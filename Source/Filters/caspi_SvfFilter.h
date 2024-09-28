@@ -18,6 +18,7 @@
 * @author CS Islay
 * @class caspi_SvfFilter
 * @brief A class implements a two-pole State Variable Filter (SVF) using the Cytomic filter design.
+* TODO: Template me!
 *
 ************************************************************************/
 constexpr float PI = 3.14159265358979323846f;
@@ -36,6 +37,7 @@ public:
      */
     void updateCoefficients(float cutoff, float Q)
     {
+       /// TODO: make variables more intuitively named
         g = std::tan (PI * cutoff / sampleRate);
         k = 1.0f / Q;
         a1 = 1.0f / (1.0f + g * (g + k));

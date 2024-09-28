@@ -5,6 +5,8 @@
  *
  * This class provides a circular buffer implementation, allowing for efficient
  * storage and retrieval of data in a ring buffer structure.
+ * The intention is for it to be used with audio data, so has linear interpolation
+ * It's very C-like in its implementation, so should definitely be modernised.
  */
 
 #ifndef CASPI_CIRCULARBUFFER_H
@@ -14,16 +16,14 @@
 
 /**
  * @class CircularBuffer
- * @brief A template class implementing a circular buffer data structure.
- *
- * This class provides a circular buffer implementation, allowing for efficient
+ * @brief A template class implementing a circular buffer data structure, allowing for efficient
  * storage and retrieval of data in a ring buffer structure.
  *
- * @tparam T The type of data to be stored in the buffer.
+ * @tparam FloatType The type of data to be stored in the buffer.
  */
 
 
-template <typename T>
+template <typename FloatType>
 class CircularBuffer
 {
 public:
@@ -45,7 +45,7 @@ public:
         wrapMask = bufferLength - 1;
 
         // create new buffer
-        buffer.reset(new T[bufferLength]);
+        buffer.reset(new FloatType[bufferLength]);
 
         // flush buffer
         clear();
@@ -60,7 +60,7 @@ public:
      * @param delayInSamples The delay in samples.
      * @return The data read from the buffer.
      */
-    T readBuffer(int delayInSamples)
+    FloatType readBuffer(const int delayInSamples)
         {
         // subtract to make read index
         int readIndex = writeIndex - delayInSamples;
@@ -81,15 +81,15 @@ public:
       * @param interpolate Whether to perform interpolation (default: true).
       * @return The interpolated data read from the buffer.
       */
-    template <typename FractionalDelayType>
-    T readBuffer(FractionalDelayType delayInFractionalSamples, const bool interpolate = true)
+
+    FloatType readBuffer(FloatType delayInFractionalSamples, const bool interpolate = true)
         {
         // Truncate and read the integer part of the delay
-        T y1 = readBuffer(static_cast<int>(delayInFractionalSamples));
+        FloatType y1 = readBuffer(static_cast<int>(delayInFractionalSamples));
         // if no interpolation, return y1 as is
         if (!interpolate) return y1;
         // read sample before
-        T y2 = readBuffer(static_cast<int>(delayInFractionalSamples) + 1);
+        FloatType y2 = readBuffer(static_cast<int>(delayInFractionalSamples) + 1);
         // interpolate
         double fraction = delayInFractionalSamples - static_cast<int>(delayInFractionalSamples);
 
@@ -118,7 +118,7 @@ public:
      *
      * @param input The data to write to the buffer.
      */
-    void writeBuffer(T input)
+    void writeBuffer(FloatType input)
     {
         /// write and increment index counter
         buffer[writeIndex++] = input;
@@ -129,10 +129,11 @@ public:
     /**
      * @brief Clears the buffer by setting all elements to zero.
      */
-    void clear() { memset(&buffer[0], 0, bufferLength * sizeof(T)); }
+    void clear() { memset(&buffer[0], 0, bufferLength * sizeof(FloatType)); }
+
 
 private:
-    std::unique_ptr<T[]> buffer = nullptr;
+    std::unique_ptr<FloatType[]> buffer = nullptr;
     unsigned int writeIndex = 0;
     unsigned int bufferLength = 0;
     unsigned int wrapMask = 0;
