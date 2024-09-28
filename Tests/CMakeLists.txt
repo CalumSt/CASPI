@@ -11,7 +11,7 @@ set(This Tests)
 # --------------------------------------------------------------------------
 # ADD TEST FILES HERE
 set(SOURCES
-        Utilities_test.h
+        Oscillator_test.cpp
 )
 # --------------------------------------------------------------------------
 
@@ -23,7 +23,6 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ../Libs/googletest/googletest/include
-        ../Source
 
     )    
 # --------------------------------------------------------------------------
@@ -32,7 +31,7 @@ target_link_libraries(${PROJECT_NAME}
 PRIVATE
 PUBLIC
     CASPI
-    GTest::gtest_main)
+    gtest_main)
 
 
 gtest_discover_tests(${PROJECT_NAME})

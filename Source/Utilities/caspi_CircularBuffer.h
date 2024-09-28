@@ -15,7 +15,7 @@
 #include <memory>
 
 /**
- * @class CircularBuffer
+ * @class caspi_CircularBuffer
  * @brief A template class implementing a circular buffer data structure, allowing for efficient
  * storage and retrieval of data in a ring buffer structure.
  *
@@ -24,7 +24,7 @@
 
 
 template <typename FloatType>
-class CircularBuffer
+class caspi_CircularBuffer
 {
 public:
     /**
@@ -104,8 +104,8 @@ public:
      * @param fractional_X The fractional value between 0 and 1.
      * @return The interpolated value.
      */
-    template<typename dataType, typename fractionalType>
-    auto linearInterpolation(const dataType y1, const dataType y2, const fractionalType fractional_X)
+
+    auto linearInterpolation(const FloatType y1, const FloatType y2, const FloatType fractional_X)
         {
         // check for invalid inputs
         if (fractional_X >= 1.0) return y2;

@@ -19,8 +19,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 *        I wanted to make a super performant oscillator with a BLEP
 *        implementation, so have made it templated.
 *        Takes some influence from wavetables, the oscillators render
-*        to a circular buffer once set frequency is called,
-*        then loops over this generated waveform.
+*        to a circular buffer, then loops over this generated waveform once it's full.
 *
 *        Should provide a decent implementation for 'trivial' waveforms.
 *        The core 'BLEP' function is based on Martin Finke's implementation.
@@ -38,14 +37,18 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #endif
 
 #include<cmath>
-#include "caspi_CircularBuffer.h"
+#include "../../Utilities/caspi_CircularBuffer.h"
 
-
+constexpr float PI = 3.14159265358979323846f;
 
 // TODO: Use a circular buffer to create a faux wavetable, so that render is only called when the waveform is changed
+    // This could be done by adding a method that adds the generated sample to the buffer,
+    // then reads in from the buffer once its full
+// For now, can just call the appropriate waveform getSample
 template <typename FloatType>
 class caspi_BlepOscillator {
-    constexpr FloatType PI = 3.14159265358979323846;
+public:
+
     /// Structure for holding phase information conveniently
     struct Phase {
 
@@ -74,9 +77,9 @@ class caspi_BlepOscillator {
     struct Sine
     {
         void resetPhase()                                            {phase.resetPhase();  }
-        void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(frequency,sampleRate); }
+        void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(2 * static_cast<FloatType>(PI) * frequency,sampleRate); }
         FloatType getNextSample()                                    { return sin(phase); }
-        Phase<FloatType> phase;
+        Phase phase;
     };
 
     /// Saw oscillator
@@ -88,7 +91,7 @@ class caspi_BlepOscillator {
             auto phaseInternal = phase.incrementPhase(1);
             return 2 * phaseInternal - 1 - blep (phaseInternal, phase.increment());
         }
-        Phase<FloatType> phase;
+        Phase phase;
     };
 
     /// Square oscillator
@@ -103,8 +106,7 @@ class caspi_BlepOscillator {
                 blep(std::fmod( phaseInternal + 0.5,1), phase.increment());
         }
 
-     private:
-        Phase<FloatType> phase;
+        Phase phase;
     };
 
     /// Triangle Oscillator
@@ -120,16 +122,15 @@ class caspi_BlepOscillator {
         }
 
     private:
-        Square<FloatType> square;
+        Square square;
         FloatType sum = 1;
-        Phase<FloatType> phase;
     };
+
 
 private:
     /// This is the core blep function
     static FloatType blep (FloatType phase, FloatType increment)
     {
-
         if (phase < increment)
         {
             /// internal phase variable
@@ -142,28 +143,29 @@ private:
             auto phaseInternal = (phase - 1) / increment;
             return (phaseInternal + 2) * phaseInternal - 1;
         }
-
     // Unsure how this return statement works
     return {};
     }
 
     /// This function renders a circular buffer of the requested waveform type
     template <typename OscillatorType>
-    render(OscillatorType oscillator,FloatType frequency, FloatType sampleRate)
+    void render(OscillatorType oscillator,FloatType frequency, FloatType sampleRate)
     {
      /// set frequency and sample rate
         oscillator.setFrequency(frequency,sampleRate);
      /// create buffer of correct size
         auto bufferSize = static_cast<int>(std::ceil(sampleRate / frequency));
-        caspi_CircularBuffer::createCircularBuffer(bufferSize);
+     /// TODO: Check how to use the circular buffer and write example
+        caspi_CircularBuffer<FloatType>::createCircularBuffer(bufferSize);
 
     /// write to buffer
         for (int i = 0; i < bufferSize; i++) {
             FloatType s = oscillator.getNextSample();
-            buffer.writeBuffer(s);
         }
 
     }
+
+
 
 };
 
