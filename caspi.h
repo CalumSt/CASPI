@@ -1,7 +1,6 @@
-#ifndef CASPI_LIBRARY_H
-#define CASPI_LIBRARY_H
+#pragma once
 
 #include "Source/Utilities/caspi_Utilities.h"
 #include "Source/Oscillators/caspi_Oscillators.h"
 
-#endif //CASPI_LIBRARY_H
+

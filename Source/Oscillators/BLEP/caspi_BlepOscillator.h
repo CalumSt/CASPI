@@ -37,9 +37,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #endif
 
 #include<cmath>
-#include "../../Utilities/caspi_CircularBuffer.h"
-
-constexpr float PI = 3.14159265358979323846f;
+#include "Utilities/caspi_CircularBuffer.h"
+#include "Utilities/caspi_Constants.h"
 
 // TODO: Use a circular buffer to create a faux wavetable, so that render is only called when the waveform is changed
     // This could be done by adding a method that adds the generated sample to the buffer,
@@ -48,7 +47,6 @@ constexpr float PI = 3.14159265358979323846f;
 template <typename FloatType>
 class caspi_BlepOscillator {
 public:
-
     /// Structure for holding phase information conveniently
     struct Phase {
 
@@ -76,16 +74,16 @@ public:
     /// Sine oscillator
     struct Sine
     {
-        void resetPhase()                                            {phase.resetPhase();  }
-        void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(2 * static_cast<FloatType>(PI) * frequency,sampleRate); }
-        FloatType getNextSample()                                    { return sin(phase); }
+        void resetPhase()                                            { phase.resetPhase();  }
+        void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(2 * static_cast<FloatType>(CASPI::PI) * frequency,sampleRate); }
+        FloatType getNextSample()                                    { return std::sin(phase.incrementPhase(2 * static_cast<FloatType>(CASPI::PI))); }
         Phase phase;
     };
 
     /// Saw oscillator
     struct Saw
     {
-        void resetPhase()                                            {phase.resetPhase();  }
+        void resetPhase()                                            { phase.resetPhase();  }
         void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(frequency,sampleRate); }
         FloatType getNextSample() {
             auto phaseInternal = phase.incrementPhase(1);
@@ -97,7 +95,7 @@ public:
     /// Square oscillator
     struct Square
     {
-        void resetPhase()                                            {phase.resetPhase();  }
+        void resetPhase()                                            { phase.resetPhase();  }
         void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(frequency,sampleRate); }
 
         FloatType getNextSample() {
