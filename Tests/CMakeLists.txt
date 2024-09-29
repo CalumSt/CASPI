@@ -13,6 +13,7 @@ set(This Tests)
 set(SOURCES
         Oscillator_test.cpp
         Utilities_test.cpp
+        Filter_test.cpp
 )
 # --------------------------------------------------------------------------
 

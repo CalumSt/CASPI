@@ -26,6 +26,9 @@ Y88b  d88P 888  888      X88 888 d88P 888
 *
 * @see https://www.martin-finke.de/articles/audio-plugins-018-polyblep-oscillator/
 *
+* TODO: Add modulation
+* TODO: Setup circular buffer
+*
 ************************************************************************/
 
 #ifndef CASPI_BLEPOSCILLATOR_H

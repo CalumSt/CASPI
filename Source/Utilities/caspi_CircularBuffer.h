@@ -107,10 +107,11 @@ public:
 
     auto linearInterpolation(const FloatType y1, const FloatType y2, const FloatType fractional_X)
         {
+        auto one = static_cast<FloatType>(1.0);
         // check for invalid inputs
-        if (fractional_X >= 1.0) return y2;
+        if (fractional_X >= one) return y2;
         // otherwise apply weighted sum interpolation
-        return fractional_X * y2 + (1.0 - fractional_X) * y1;
+        return fractional_X * y2 + (one - fractional_X) * y1;
         }
 
     /**

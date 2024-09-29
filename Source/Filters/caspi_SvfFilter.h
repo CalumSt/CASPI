@@ -1,33 +1,36 @@
-#pragma once
-#include <cmath>
 /************************************************************************
-      ___           ___           ___           ___
-     /\__\         /\  \         /\__\         /\  \
-    /:/  /        /::\  \       /:/ _/_       /::\  \     ___
-   /:/  /        /:/\:\  \     /:/ /\  \     /:/\:\__\   /\__\
-  /:/  /  ___   /:/ /::\  \   /:/ /::\  \   /:/ /:/  /  /:/__/
- /:/__/  /\__\ /:/_/:/\:\__\ /:/_/:/\:\__\ /:/_/:/  /  /::\  \
- \:\  \ /:/  / \:\/:/  \/__/ \:\/:/ /:/  / \:\/:/  /   \/\:\  \__
-  \:\  /:/  /   \::/__/       \::/ /:/  /   \::/__/     ~~\:\/\__\
-   \:\/:/  /     \:\  \        \/_/:/  /     \:\  \        \::/  /
-    \::/  /       \:\__\         /:/  /       \:\__\       /:/  /
-     \/__/         \/__/         \/__/         \/__/       \/__/
+ .d8888b.                             d8b
+d88P  Y88b                            Y8P
+888    888
+888         8888b.  .d8888b  88888b.  888
+888            "88b 88K      888 "88b 888
+888    888 .d888888 "Y8888b. 888  888 888
+Y88b  d88P 888  888      X88 888 d88P 888
+ "Y8888P"  "Y888888  88888P' 88888P"  888
+                             888
+                             888
+                             888
 
 
 * @file caspi_SvfFilter.h
 * @author CS Islay
 * @class caspi_SvfFilter
-* @brief A class implements a two-pole State Variable Filter (SVF) using the Cytomic filter design.
-* TODO: Template me!
+* @brief A class implementing a one pole filter. Based on the Cytomic SVF filter design.
+*		 Very 'clean' and cheap filter, but not particularly musical.
+* @see https://cytomic.com/files/cybot.pdf
 *
 ************************************************************************/
-constexpr float PI = 3.14159265358979323846f;
 
+#pragma once
+#include <cmath>
+#include "Utilities/caspi_Constants.h"
+
+template <typename FloatType>
 class caspi_SvfFilter
 {
 public:
     void setSampleRate (const float _sampleRate) { sampleRate = _sampleRate; }
-    [[nodiscard]] float getSampleRate() const { return sampleRate; }
+    [[nodiscard]] FloatType getSampleRate() const { return sampleRate; }
 
     /**
      * @brief Updates the filter coefficients based on the cutoff frequency and quality factor.
@@ -35,12 +38,13 @@ public:
      * @param cutoff The cutoff frequency of the filter.
      * @param Q The quality factor of the filter.
      */
-    void updateCoefficients(float cutoff, float Q)
+    void updateCoefficients(FloatType cutoff, FloatType Q)
     {
+    	auto one = static_cast<FloatType>(1.0);
        /// TODO: make variables more intuitively named
-        g = std::tan (PI * cutoff / sampleRate);
-        k = 1.0f / Q;
-        a1 = 1.0f / (1.0f + g * (g + k));
+        g = std::tan (CASPI::PI * cutoff / sampleRate);
+        k = one / Q;
+        a1 = one / (one + g * (g + k));
         a2 = g * a1;
         a3 = g * a2;
     }
@@ -50,14 +54,15 @@ public:
      */
     void reset()
     {
-        g = 0.0f;
-        k = 0.0f;
-        a1 = 0.0f;
-        a2 = 0.0f;
-        a3 = 0.0f;
+    	auto zero = static_cast<FloatType>(0.0);
+        g = zero;
+        k = zero;
+        a1 = zero;
+        a2 = zero;
+        a3 = zero;
 
-        ic1eq = 0.0f;
-        ic2eq = 0.0f;
+        ic1eq = zero;
+        ic2eq = zero;
     }
 
     /**
@@ -77,16 +82,16 @@ public:
     }
 
 private:
-    float sampleRate = 44100.0f; ///< The sample rate of the filter
+    FloatType sampleRate = static_cast<FloatType>(44100.0); ///< The sample rate of the filter
 
-    float g = 0.0f; ///< The normalized angular frequency coefficient.
+    FloatType g = static_cast<FloatType>(0.0); ///< The normalized angular frequency coefficient.
 
-    float k = 0.0f; ///< The damping coefficient, inversely related to the quality factor.
+    FloatType k = static_cast<FloatType>(0.0); ///< The damping coefficient, inversely related to the quality factor.
 
-    float a1 = 0.0f; ///< Coefficient a1 used in the filter difference equations.
-    float a2 = 0.0f; ///< Coefficient a2 used in the filter difference equations.
-    float a3 = 0.0f; ///< Coefficient a3 used in the filter difference equations.
+    FloatType a1 = static_cast<FloatType>(0.0); ///< Coefficient a1 used in the filter difference equations.
+    FloatType a2 = static_cast<FloatType>(0.0); ///< Coefficient a2 used in the filter difference equations.
+    FloatType a3 = static_cast<FloatType>(0.0); ///< Coefficient a3 used in the filter difference equations.
 
-    float ic1eq = 0.0f; ///< Internal state variable for the first integrator.
-    float ic2eq = 0.0f; ///< Internal state variable for the second integrator.
+    FloatType ic1eq = static_cast<FloatType>(0.0); ///< Internal state variable for the first integrator.
+    FloatType ic2eq = static_cast<FloatType>(0.0); ///< Internal state variable for the second integrator.
 };
