@@ -13,7 +13,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
                              888
 
 
-* @file caspi_Oscillators.h
+* @file caspi_oscillators.h
 * @author CS Islay
 *
 ************************************************************************/
@@ -23,5 +23,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 /// Add finished oscillators here
 #include "BLEP/caspi_BlepOscillator.h"
+
+
 
 #endif //CASPI_OSCILLATORS_H

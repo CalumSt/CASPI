@@ -12,6 +12,7 @@ set(This Tests)
 # ADD TEST FILES HERE
 set(SOURCES
         Oscillator_test.cpp
+        Utilities_test.cpp
 )
 # --------------------------------------------------------------------------
 

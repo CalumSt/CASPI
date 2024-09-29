@@ -87,7 +87,7 @@ public:
         void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(frequency,sampleRate); }
         FloatType getNextSample() {
             auto phaseInternal = phase.incrementPhase(1);
-            return 2 * phaseInternal - 1 - blep (phaseInternal, phase.increment());
+            return 2 * phaseInternal - 1 - blep (phaseInternal, phase.increment);
         }
         Phase phase;
     };
@@ -100,8 +100,12 @@ public:
 
         FloatType getNextSample() {
             auto phaseInternal = phase.incrementPhase(1);
-            return ((phaseInternal < 0.5) ? -1 : 1) - blep (phaseInternal, phase.increment()) +
-                blep(std::fmod( phaseInternal + 0.5,1), phase.increment());
+            auto half =  static_cast<FloatType>(0.5);
+            auto one =  static_cast<FloatType>(1);
+            /// These static casts are ugly
+            return ((phaseInternal < half) ?  -one :  one)
+                - blep (phaseInternal, phase.increment)
+                + blep(std::fmod( phaseInternal + half,one), phase.increment);
         }
 
         Phase phase;
@@ -115,7 +119,7 @@ public:
 
         FloatType getNextSample()
         {
-            sum += 4 * square.phase.increment * square.getSample();
+            sum += 4 * square.phase.increment * square.getNextSample();
             return sum;
         }
 
@@ -139,7 +143,7 @@ private:
         if (phase > 1 - increment)
         {
             auto phaseInternal = (phase - 1) / increment;
-            return (phaseInternal + 2) * phaseInternal - 1;
+            return (phaseInternal + 2) * phaseInternal + 1;
         }
     // Unsure how this return statement works
     return {};

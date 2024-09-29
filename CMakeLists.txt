@@ -13,9 +13,10 @@ project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 set(CMAKE_CXX_STANDARD 20)
 
 add_library(${PROJECT_NAME} INTERFACE caspi.h
-        Source/Oscillators/caspi_Oscillators.h
+        Source/Oscillators/caspi_oscillators.h
         Source/Oscillators/BLEP/caspi_BlepOscillator.h
-        Source/Utilities/caspi_Constants.h)
+        Source/Utilities/caspi_Constants.h
+        Source/Utilities/caspi_utilities.h)
 add_subdirectory(Source)
 target_include_directories(${PROJECT_NAME} INTERFACE Source/.)
 
