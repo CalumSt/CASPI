@@ -15,7 +15,8 @@ set(CMAKE_CXX_STANDARD 20)
 add_library(${PROJECT_NAME} INTERFACE caspi.h
         Source/Oscillators/caspi_oscillators.h
         Source/Utilities/caspi_utilities.h
-        Source/Filters/caspi_filters.h)
+        Source/Filters/caspi_filters.h
+        Source/Envelopes/caspi_envelopes.h)
 add_subdirectory(Source)
 target_include_directories(${PROJECT_NAME} INTERFACE Source/.)
 

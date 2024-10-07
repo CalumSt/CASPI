@@ -22,7 +22,7 @@
  * @tparam FloatType The type of data to be stored in the buffer.
  */
 
-
+// TODO: Make stereo!
 template <typename FloatType>
 class caspi_CircularBuffer
 {
@@ -131,6 +131,7 @@ public:
      * @brief Clears the buffer by setting all elements to zero.
      */
     void clear() { memset(&buffer[0], 0, bufferLength * sizeof(FloatType)); }
+    // TODO: Fix me!
 
 
 private:

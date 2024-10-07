@@ -1,7 +1,7 @@
 #ifndef CASPI_WAVETABLEOSCILLATOR_H
 #define CASPI_WAVETABLEOSCILLATOR_H
 
-#include "../caspi_Oscillator.h"
+#include "caspi_Oscillator.h"
 
 /************************************************************************
       ___           ___           ___           ___

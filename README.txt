@@ -4,14 +4,21 @@ This project is header-only (except for tests) and has a dependency on googletes
 Hopefully, including this should be as simple as including it as a submodule and adding #include "caspi.h".
 Alternatively, if you only need a little bit, you can use specific components, e.g. #include "caspi_oscillators.h"
 
+To add:
+    ADSR envelope
+    LFOs
+    Wavetable
+    Sample reader
+    Ladder filter
+    Mod Matrix
 
 Wishlist:
-	Full code test coverage
-	Doxygen-code generation
+	Full code coverage
+	Doxygen docs generation
 	Automatic UML diagrams
 	Framework-independent, but JUCE-forward
-	Machine Learning integration for synth parameter estimation
-	
+	Machine Learning toolkit
+
 See also:
 	Will Pirkle Book
 	The Computer Music Tutorial
