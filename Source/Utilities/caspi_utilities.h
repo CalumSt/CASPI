@@ -3,5 +3,6 @@
 
 #include "caspi_Constants.h"
 #include "caspi_CircularBuffer.h"
+#include "caspi_assert.h"
 
 #endif //CASPI_UTILITIES_H

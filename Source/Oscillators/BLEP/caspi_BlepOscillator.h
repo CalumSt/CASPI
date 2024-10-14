@@ -18,8 +18,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 * @brief A class implementing a BLEP oscillator.
 *        I wanted to make a super performant oscillator with a BLEP
 *        implementation, so have made it templated.
-*        Takes some influence from wavetables, the oscillators render
-*        to a circular buffer, then loops over this generated waveform once it's full.
 *
 *        Should provide a decent implementation for 'trivial' waveforms.
 *        The core 'BLEP' function is based on Martin Finke's implementation.
@@ -27,21 +25,18 @@ Y88b  d88P 888  888      X88 888 d88P 888
 * @see https://www.martin-finke.de/articles/audio-plugins-018-polyblep-oscillator/
 *
 * TODO: Add modulation
-* TODO: Setup circular buffer
+* TODO: Make Stereo
 *
 ************************************************************************/
 
 #ifndef CASPI_BLEPOSCILLATOR_H
 #define CASPI_BLEPOSCILLATOR_H
 
-#ifndef CASPI_ASSERT
-#include <cassert>
-#define CASPI_ASSERT(x) assert(x)
-#endif
 
 #include<cmath>
 #include "Utilities/caspi_CircularBuffer.h"
 #include "Utilities/caspi_Constants.h"
+#include"Utilities/caspi_assert.h"
 
 // TODO: Use a circular buffer to create a faux wavetable, so that render is only called when the waveform is changed
     // This could be done by adding a method that adds the generated sample to the buffer,
@@ -50,14 +45,27 @@ Y88b  d88P 888  888      X88 888 d88P 888
 template <typename FloatType>
 class caspi_BlepOscillator {
 public:
+
+
     /// Structure for holding phase information conveniently
     struct Phase {
 
         void resetPhase() { phase = 0; }
 
         void setFrequency(FloatType frequency, FloatType sampleRate) {
-            CASPI_ASSERT(sampleRate > 0 && frequency >= 0);
+            CASPI_ASSERT((sampleRate > 0 && frequency >= 0), "Sample Rate and Frequency must be larger than 0.");
             increment = frequency / sampleRate;
+            this->sampleRate = sampleRate;
+        }
+
+        void setModulationFrequency(FloatType modulationFrequency) {
+            CASPI_ASSERT(modulationFrequency >= 0, "Modulation Frequency cannot be negative.");
+            this->modulationFrequency = modulationFrequency;
+        }
+
+        void setModulationIndex(FloatType modulationIndex) {
+            CASPI_ASSERT(modulationIndex >= 0, "Modulation Index cannot be negative.");
+            this->modulationIndex = modulationIndex;
         }
 
         FloatType incrementPhase(FloatType wrapLimit) {
@@ -70,8 +78,16 @@ public:
 
             return phaseInternal;
         } /// wrap limit is 2pi for sine, 1 for others
+
+        FloatType modulatePhase() {
+
+            return modulationIndex * sin(phase * modulationFrequency * CASPI::PI / sampleRate);
+        }
+        FloatType sampleRate = static_cast<FloatType>(44100.0);
         FloatType phase = 0;
         FloatType increment = 0;
+        FloatType modulationIndex = 0;
+        FloatType modulationFrequency = 0;
     };
 
     /// Sine oscillator
@@ -79,7 +95,7 @@ public:
     {
         void resetPhase()                                            { phase.resetPhase();  }
         void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(2 * static_cast<FloatType>(CASPI::PI) * frequency,sampleRate); }
-        FloatType getNextSample()                                    { return std::sin(phase.incrementPhase(2 * static_cast<FloatType>(CASPI::PI))); }
+        FloatType getNextSample()                                    { return std::sin(phase.incrementPhase(2 * static_cast<FloatType>(CASPI::PI) + phase.modulatePhase())); }
         Phase phase;
     };
 
@@ -152,24 +168,18 @@ private:
     return {};
     }
 
-    /// This function renders a circular buffer of the requested waveform type
+    /// Placeholder until I work out how to better implement this
     template <typename OscillatorType>
-    void render(OscillatorType oscillator,FloatType frequency, FloatType sampleRate)
-    {
-     /// set frequency and sample rate
-        oscillator.setFrequency(frequency,sampleRate);
-     /// create buffer of correct size
-        auto bufferSize = static_cast<int>(std::ceil(sampleRate / frequency));
-     /// TODO: Check how to use the circular buffer and write example
-        caspi_CircularBuffer<FloatType>::createCircularBuffer(bufferSize);
-
-    /// write to buffer
-        for (int i = 0; i < bufferSize; i++) {
-            FloatType s = oscillator.getNextSample();
+    void renderToCaspiBuffer(caspi_CircularBuffer<FloatType> audioBuffer,FloatType frequency, FloatType sampleRate, const int numberOfSamples = 1) {
+        OscillatorType osc;
+        osc.setFrequency(frequency, sampleRate);
+        for (int sampleIndex = 0; sampleIndex << numberOfSamples; sampleIndex++) {
+            // get sample from (mono) oscillator
+            // todo: panning?
+            auto sample = osc.getNextSample();
+            audioBuffer.writeBuffer(sample);
         }
-
     }
-
 
 
 };

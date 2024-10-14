@@ -23,13 +23,15 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #pragma once
 #include <cmath>
+#include <Oscillators/BLEP/caspi_BlepOscillator.h>
+#include "Utilities/caspi_assert.h"
 #include "Utilities/caspi_Constants.h"
 
 template <typename FloatType>
 class caspi_SvfFilter
 {
 public:
-    void setSampleRate (const float _sampleRate) { sampleRate = _sampleRate; }
+    void setSampleRate (const float _sampleRate) { CASPI_ASSERT(_sampleRate > 0,"Sample rate must be greater than 0."); sampleRate = _sampleRate; }
     [[nodiscard]] FloatType getSampleRate() const { return sampleRate; }
 
     /**
@@ -40,6 +42,7 @@ public:
      */
     void updateCoefficients(FloatType cutoff, FloatType Q)
     {
+        CASPI_ASSERT(cutoff > 0 && Q > 0, "Cutoff and Q must be positive.");
     	auto one = static_cast<FloatType>(1.0);
        /// TODO: make variables more intuitively named
         g = std::tan (CASPI::PI * cutoff / sampleRate);
@@ -83,15 +86,12 @@ public:
 
 private:
     FloatType sampleRate = static_cast<FloatType>(44100.0); ///< The sample rate of the filter
-
-    FloatType g = static_cast<FloatType>(0.0); ///< The normalized angular frequency coefficient.
-
-    FloatType k = static_cast<FloatType>(0.0); ///< The damping coefficient, inversely related to the quality factor.
-
-    FloatType a1 = static_cast<FloatType>(0.0); ///< Coefficient a1 used in the filter difference equations.
-    FloatType a2 = static_cast<FloatType>(0.0); ///< Coefficient a2 used in the filter difference equations.
-    FloatType a3 = static_cast<FloatType>(0.0); ///< Coefficient a3 used in the filter difference equations.
-
-    FloatType ic1eq = static_cast<FloatType>(0.0); ///< Internal state variable for the first integrator.
-    FloatType ic2eq = static_cast<FloatType>(0.0); ///< Internal state variable for the second integrator.
+    FloatType zero =  static_cast<FloatType>(0.0);
+    FloatType g = zero; ///< The normalized angular frequency coefficient.
+    FloatType k = zero; ///< The damping coefficient, inversely related to the quality factor.
+    FloatType a1 = zero; ///< Coefficient a1 used in the filter difference equations.
+    FloatType a2 = zero; ///< Coefficient a2 used in the filter difference equations.
+    FloatType a3 = zero; ///< Coefficient a3 used in the filter difference equations.
+    FloatType ic1eq = zero; ///< Internal state variable for the first integrator.
+    FloatType ic2eq = zero; ///< Internal state variable for the second integrator.
 };

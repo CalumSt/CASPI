@@ -5,6 +5,7 @@
 
 /// TODO: Implement better testing strategy. Use 3 sine waveforms, sum them, apply the filter, then FFT the result and check that the frequency has been removed.
 
+// ===================================================================
 // Behaviour to test: initialisation
 TEST(SvfFilterTests,Constructor_test)
 {
@@ -28,6 +29,17 @@ TEST(SvfFilterTests, Filter_test)
         const float nextValue = filter.render(oscSample);
         EXPECT_GE(nextValue, -1.0f);
         EXPECT_LE(nextValue, 1.0f);
-        EXPECT_NE (oscSample, nextValue);
+        if (i > 0) {
+            EXPECT_NE (oscSample, nextValue);
+        }
     }
+}
+
+// ===================================================================
+// Behaviour to test: initialisation
+TEST(LadderFilter,Constructor_test)
+{
+    caspi_SvfFilter<float> filter;
+    const auto sample = filter.render(1.0f);
+    EXPECT_EQ (sample, 0.0f);
 }

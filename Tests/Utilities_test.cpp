@@ -1,3 +1,4 @@
+#include <gtest/gtest-spi.h>
 #ifndef UTILITIES_TEST_H
 #define UTILITIES_TEST_H
 
@@ -7,6 +8,11 @@
 // Stub test to make sure the project compiles
 TEST(UtilitiesTests, test) {
     EXPECT_TRUE(true);
+}
+
+TEST(UtilitiesTests, assert_test) {
+    EXPECT_NO_THROW(CASPI_ASSERT(true,"If this has failed, sorry."));
+    EXPECT_DEATH(CASPI_ASSERT(false,"This is supposed to fail."), "Assertion failed.");
 }
 
 // =======================================================================
