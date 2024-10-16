@@ -15,6 +15,12 @@ TEST(UtilitiesTests, assert_test) {
     EXPECT_DEATH(CASPI_ASSERT(false,"This is supposed to fail."), "Assertion failed.");
 }
 
+TEST(UtilitiesTests, ConstantsTest) {
+    double expected = 3.14159265358979323846;
+    auto test = CASPI::PI<double>;
+    EXPECT_EQ(test,expected);
+}
+
 // =======================================================================
 // Circular Buffer Tests
 // =======================================================================

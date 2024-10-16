@@ -38,14 +38,13 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include "Utilities/caspi_Constants.h"
 #include"Utilities/caspi_assert.h"
 
-// TODO: Use a circular buffer to create a faux wavetable, so that render is only called when the waveform is changed
+// TODO: Incorporate phase modulation into the oscillator to allow external modulation
     // This could be done by adding a method that adds the generated sample to the buffer,
     // then reads in from the buffer once its full
 // For now, can just call the appropriate waveform getSample
 template <typename FloatType>
 class caspi_BlepOscillator {
 public:
-
 
     /// Structure for holding phase information conveniently
     struct Phase {
@@ -81,7 +80,7 @@ public:
 
         FloatType modulatePhase() {
 
-            return modulationIndex * sin(phase * modulationFrequency * CASPI::PI / sampleRate);
+            return modulationIndex * sin(phase * modulationFrequency * CASPI::TWO_PI<float> / sampleRate);
         }
         FloatType sampleRate = static_cast<FloatType>(44100.0);
         FloatType phase = 0;
@@ -94,8 +93,8 @@ public:
     struct Sine
     {
         void resetPhase()                                            { phase.resetPhase();  }
-        void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(2 * static_cast<FloatType>(CASPI::PI) * frequency,sampleRate); }
-        FloatType getNextSample()                                    { return std::sin(phase.incrementPhase(2 * static_cast<FloatType>(CASPI::PI) + phase.modulatePhase())); }
+        void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(CASPI::TWO_PI<float> * frequency,sampleRate); }
+        FloatType getNextSample()                                    { return std::sin(phase.incrementPhase(CASPI::TWO_PI<float>)); }
         Phase phase;
     };
 

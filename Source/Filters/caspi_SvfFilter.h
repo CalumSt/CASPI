@@ -45,7 +45,7 @@ public:
         CASPI_ASSERT(cutoff > 0 && Q > 0, "Cutoff and Q must be positive.");
     	auto one = static_cast<FloatType>(1.0);
        /// TODO: make variables more intuitively named
-        g = std::tan (CASPI::PI * cutoff / sampleRate);
+        g = std::tan (CASPI::TWO_PI<float> * cutoff / sampleRate);
         k = one / Q;
         a1 = one / (one + g * (g + k));
         a2 = g * a1;
