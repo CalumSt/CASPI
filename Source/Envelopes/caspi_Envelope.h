@@ -12,37 +12,36 @@ Y88b  d88P 888  888      X88 888 d88P 888
                              888
 
 
-* @file caspi_Envelope.h
+* @file caspi_EnvelopeGenerator.h
 * @author CS Islay
+* @class caspi_EnvelopeGenerator
 * @brief A class implementing a variety of envelopes using ADSR stages.
 *
 ************************************************************************/
-#ifndef CASPI_ENVELOPEGENERATOR_H
-#define CASPI_ENVELOPEGENERATOR_H
+#ifndef caspi_EnvelopeGenerator_H
+#define caspi_EnvelopeGenerator_H
 
 #include <Utilities/caspi_CircularBuffer.h>
-#include "Utilities/caspi_Assert.h"
+#include "Utilities/caspi_assert.h"
 #include <string>
-#include <cmath>
 #include <iostream>
 #include <Utilities/caspi_Constants.h>
-namespace CASPI::Envelope {
 
-        /// ADSR parameter interface
+/// TODO: Remove class and make namespace!
+namespace CASPI::Envelope {
     template <typename FloatType>
+    class caspi_EnvelopeGenerator {
+
+    private:
+        /// ADSR parameter interface
         struct Parameters {
-            // Constants
-            const FloatType silence = static_cast<FloatType>(0.0001f);
-            const FloatType zero    = static_cast<FloatType>(0.0f);
-            const FloatType one     = static_cast<FloatType>(1.0f);
-            const FloatType two     = static_cast<FloatType>(2.0f);
             /// member variables
             /// Implemented with Redmon's analog equations
-            const FloatType attackTCO   = static_cast<FloatType>(std::exp(-1.5));
+            const FloatType attackTCO   = static_cast<FloatType>(exp(-1.5));
             FloatType attackCoefficient = zero;
             FloatType attackOffset      = zero;
 
-            const FloatType decayTCO   = static_cast<FloatType>(std::exp(-4.95));
+            const FloatType decayTCO   = static_cast<FloatType>(exp(-4.95));
             FloatType decayCoefficient = silence;
             FloatType decayOffset      = zero;
 
@@ -52,6 +51,12 @@ namespace CASPI::Envelope {
             FloatType releaseOffset      = zero;
 
             FloatType sampleRate         = static_cast<FloatType>(44100.0f);
+
+            // Constants
+            const FloatType silence = static_cast<FloatType>(0.0001f);
+            const FloatType zero    = static_cast<FloatType>(0.0f);
+            const FloatType one     = static_cast<FloatType>(1.0f);
+            const FloatType two     = static_cast<FloatType>(2.0f);
 
             /// setters
             void setAttackTime(FloatType _attackTime_s)   {
@@ -67,12 +72,10 @@ namespace CASPI::Envelope {
                 decayOffset          = (sustainLevel - decayTCO) * (one - decayCoefficient);
             }
 
-            bool setSustainLevel(FloatType _sustainLevel) noexcept
-            {
-                if (_sustainLevel <= zero) { _sustainLevel = zero; return false; }
-                if (_sustainLevel > one) { _sustainLevel = one; return false; }
+            void setSustainLevel(FloatType _sustainLevel) {
+                if (_sustainLevel <= zero) { _sustainLevel = zero; }
+                CASPI_ASSERT(sustainLevel < one, "Sustain level must be between 0 and 1.");
                 sustainLevel = _sustainLevel;
-                return true;
             }
 
             void setReleaseTime(FloatType _releaseTime_s) {
@@ -89,16 +92,27 @@ namespace CASPI::Envelope {
 
         };
 
-
+    public:
         // Struct to hold state and related functionality
         enum class State { idle, attack, decay, slope, sustain, release, noteOn, noteOff };
 
-    template <typename FloatType>
+        /**
+        * @brief renders the next samples and applies to the samples within the buffer.
+        */
+        template <typename EnvelopeType>
+        void renderToBuffer(caspi_CircularBuffer<FloatType> buffer, const int bufferLength = 1) {
+            EnvelopeType env;
+            for (int sampleIndex = 0; sampleIndex << bufferLength; sampleIndex++) {
+                auto sample = buffer.readBuffer();
+                buffer.writeBuffer(sample * env.render());
+            }
+        }
+
         struct EnvelopeBase {
             virtual ~EnvelopeBase() = default;
 
-            State state = State::idle;
-            Parameters<FloatType> parameters;
+            State state;
+            Parameters parameters;
             /// These are used to calculate the envelope
             FloatType level       = parameters.zero;
             FloatType target      = parameters.zero;
@@ -168,20 +182,18 @@ namespace CASPI::Envelope {
         };
 
         /// ADSR Envelope - most common envelope to use
-        template <typename FloatType>
-        struct ADSR final : EnvelopeBase<FloatType> {
-        /// TODO: make this better
-            using EnvelopeBase<FloatType>::level;
-            using EnvelopeBase<FloatType>::coefficient;
-            using EnvelopeBase<FloatType>::offset;
-            using EnvelopeBase<FloatType>::target;
-            using EnvelopeBase<FloatType>::parameters;
-            using EnvelopeBase<FloatType>::state;
-            using EnvelopeBase<FloatType>::render;
-            using EnvelopeBase<FloatType>::noteOn;
-            using EnvelopeBase<FloatType>::noteOff;
-            using EnvelopeBase<FloatType>::reset;
-            using EnvelopeBase<FloatType>::getState;
+        struct ADSR final : EnvelopeBase {
+            using EnvelopeBase::level;
+            using EnvelopeBase::coefficient;
+            using EnvelopeBase::offset;
+            using EnvelopeBase::target;
+            using EnvelopeBase::parameters;
+            using EnvelopeBase::state;
+            using EnvelopeBase::render;
+            using EnvelopeBase::noteOn;
+            using EnvelopeBase::noteOff;
+            using EnvelopeBase::reset;
+            using EnvelopeBase::getState;
 
         private:
             /// This function handles state switching using the target parameter relative to levels.
@@ -220,5 +232,7 @@ namespace CASPI::Envelope {
         };
 
     };
+}
 
-#endif // CASPI_ENVELOPEGENERATOR_H
+
+#endif //caspi_EnvelopeGenerator_H
