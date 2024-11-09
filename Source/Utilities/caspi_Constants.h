@@ -1,6 +1,6 @@
 #ifndef CASPI_CONSTANTS_H
 #define CASPI_CONSTANTS_H
-namespace CASPI {
+namespace CASPI::Constants {
 
 template <typename FloatType>
     constexpr FloatType PI = static_cast<FloatType>(3.14159265358979323846);

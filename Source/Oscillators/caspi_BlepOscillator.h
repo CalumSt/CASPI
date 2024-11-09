@@ -42,11 +42,11 @@ Y88b  d88P 888  888      X88 888 d88P 888
     // This could be done by adding a method that adds the generated sample to the buffer,
     // then reads in from the buffer once its full
 // For now, can just call the appropriate waveform getSample
-template <typename FloatType>
-class caspi_BlepOscillator {
-public:
+
+namespace CASPI::BlepOscillator {
 
     /// Structure for holding phase information conveniently
+    template <typename FloatType>
     struct Phase {
 
         void resetPhase() { phase = 0; }
@@ -57,14 +57,9 @@ public:
             this->sampleRate = sampleRate;
         }
 
-        void setModulationFrequency(FloatType modulationFrequency) {
-            CASPI_ASSERT(modulationFrequency >= 0, "Modulation Frequency cannot be negative.");
-            this->modulationFrequency = modulationFrequency;
-        }
-
-        void setModulationIndex(FloatType modulationIndex) {
-            CASPI_ASSERT(modulationIndex >= 0, "Modulation Index cannot be negative.");
-            this->modulationIndex = modulationIndex;
+        void setHardSyncFrequency(FloatType frequency) {
+            CASPI_ASSERT(frequency >= 0, "Hard Sync Frequency cannot be negative.");
+            hardSyncIncrement = frequency / sampleRate;
         }
 
         FloatType incrementPhase(FloatType wrapLimit) {
@@ -78,39 +73,37 @@ public:
             return phaseInternal;
         } /// wrap limit is 2pi for sine, 1 for others
 
-        FloatType modulatePhase() {
-
-            return modulationIndex * sin(phase * modulationFrequency * CASPI::TWO_PI<float> / sampleRate);
-        }
         FloatType sampleRate = static_cast<FloatType>(44100.0);
         FloatType phase = 0;
         FloatType increment = 0;
-        FloatType modulationIndex = 0;
-        FloatType modulationFrequency = 0;
+        FloatType hardSyncPhase = 0;
+        FloatType hardSyncIncrement = 0;
     };
 
     /// Sine oscillator
+    template <typename FloatType>
     struct Sine
     {
         void resetPhase()                                            { phase.resetPhase();  }
-        void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(CASPI::TWO_PI<float> * frequency,sampleRate); }
-        FloatType getNextSample()                                    { return std::sin(phase.incrementPhase(CASPI::TWO_PI<float>)); }
-        Phase phase;
+        void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(CASPI::Constants::TWO_PI<float> * frequency,sampleRate); }
+        FloatType getNextSample()                                    { return std::sin(phase.incrementPhase(CASPI::Constants::TWO_PI<float>)); }
+        Phase<FloatType> phase;
     };
 
-    /// Saw oscillator
+    template <typename FloatType>
     struct Saw
     {
         void resetPhase()                                            { phase.resetPhase();  }
         void setFrequency(FloatType frequency, FloatType sampleRate) { phase.setFrequency(frequency,sampleRate); }
         FloatType getNextSample() {
             auto phaseInternal = phase.incrementPhase(1);
-            return 2 * phaseInternal - 1 - blep (phaseInternal, phase.increment);
+            return 2 * phaseInternal - 1 - blep<FloatType> (phaseInternal, phase.increment);
         }
-        Phase phase;
+        Phase<FloatType> phase;
     };
 
     /// Square oscillator
+    template <typename FloatType>
     struct Square
     {
         void resetPhase()                                            { phase.resetPhase();  }
@@ -122,14 +115,15 @@ public:
             auto one =  static_cast<FloatType>(1);
             /// These static casts are ugly
             return ((phaseInternal < half) ?  -one :  one)
-                - blep (phaseInternal, phase.increment)
-                + blep(std::fmod( phaseInternal + half,one), phase.increment);
+                - blep<FloatType>(phaseInternal, phase.increment)
+                + blep<FloatType>(std::fmod( phaseInternal + half,one), phase.increment);
         }
 
-        Phase phase;
+        Phase<FloatType> phase;
     };
 
     /// Triangle Oscillator
+    template <typename FloatType>
     struct Triangle
     {
         void resetPhase()                                            { square.resetPhase(); sum = 1;  }
@@ -142,13 +136,13 @@ public:
         }
 
     private:
-        Square square;
+        Square<FloatType> square;
         FloatType sum = 1;
     };
 
 
-private:
     /// This is the core blep function
+    template <typename FloatType>
     static FloatType blep (FloatType phase, FloatType increment)
     {
         if (phase < increment)
@@ -168,7 +162,8 @@ private:
     }
 
     /// Placeholder until I work out how to better implement this
-    template <typename OscillatorType>
+
+    template <typename OscillatorType, typename FloatType>
     void renderToCaspiBuffer(caspi_CircularBuffer<FloatType> audioBuffer,FloatType frequency, FloatType sampleRate, const int numberOfSamples = 1) {
         OscillatorType osc;
         osc.setFrequency(frequency, sampleRate);

@@ -3,8 +3,9 @@
 #define UTILITIES_TEST_H
 
 #include <gtest/gtest.h>
-#include <Utilities/caspi_utilities.h>
-
+#include <Utilities/caspi_Constants.h>
+#include <Utilities/caspi_assert.h>
+#include <Utilities/caspi_CircularBuffer.h>
 // Stub test to make sure the project compiles
 TEST(UtilitiesTests, test) {
     EXPECT_TRUE(true);
@@ -17,7 +18,7 @@ TEST(UtilitiesTests, assert_test) {
 
 TEST(UtilitiesTests, ConstantsTest) {
     double expected = 3.14159265358979323846;
-    auto test = CASPI::PI<double>;
+    auto test = CASPI::Constants::PI<double>;
     EXPECT_EQ(test,expected);
 }
 

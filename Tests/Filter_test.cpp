@@ -21,7 +21,7 @@ TEST(SvfFilterTests, Filter_test)
     filter.reset();
     filter.setSampleRate (44100.0f);
     filter.updateCoefficients(1000.0f,0.707f);
-    caspi_BlepOscillator<float>::Saw osc;
+    CASPI::BlepOscillator::Saw<float> osc;
     osc.setFrequency(1000.0f, 44100.0f);
     int numberOfSamples = 44100; // 1 second of samples
     for (int i = 0; i < numberOfSamples; i++) {

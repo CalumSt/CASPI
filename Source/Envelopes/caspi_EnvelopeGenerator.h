@@ -27,8 +27,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include <iostream>
 #include <Utilities/caspi_Constants.h>
 
-template <typename FloatType>
-class caspi_EnvelopeGenerator {
+/// TODO: Remove class and make namespace!
+namespace CASPI::Envelope {
+    template <typename FloatType>
+    class caspi_EnvelopeGenerator {
 
     private:
         /// ADSR parameter interface
@@ -91,7 +93,7 @@ class caspi_EnvelopeGenerator {
         };
 
     public:
-    	// Struct to hold state and related functionality
+        // Struct to hold state and related functionality
         enum class State { idle, attack, decay, slope, sustain, release, noteOn, noteOff };
 
         /**
@@ -107,77 +109,77 @@ class caspi_EnvelopeGenerator {
         }
 
         struct EnvelopeBase {
-                virtual ~EnvelopeBase() = default;
+            virtual ~EnvelopeBase() = default;
 
-                State state;
-                Parameters parameters;
-                /// These are used to calculate the envelope
-                FloatType level       = parameters.zero;
-                FloatType target      = parameters.zero;
-                FloatType coefficient = parameters.zero;
-                FloatType offset      = parameters.zero;
+            State state;
+            Parameters parameters;
+            /// These are used to calculate the envelope
+            FloatType level       = parameters.zero;
+            FloatType target      = parameters.zero;
+            FloatType coefficient = parameters.zero;
+            FloatType offset      = parameters.zero;
 
-                FloatType render() {
-                    level = coefficient * level + offset;
-                    nextState();
-                    return level;
+            FloatType render() {
+                level = coefficient * level + offset;
+                nextState();
+                return level;
+            }
+            /**
+            * @brief Instructs the ADSR envelope that a note has been played.
+            */
+            void noteOn() {
+                state = State::noteOn;
+                nextState();
+            }
+
+            /**
+            * @brief Instructs the ADSR envelope that a note has been released.
+            */
+            void noteOff() {
+                state = State::noteOff;
+                nextState();
+            }
+
+            /**
+             * @brief reset the ADSR envelope to idle.
+             */
+            void reset() {
+                level       = parameters.zero;
+                coefficient = parameters.zero;
+                target      = parameters.zero;
+                state       = State::idle;
+            }
+
+            // TODO: convert these to individual functions that return a boolean
+            std::string getState() {
+                switch (state) {
+                    case State::idle: return std::string { "idle" };
+                    case State::attack: return std::string { "attack" };
+                    case State::decay: return std::string { "decay" };
+                    case State::slope: return std::string { "slope" };
+                    case State::sustain: return std::string { "sustain" };
+                    case State::release: return std::string { "release" };
+                    case State::noteOn: return std::string { "noteOn" };
+                    case State::noteOff: return std::string { "noteOff" };
+                    default: return std::string { "idle" };
                 }
-                /**
-                * @brief Instructs the ADSR envelope that a note has been played.
-                */
-                void noteOn() {
-                    state = State::noteOn;
-                    nextState();
-                }
+            }
 
-                /**
-                * @brief Instructs the ADSR envelope that a note has been released.
-                */
-                void noteOff() {
-                    state = State::noteOff;
-                    nextState();
-                }
+            // setters
+            void setAttackTime(FloatType _attackTime_s)   { parameters.setAttackTime(_attackTime_s); }
+            void setDecayTime(FloatType _decayTime_s)     { parameters.setDecayTime(_decayTime_s); }
+            void setSustainLevel(FloatType _sustainLevel) { parameters.setSustainLevel(_sustainLevel); }
+            void setReleaseTime(FloatType _releaseTime_s) { parameters.setReleaseTime(_releaseTime_s); }
+            void setSampleRate(FloatType _sampleRate)     { CASPI_ASSERT(_sampleRate > parameters.zero,"Sample rate must be positive, non-zero."); parameters.sampleRate = _sampleRate; }
 
-                /**
-                 * @brief reset the ADSR envelope to idle.
-                 */
-                void reset() {
-                    level       = parameters.zero;
-                    coefficient = parameters.zero;
-                    target      = parameters.zero;
-                    state       = State::idle;
-                }
+            // getters - mostly for debugging
+            FloatType getAttack()       { return parameters.getAttack(); }
+            FloatType getDecay()        { return parameters.getDecay(); }
+            FloatType getSustainLevel() { return parameters.getSustainLevel(); }
+            FloatType getRelease()      { return parameters.getRelease(); }
 
-
-                std::string getState() {
-                    switch (state) {
-                        case State::idle: return std::string { "idle" };
-                        case State::attack: return std::string { "attack" };
-                        case State::decay: return std::string { "decay" };
-                        case State::slope: return std::string { "slope" };
-                        case State::sustain: return std::string { "sustain" };
-                        case State::release: return std::string { "release" };
-                        case State::noteOn: return std::string { "noteOn" };
-                        case State::noteOff: return std::string { "noteOff" };
-                        default: return std::string { "idle" };
-                    }
-                }
-
-                // setters
-                void setAttackTime(FloatType _attackTime_s)   { parameters.setAttackTime(_attackTime_s); }
-                void setDecayTime(FloatType _decayTime_s)     { parameters.setDecayTime(_decayTime_s); }
-                void setSustainLevel(FloatType _sustainLevel) { parameters.setSustainLevel(_sustainLevel); }
-                void setReleaseTime(FloatType _releaseTime_s) { parameters.setReleaseTime(_releaseTime_s); }
-                void setSampleRate(FloatType _sampleRate)     { CASPI_ASSERT(_sampleRate > parameters.zero,"Sample rate must be positive, non-zero."); parameters.sampleRate = _sampleRate; }
-
-                // getters - mostly for debugging
-                FloatType getAttack()       { return parameters.getAttack(); }
-                FloatType getDecay()        { return parameters.getDecay(); }
-                FloatType getSustainLevel() { return parameters.getSustainLevel(); }
-                FloatType getRelease()      { return parameters.getRelease(); }
-
-                virtual void nextState() { };
-            };
+            virtual void nextState() { };
+        };
 
         /// ADSR Envelope - most common envelope to use
         struct ADSR final : EnvelopeBase {
@@ -229,7 +231,8 @@ class caspi_EnvelopeGenerator {
             }
         };
 
-};
+    };
+}
 
 
 #endif //caspi_EnvelopeGenerator_H

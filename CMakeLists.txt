@@ -12,11 +12,7 @@ project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(${PROJECT_NAME} INTERFACE caspi.h
-        Source/Oscillators/caspi_oscillators.h
-        Source/Utilities/caspi_utilities.h
-        Source/Filters/caspi_filters.h
-        Source/Envelopes/caspi_envelopes.h)
+add_library(${PROJECT_NAME} INTERFACE caspi.h)
 
 
 add_subdirectory(Source)

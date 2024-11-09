@@ -18,16 +18,16 @@ TEST(OscillatorTests, test) {
 }
 
 TEST(OscillatorTests, SineSetFrequency_test) {
-    caspi_BlepOscillator<float>::Sine osc;
+    CASPI::BlepOscillator::Sine<float> osc;
     osc.setFrequency(frequency,sampleRate);
     EXPECT_GT(osc.phase.increment, -1.0f);
     EXPECT_NE(osc.phase.increment, 0.0f);
     EXPECT_LT(osc.phase.increment, 1.0f);
-    EXPECT_NEAR(osc.phase.increment, CASPI::TWO_PI<float> * phaseIncrement,0.001f);
+    EXPECT_NEAR(osc.phase.increment, CASPI::Constants::TWO_PI<float> * phaseIncrement,0.001f);
 }
 
 TEST(OscillatorTests, SawSetFrequency_test) {
-    caspi_BlepOscillator<float>::Saw osc;
+    CASPI::BlepOscillator::Saw<float> osc;
     osc.setFrequency(frequency,sampleRate);
     EXPECT_GT(osc.phase.increment, -1.0f);
     EXPECT_NE(osc.phase.increment, 0.0f);
@@ -36,7 +36,7 @@ TEST(OscillatorTests, SawSetFrequency_test) {
 }
 
 TEST(OscillatorTests, SquareSetFrequency_test) {
-    caspi_BlepOscillator<float>::Square osc;
+    CASPI::BlepOscillator::Square<float> osc;
     osc.setFrequency(frequency,sampleRate);
     EXPECT_GT(osc.phase.increment, -1.0f);
     EXPECT_NE(osc.phase.increment, 0.0f);
@@ -51,7 +51,7 @@ TEST(OscillatorTests, SquareSetFrequency_test) {
 
 // test individual sample
 TEST(OscillatorTests, SineGetNextSample_test) {
-    caspi_BlepOscillator<float>::Sine osc;
+    CASPI::BlepOscillator::Triangle<float> osc;
     osc.setFrequency(frequency,sampleRate);
     const auto s = osc.getNextSample();
     EXPECT_GT(s, -1.0f);
@@ -62,9 +62,9 @@ TEST(OscillatorTests, SineGetNextSample_test) {
 // test whole waveform
 /// TODO: replace with better testing strategy: Have pre-generated expected waveforms and try to get them to match
 TEST(OscillatorTests, SineRenderWaveform_test) {
-    const auto internal_pi = CASPI::TWO_PI<float>;
+    const auto internal_pi = CASPI::Constants::TWO_PI<float>;
     constexpr auto testInternalPhaseIncrement = internal_pi * phaseIncrement;
-    caspi_BlepOscillator<float>::Sine osc;
+    CASPI::BlepOscillator::Sine<float> osc;
     osc.setFrequency(frequency,sampleRate);
     EXPECT_NEAR(testInternalPhaseIncrement,osc.phase.increment,0.001f);
 
@@ -76,8 +76,8 @@ TEST(OscillatorTests, SineRenderWaveform_test) {
 }
 
 TEST(OscillatorTests, SawRenderWaveform_test) {
-    const auto internal_pi = CASPI::TWO_PI<float>;
-    caspi_BlepOscillator<float>::Saw osc;
+    const auto internal_pi = CASPI::Constants::TWO_PI<float>;
+    CASPI::BlepOscillator::Saw<float> osc;
     osc.setFrequency(frequency,sampleRate);
     auto currentPhase = 0.0f;
     while (currentPhase >= internal_pi) { currentPhase -= internal_pi; }
@@ -90,8 +90,8 @@ TEST(OscillatorTests, SawRenderWaveform_test) {
 }
 
 TEST(OscillatorTests, SquareRenderWaveform_test) {
-    const auto internal_pi = CASPI::TWO_PI<float>;
-    caspi_BlepOscillator<float>::Square osc;
+    const auto internal_pi = CASPI::Constants::TWO_PI<float>;
+    CASPI::BlepOscillator::Square<float> osc;
     osc.setFrequency(frequency,sampleRate);
     auto currentPhase = 0.0f;
     while (currentPhase >= internal_pi) { currentPhase -= internal_pi; }
@@ -104,8 +104,8 @@ TEST(OscillatorTests, SquareRenderWaveform_test) {
 }
 
 TEST(OscillatorTests, TriangleRenderWaveform_test) {
-    const auto internal_pi = CASPI::TWO_PI<float>;
-    caspi_BlepOscillator<float>::Triangle osc;
+    const auto internal_pi = CASPI::Constants::TWO_PI<float>;
+    CASPI::BlepOscillator::Triangle<float> osc;
     osc.setFrequency(frequency,sampleRate);
     auto currentPhase = 0.0f;
     while (currentPhase >= internal_pi) { currentPhase -= internal_pi; }
