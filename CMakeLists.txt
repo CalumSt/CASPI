@@ -14,8 +14,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(${PROJECT_NAME} INTERFACE caspi.h)
 
-
 add_subdirectory(Source)
+
+file(GLOB_RECURSE SourceFiles CONFIGURE_DEPENDS
+        "caspi.h" "${CMAKE_CURRENT_SOURCE_DIR}/Source/*/*.h")
+target_sources("${PROJECT_NAME}" PRIVATE ${SourceFiles})
 
 target_include_directories(${PROJECT_NAME} INTERFACE Source/.)
 

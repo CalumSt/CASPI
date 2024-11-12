@@ -2,7 +2,8 @@
 #define OSCILLATOR_TEST_H
 
 #include <gtest/gtest.h>
-#include "Oscillators/caspi_oscillators.h"
+#include "Oscillators/caspi_BlepOscillator.h"
+#include "Oscillators/caspi_PMOperator.h"
 
 // Test params
 constexpr auto frequency = 1000.0f;
@@ -46,7 +47,6 @@ TEST(OscillatorTests, SquareSetFrequency_test) {
 
 // Don't need to test triangle as it is based on square
 
-//================================================================
 // Render tests
 
 // test individual sample
@@ -113,10 +113,23 @@ TEST(OscillatorTests, TriangleRenderWaveform_test) {
         auto s = osc.getNextSample();
         EXPECT_GE(s, -1.0f);
         EXPECT_LE(s, 1.0f);
-        EXPECT_NE(s,0.0f); /// included to force failure
         currentPhase += phaseIncrement;
     }
 }
+
+//======================================================================================
+// PM tests
+
+TEST(OscillatorTests, PMOperator_test) {
+    CASPI::PMOperator::Operator<float> osc;
+    osc.setFrequency(frequency,0.5f,sampleRate);
+    for (int i = 0;i < samplesToRender; i++) {
+        auto s = osc.getNextSample();
+        EXPECT_GE(s, -1.0f);
+        EXPECT_LE(s, 1.0f);
+    }
+}
+
 
 
 

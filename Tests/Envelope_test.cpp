@@ -3,7 +3,7 @@
 #include <string>
 #include "Envelopes/caspi_EnvelopeGenerator.h"
 
-CASPI::Envelope::caspi_EnvelopeGenerator<float>::ADSR ADSR; // This needs to be tidied up
+CASPI::Envelope::ADSR<float> ADSR; // This needs to be tidied up
 const int numberOfSettings = 6;
 const std::vector<float> testTimeList = { 0.05f,0.1f,0.5f,0.75f,1.0f,2.0f };
 const std::vector<float> testSustainList = { 0.00001f,0.01f,0.05f,0.1f,0.5f,1.0f };

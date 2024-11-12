@@ -12,9 +12,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
                              888
 
 
-* @file caspi_EnvelopeGenerator.h
+* @file caspi_Envelope.h
 * @author CS Islay
-* @class caspi_EnvelopeGenerator
 * @brief A class implementing a variety of envelopes using ADSR stages.
 *
 ************************************************************************/
@@ -29,11 +28,9 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 /// TODO: Remove class and make namespace!
 namespace CASPI::Envelope {
-    template <typename FloatType>
-    class caspi_EnvelopeGenerator {
 
-    private:
         /// ADSR parameter interface
+    template <typename FloatType>
         struct Parameters {
             /// member variables
             /// Implemented with Redmon's analog equations
@@ -92,14 +89,14 @@ namespace CASPI::Envelope {
 
         };
 
-    public:
+
         // Struct to hold state and related functionality
         enum class State { idle, attack, decay, slope, sustain, release, noteOn, noteOff };
 
         /**
         * @brief renders the next samples and applies to the samples within the buffer.
         */
-        template <typename EnvelopeType>
+        template <typename EnvelopeType, typename FloatType>
         void renderToBuffer(caspi_CircularBuffer<FloatType> buffer, const int bufferLength = 1) {
             EnvelopeType env;
             for (int sampleIndex = 0; sampleIndex << bufferLength; sampleIndex++) {
@@ -107,12 +104,12 @@ namespace CASPI::Envelope {
                 buffer.writeBuffer(sample * env.render());
             }
         }
-
+    template <typename FloatType>
         struct EnvelopeBase {
             virtual ~EnvelopeBase() = default;
 
             State state;
-            Parameters parameters;
+            Parameters<FloatType> parameters;
             /// These are used to calculate the envelope
             FloatType level       = parameters.zero;
             FloatType target      = parameters.zero;
@@ -182,18 +179,20 @@ namespace CASPI::Envelope {
         };
 
         /// ADSR Envelope - most common envelope to use
-        struct ADSR final : EnvelopeBase {
-            using EnvelopeBase::level;
-            using EnvelopeBase::coefficient;
-            using EnvelopeBase::offset;
-            using EnvelopeBase::target;
-            using EnvelopeBase::parameters;
-            using EnvelopeBase::state;
-            using EnvelopeBase::render;
-            using EnvelopeBase::noteOn;
-            using EnvelopeBase::noteOff;
-            using EnvelopeBase::reset;
-            using EnvelopeBase::getState;
+        template <typename FloatType>
+        struct ADSR final : EnvelopeBase<FloatType> {
+        /// TODO: make this better
+            using EnvelopeBase<FloatType>::level;
+            using EnvelopeBase<FloatType>::coefficient;
+            using EnvelopeBase<FloatType>::offset;
+            using EnvelopeBase<FloatType>::target;
+            using EnvelopeBase<FloatType>::parameters;
+            using EnvelopeBase<FloatType>::state;
+            using EnvelopeBase<FloatType>::render;
+            using EnvelopeBase<FloatType>::noteOn;
+            using EnvelopeBase<FloatType>::noteOff;
+            using EnvelopeBase<FloatType>::reset;
+            using EnvelopeBase<FloatType>::getState;
 
         private:
             /// This function handles state switching using the target parameter relative to levels.
@@ -232,7 +231,5 @@ namespace CASPI::Envelope {
         };
 
     };
-}
 
-
-#endif //caspi_EnvelopeGenerator_H
+#endif
