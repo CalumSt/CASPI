@@ -23,7 +23,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #pragma once
 #include <cmath>
-#include <Oscillators/BLEP/caspi_BlepOscillator.h>
 #include "Utilities/caspi_assert.h"
 #include "Utilities/caspi_Constants.h"
 

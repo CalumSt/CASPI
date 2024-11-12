@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 
 set(caspi_headers
-        Oscillators/caspi_oscillators.h
-        Utilities/caspi_utilities.h
-        Filters/caspi_filters.h
-        Envelopes/caspi_envelopes.h)
+        Oscillators/caspi_BlepOscillator.h
+        Oscillators/caspi_PMOperator.h
+        Utilities/caspi_Assert.h
+        Utilities/caspi_CircularBuffer.h
+        Utilities/caspi_Maths.h
+        Utilities/caspi_Constants.h
+        Filters/caspi_SvfFilter.h
+        Envelopes/caspi_EnvelopeGenerator.h)
 
 include_directories(${PROJECT_NAME} PUBLIC ${caspi_headers})
