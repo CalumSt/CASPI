@@ -23,7 +23,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #pragma once
 #include <cmath>
-#include "Utilities/caspi_Assert.h"
+#include "Utilities/caspi_assert.h"
 #include "Utilities/caspi_Constants.h"
 
 template <typename FloatType>
