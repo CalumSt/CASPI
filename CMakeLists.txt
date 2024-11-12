@@ -25,7 +25,9 @@ target_include_directories(${PROJECT_NAME} INTERFACE Source/.)
 target_link_libraries(${PROJECT_NAME} INTERFACE CASPI)
 
 ## Testing
-add_subdirectory(Tests)
-add_subdirectory(Libs/googletest)
-enable_testing()
+if (BUILD_TESTING)
+    add_subdirectory(Tests)
+    add_subdirectory(Libs/googletest)
+    enable_testing()
+endif()
 
