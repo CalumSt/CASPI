@@ -22,6 +22,8 @@ target_sources("${PROJECT_NAME}" PRIVATE ${SourceFiles})
 
 target_include_directories(${PROJECT_NAME} INTERFACE Source/.)
 
+target_link_libraries(${PROJECT_NAME} INTERFACE CASPI)
+
 ## Testing
 add_subdirectory(Tests)
 add_subdirectory(Libs/googletest)

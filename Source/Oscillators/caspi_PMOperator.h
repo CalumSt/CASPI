@@ -26,7 +26,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include "Utilities/caspi_Constants.h"
 
 
-namespace CASPI::PMOperator {
+namespace CASPI {
     template <typename FloatType>
     struct Phase {
         /*
@@ -63,7 +63,7 @@ namespace CASPI::PMOperator {
     };
 
     template <typename FloatType>
-    struct Operator {
+    struct PMOperator {
         Phase<FloatType> carrierPhase;
         Phase<FloatType> modulatorPhase;
         const FloatType zero = static_cast<FloatType>(0.0f);
