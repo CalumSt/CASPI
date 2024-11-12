@@ -121,7 +121,7 @@ TEST(OscillatorTests, TriangleRenderWaveform_test) {
 // PM tests
 
 TEST(OscillatorTests, PMOperator_test) {
-    CASPI::Operator<float> osc;
+    CASPI::PMOperator<float> osc;
     osc.setFrequency(frequency,0.5f,sampleRate);
     for (int i = 0;i < samplesToRender; i++) {
         auto s = osc.getNextSample();
