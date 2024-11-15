@@ -7,6 +7,7 @@ set(caspi_headers
         Utilities/caspi_CircularBuffer.h
         Utilities/caspi_Maths.h
         Utilities/caspi_Constants.h
+        Utilities/caspi_ScopedLock.h
         Filters/caspi_SvfFilter.h
         Envelopes/caspi_EnvelopeGenerator.h)
 
