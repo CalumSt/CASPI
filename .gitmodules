@@ -1,4 +1,4 @@
-[submodule "Libs/googletest"]
-	path = Libs/googletest
+[submodule "Tests/Libs/googletest"]
+	path = Tests/Libs/googletest
 	url = https://github.com/google/googletest.git
 	branch = develop

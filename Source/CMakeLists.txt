@@ -12,3 +12,6 @@ set(caspi_headers
         Envelopes/caspi_EnvelopeGenerator.h)
 
 include_directories(${PROJECT_NAME} PUBLIC ${caspi_headers})
+
+add_library(CASPI INTERFACE)
+target_include_directories(CASPI INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
