@@ -51,11 +51,11 @@ TEST(OscillatorTests, SquareSetFrequency_test) {
 
 // test individual sample
 TEST(OscillatorTests, SineGetNextSample_test) {
-    CASPI::BlepOscillator::Triangle<float> osc;
+    CASPI::BlepOscillator::Sine<float> osc;
     osc.setFrequency(frequency,sampleRate);
     const auto s = osc.getNextSample();
-    EXPECT_GT(s, -1.0f);
-    EXPECT_LT(s, 1.0f);
+    EXPECT_GE(s, -1.0f);
+    EXPECT_LE(s, 1.0f);
     EXPECT_NEAR(s, 0.0f,0.01f);
 }
 
