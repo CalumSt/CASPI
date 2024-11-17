@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-set(caspi_headers
+include_directories(${PROJECT_NAME} PUBLIC
         Oscillators/caspi_BlepOscillator.h
         Oscillators/caspi_PMOperator.h
         Utilities/caspi_Assert.h
@@ -12,7 +12,4 @@ set(caspi_headers
         Filters/caspi_SvfFilter.h
         Envelopes/caspi_EnvelopeGenerator.h)
 
-include_directories(${PROJECT_NAME} PUBLIC ${caspi_headers})
-
-add_library(CASPI INTERFACE)
 target_include_directories(CASPI INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
