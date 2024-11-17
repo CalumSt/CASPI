@@ -5,6 +5,8 @@ project(TESTING)
 # allow testing from this directory
 enable_testing()
 
+message(STATUS "Configuring CASPI Tests")
+
 # set up sources
 include(GoogleTest)
 add_subdirectory(Libs/googletest/)

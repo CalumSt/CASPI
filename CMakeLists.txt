@@ -10,10 +10,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(Source)
 
-file(GLOB_RECURSE SourceFiles CONFIGURE_DEPENDS
-        "caspi.h" "${CMAKE_CURRENT_SOURCE_DIR}/Source/*/*.h")
-target_sources("${PROJECT_NAME}" PRIVATE ${SourceFiles})
-
 set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER caspi.h)
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
@@ -48,7 +44,7 @@ if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
     add_subdirectory(Tests)
 endif()
 
-add_library(${PROJECT_NAME} caspi.h)
+add_library(${PROJECT_NAME} INTERFACE)
 
 install(TARGETS ${PROJECT_NAME}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
