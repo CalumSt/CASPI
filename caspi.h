@@ -8,5 +8,6 @@
 #include "Source/Filters/caspi_SvfFilter.h"
 #include "Source/Oscillators/caspi_BlepOscillator.h"
 #include "Source/Oscillators/caspi_PMOperator.h"
+#include "Soruce/Utilities/caspi_Gain.h"
 
 

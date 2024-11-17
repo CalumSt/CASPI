@@ -6,8 +6,3 @@
 [submodule "Tests/Libs/matplotlib-cpp"]
 	path = Tests/Libs/matplotlib-cpp
 	url = https://github.com/lava/matplotlib-cpp.git
-
-[submodule "Matplot++"]
-	path = Tests/Libs/Matplot
-	url = https://github.com/alandefreitas/matplotplusplus/
-	branch = develop
