@@ -4,6 +4,7 @@ set(caspi_headers
         Oscillators/caspi_BlepOscillator.h
         Oscillators/caspi_PMOperator.h
         Utilities/caspi_Assert.h
+        Utilities/caspi_Gain.h
         Utilities/caspi_CircularBuffer.h
         Utilities/caspi_Maths.h
         Utilities/caspi_Constants.h
