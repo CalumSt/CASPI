@@ -42,7 +42,7 @@ MaxEmptyLinesToKeep: 1
 NamespaceIndentation: Inner
 PointerAlignment: Left
 ReflowComments: false
-SortIncludes: false
+SortIncludes: "CaseInsensitive"
 SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: true
 SpaceBeforeAssignmentOperators: true
@@ -72,4 +72,3 @@ PointerAlignment: Left
 SpacesBeforeTrailingComments: 1
 TabWidth: 4
 UseTab: Never
-...

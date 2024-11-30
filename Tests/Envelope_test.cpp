@@ -1,10 +1,13 @@
 #pragma once
+#include "test_helpers.h"
+
+#include "Envelopes/caspi_EnvelopeGenerator.h"
 #include <gtest/gtest.h>
 #include <string>
-#include "Envelopes/caspi_EnvelopeGenerator.h"
 
 CASPI::Envelope::ADSR<float> ADSR; // This needs to be tidied up
 const int numberOfSettings = 6;
+const float sampleRate = 44100.0f;
 const std::vector<float> testTimeList = { 0.05f,0.1f,0.5f,0.75f,1.0f,2.0f };
 const std::vector<float> testSustainList = { 0.00001f,0.01f,0.05f,0.1f,0.5f,1.0f };
 
@@ -175,10 +178,51 @@ TEST(AdsrTests, Release_test) {
         EXPECT_EQ(ADSR.getState(),"idle");
         EXPECT_EQ(ADSR.render(),0.0f);
     }
-
-// A legato test will eventually go here.
-
-// =================================================================================================
 };
 
+/// This test generates the envelope figure to make sure everything is working.
+TEST(AdsrTests, render_test)
+{
+
+    for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
+        int numberOfSamples = 0;
+        auto totalTime = 4.0f * testTimeList[testIndex];
+        auto totalNumberOfSamples = static_cast<int>(totalTime * sampleRate);
+        auto output = std::vector<float>(totalNumberOfSamples, 0.0f);
+        auto numberOfSamplesPerState = static_cast<int>(sampleRate * testTimeList[testIndex]);
+
+        ADSR.reset();
+        ADSR.setAttackTime(testTimeList[testIndex]);
+        ADSR.setSustainLevel(testSustainList[testIndex]);
+        ADSR.setDecayTime(testTimeList[testIndex]);
+        ADSR.setReleaseTime(testTimeList[testIndex]);
+        // Attack
+        ADSR.noteOn();
+        for (int sampleIndex = 0; sampleIndex < numberOfSamplesPerState; sampleIndex++) {
+            output.at(numberOfSamples) = ADSR.render();
+            numberOfSamples++;
+        }
+        // Decay
+        for (int sampleIndex = 0; sampleIndex < numberOfSamplesPerState; sampleIndex++) {
+            output.at(numberOfSamples) = ADSR.render();
+            numberOfSamples++;
+        }
+        // Sustain
+        for (int sampleIndex = 0; sampleIndex < numberOfSamplesPerState; sampleIndex++) {
+            output.at(numberOfSamples) = ADSR.render();
+            numberOfSamples++;
+        }
+        ADSR.noteOff();
+        // Release
+        for (int sampleIndex = 0; sampleIndex < numberOfSamplesPerState; sampleIndex++) {
+            output.at(numberOfSamples) = ADSR.render();
+            numberOfSamples++;
+        }
+        auto times = range (0.0f, totalTime, 1.0f / sampleRate);
+        const std::string filename = "Envelope" + std::to_string(testIndex);
+        //createPlot<float> (times, output, "Single Envelope", filename);
+        EXPECT_EQ(ADSR.getState(),"idle");
+        EXPECT_EQ(ADSR.render(),0.0f);
+    }
+}
 
