@@ -10,6 +10,7 @@ message(STATUS "Configuring CASPI Tests")
 # set up sources
 include(GoogleTest)
 add_subdirectory(Libs/googletest/)
+add_subdirectory(Libs/Matplot/)
 
 set(This Tests)
 # --------------------------------------------------------------------------
@@ -19,6 +20,8 @@ set(SOURCES
         Utilities_test.cpp
         Filter_test.cpp
         Envelope_test.cpp
+        Synthesizer_test.cpp
+        FFT_test.cpp
 )
 # --------------------------------------------------------------------------
 
@@ -34,8 +37,6 @@ target_include_directories(${PROJECT_NAME}
     )    
 # --------------------------------------------------------------------------
     
-target_link_libraries(${PROJECT_NAME} PRIVATE gtest_main )
-
-
+target_link_libraries(${PROJECT_NAME} PRIVATE gtest_main matplot)
 
 gtest_discover_tests(${PROJECT_NAME})

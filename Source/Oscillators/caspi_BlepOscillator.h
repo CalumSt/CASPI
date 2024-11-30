@@ -167,13 +167,26 @@ namespace CASPI::BlepOscillator {
     void renderToCaspiBuffer(caspi_CircularBuffer<FloatType> audioBuffer,FloatType frequency, FloatType sampleRate, const int numberOfSamples = 1) {
         OscillatorType osc;
         osc.setFrequency(frequency, sampleRate);
-        for (int sampleIndex = 0; sampleIndex << numberOfSamples; sampleIndex++) {
+        for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
             // get sample from (mono) oscillator
             // todo: panning?
             auto sample = osc.getNextSample();
             audioBuffer.writeBuffer(sample);
         }
     }
+
+    template <typename OscillatorType, typename FloatType>
+    std::vector<FloatType> renderBlock(FloatType frequency, FloatType sampleRate, const int numberOfSamples = 1) {
+            OscillatorType osc;
+            auto output = std::vector<FloatType>(numberOfSamples);
+            osc.setFrequency(frequency, sampleRate);
+            for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
+                // get sample from (mono) oscillator
+                auto sample = osc.getNextSample();
+                output.at(sampleIndex) = sample;
+            }
+            return output;
+        }
 
 
 };

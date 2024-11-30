@@ -25,7 +25,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include <cmath>
 #include <algorithm>
 template <typename FloatType,typename... Processors>
-class fm_SynthVoice
+class caspi_SynthVoice
 {
     public:
         // methods
@@ -96,6 +96,7 @@ class fm_SynthVoice
 
 private:
         FloatType gain = static_cast<FloatType>(0.0);
+        std::unique_ptr<> oscillator = std::make_unique<>();
         int note = 0;
         int velocity = 0;
         FloatType sampleRate = static_cast<FloatType>(44100.0);
