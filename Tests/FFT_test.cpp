@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include "Oscillators/caspi_BlepOscillator.h"
 #include "Utilities/caspi_FFT.h"
+#include "test_helpers.h"
 
 using namespace std;
 
@@ -33,7 +34,6 @@ auto constructTestData(int blockSize, double sampleRate)
 {
     auto data_20Hz  = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (20.0,sampleRate,blockSize);
     auto data_100Hz = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (100.0,sampleRate,blockSize);
-    //auto data_500Hz = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (500.0,sampleRate,blockSize);
     auto data = std::vector<double>(blockSize);
     for (int i = 0; i < blockSize; i++)
     {
@@ -48,10 +48,17 @@ const std::vector<double> sampleRateList = {48000.0,44100.0,22050.0};
 
 TEST(FFT,DFT_test)
 {
-    int numSamples = 64;
-    auto data_20Hz = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (20.0,64.0,numSamples);
-    auto outData = data_20Hz;
-    CASPI::dft (data_20Hz,outData);
+    int numSamples = 512;
+    double sampleRate = 512.0;
+    double testFrequency = 120.0;
+    auto timeData = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (testFrequency,sampleRate,numSamples);
+    auto outData = timeData;
+    CASPI::dft (timeData,outData);
+
+    auto frequencyBins = CASPI::generateFrequencyBins (numSamples,sampleRate);
+    // Get closest to test frequency
+    auto lowerBound = std::lower_bound (frequencyBins.begin(),frequencyBins.end(),testFrequency);
+    // Want the frequency bins around the test frequency to have highest magnitude
     EXPECT_EQ (outData.size(), numSamples);
 }
 

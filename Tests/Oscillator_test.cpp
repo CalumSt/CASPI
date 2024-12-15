@@ -6,6 +6,7 @@
 #include <utility>
 #include "Oscillators/caspi_BlepOscillator.h"
 #include "Oscillators/caspi_PMOperator.h"
+#include "Oscillators/caspi_PMOperator_new.h"
 #include "test_helpers.h"
 
 // Test params
@@ -20,15 +21,15 @@ constexpr auto phaseIncrement = frequency / sampleRate;
 
 // Helper
 template <typename OscType>
-void generateWaveformGraph(OscType& osc, float frequency, float sampleRate,float numberOfWavelengths,std::string filename)
+void generateWaveformGraph(OscType& osc, float inputFrequency, float inputSampleRate, const float numberOfWavelengths,std::string filename)
 {
-    const auto renderTimeForSingleWaveform = numberOfWavelengths * 1.0f / frequency;
-    const int numberOfSamples = static_cast<int>(renderTimeForSingleWaveform * sampleRate);
+    const auto renderTimeForSingleWaveform = numberOfWavelengths * 1.0f / inputFrequency;
+    const auto numberOfSamples = static_cast<int>(renderTimeForSingleWaveform * inputSampleRate);
     osc.resetPhase();
-    osc.setFrequency (frequency,sampleRate);
-    std::vector<float> times = std::vector<float>(numberOfSamples);
+    osc.setFrequency (inputFrequency,inputSampleRate);
+    auto times = std::vector<float>(numberOfSamples);
     std::iota(std::begin(times), std::end(times), 0.0f);
-    std::vector<float> samples = std::vector<float>(numberOfSamples);
+    auto samples = std::vector<float>(numberOfSamples);
     for (int i = 0;i < numberOfSamples; i++) {
         samples.at(i) = osc.getNextSample();
     }
@@ -37,15 +38,15 @@ void generateWaveformGraph(OscType& osc, float frequency, float sampleRate,float
 
 // Helper
 template <typename OscType>
-void generatePulseModulationWaveformGraph(OscType& osc, float frequency,float modIndex, float sampleRate,float numberOfWavelengths,std::string filename)
+void generatePulseModulationWaveformGraph(OscType& osc, float inputFrequency,float inputModIndex, float inputSampleRate, const float numberOfWavelengths,std::string filename)
 {
-    const auto renderTimeForSingleWaveform = numberOfWavelengths * 1.0f / frequency;
-    const int numberOfSamples = static_cast<int>(renderTimeForSingleWaveform * sampleRate);
+    const auto renderTimeForSingleWaveform = numberOfWavelengths * 1.0f / inputFrequency;
+    const auto numberOfSamples = static_cast<int>(renderTimeForSingleWaveform * inputSampleRate);
     osc.reset();
-    osc.setFrequency (frequency,modIndex,sampleRate);
-    std::vector<float> times = std::vector<float>(numberOfSamples);
+    osc.setFrequency (inputFrequency,inputModIndex,inputSampleRate);
+    auto times = std::vector<float>(numberOfSamples);
     std::iota(std::begin(times), std::end(times), 0.0f);
-    std::vector<float> samples = std::vector<float>(numberOfSamples);
+    auto samples = std::vector<float>(numberOfSamples);
     for (int i = 0;i < numberOfSamples; i++) {
         samples.at(i) = osc.getNextSample();
     }
@@ -112,7 +113,6 @@ TEST(OscillatorTests, SineRenderWaveform_test) {
         EXPECT_LE(s, 1.0f);
     }
 
-    generateWaveformGraph (osc, frequency, sampleRate,3.0f, "sine_waveform");
 }
 
 TEST(OscillatorTests, SawRenderWaveform_test) {
@@ -127,8 +127,6 @@ TEST(OscillatorTests, SawRenderWaveform_test) {
         EXPECT_LE(s, 1.0f);
         currentPhase += phaseIncrement;
     }
-
-    generateWaveformGraph (osc, frequency, sampleRate,3.0f, "saw_waveform");
 
 }
 
@@ -145,7 +143,6 @@ TEST(OscillatorTests, SquareRenderWaveform_test) {
         currentPhase += phaseIncrement;
     }
 
-    generateWaveformGraph (osc, frequency, sampleRate,3.0f, "square_waveform");
 }
 
 TEST(OscillatorTests, TriangleRenderWaveform_test) {
@@ -161,7 +158,6 @@ TEST(OscillatorTests, TriangleRenderWaveform_test) {
         currentPhase += phaseIncrement;
     }
 
-    generateWaveformGraph (osc, frequency, sampleRate,3.0f, "triangle_waveform");
 }
 
 
@@ -192,11 +188,7 @@ TEST(OscillatorTests, PMOperator_test) {
         EXPECT_GE(s, -1.0f);
         EXPECT_LE(s, 1.0f);
     }
-
-    generatePulseModulationWaveformGraph (osc, frequency,modIndex, sampleRate,3.0f, "pm_operator_waveform");
 }
-
-
 
 
 #endif //OSCILLATOR_TEST_H
