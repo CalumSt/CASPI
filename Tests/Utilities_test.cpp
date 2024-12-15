@@ -69,7 +69,7 @@ TEST(BufferTest, FractionalDelay_test) {
 
 TEST(GainTests, GainRampDown_test)
 {
-    Gain<float> Gain;
+    CASPI::Gain<float> Gain;
     Gain.reset();
     EXPECT_FALSE(Gain.isRampDown());
     EXPECT_FALSE(Gain.isRampUp());
@@ -95,7 +95,7 @@ TEST(GainTests, GainRampDown_test)
 
 TEST(GainTests, GainRampUp_test)
 {
-    Gain<float> Gain;
+    CASPI::Gain<float> Gain;
     Gain.reset();
     EXPECT_FALSE(Gain.isRampDown());
     EXPECT_FALSE(Gain.isRampUp());

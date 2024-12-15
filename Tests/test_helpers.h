@@ -5,10 +5,10 @@
 #ifndef TEST_HELPERS_H
 #define TEST_HELPERS_H
 
+#include <filesystem>
+#include <matplot/matplot.h>
 #include <string>
 #include <vector>
-#include <matplot/matplot.h>
-
 
 using namespace matplot;
 template <typename FloatType>
@@ -40,15 +40,29 @@ std::vector<FloatType> range(FloatType start, FloatType end, FloatType step)
 }
 
 template <typename FloatType>
-std::vector<FloatType> range(FloatType start, FloatType end, int numberOfSteps)
+std::vector<FloatType> range (FloatType start, FloatType end, int numberOfSteps)
 {
     std::vector<FloatType> result;
     auto timeStep = (end - start) / numberOfSteps;
-    for (int i = 0; i < numberOfSteps; i++) {
-        auto value = start + static_cast<FloatType>(timeStep * i);
-        result.push_back(value);
+    for (int i = 0; i < numberOfSteps; i++)
+    {
+        auto value = start + static_cast<FloatType> (timeStep * i);
+        result.push_back (value);
     }
     return result;
+}
+
+inline void saveToFile(const std::string& filename, std::vector<double> x, std::vector<double> y)
+{
+    const std::filesystem::path path(filename);
+    std::filesystem::create_directory(path.parent_path());
+
+    std::cout << path.stem().string() << " saved to: " << absolute(path).string() << "\n";
+    std::ofstream file(path.string());
+    for (int i = 0; i < x.size(); i++) {
+        file << x[i] << "," << y[i] << "\n";
+    }
+    file.close();
 }
 
 
