@@ -25,8 +25,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include <string>
 #include <iostream>
 #include <Utilities/caspi_Constants.h>
-
-/// TODO: Remove class and make namespace!
 namespace CASPI::Envelope {
 
         /// ADSR parameter interface
