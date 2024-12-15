@@ -44,7 +44,7 @@ namespace CASPI {
 
         void modulateIncrement(FloatType frequency, FloatType modulation) {
             auto modulatedFrequency = frequency + modulation;
-            increment = CASPI::Constants::TWO_PI<FloatType> / sampleRate * modulatedFrequency;
+            increment = modulatedFrequency / sampleRate;
         }
 
         FloatType incrementPhase(FloatType wrapLimit) {

@@ -20,7 +20,7 @@ set(SOURCES
         Utilities_test.cpp
         Filter_test.cpp
         Envelope_test.cpp
-        Synthesizer_test.cpp
+        PMOperator_test.cpp
         FFT_test.cpp
 )
 # --------------------------------------------------------------------------

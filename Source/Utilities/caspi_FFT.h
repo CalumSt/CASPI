@@ -28,12 +28,6 @@ inline void dft (const CArray& inData, CArray& outData)
             sum += inData[n] * exponentFactor;
         }
         outData[k] = sum;
-
-        for (size_t f = 0; f < N; ++f)
-        {
-            std::printf("%02zu: %.2f, %.2f\n", f, real(outData[f]), imag(outData[f]));
-        }
-
     }
 }
 
@@ -50,12 +44,7 @@ inline void dft (const std::vector<double>& inData, std::vector<double>& outData
             auto exponentFactor = sin(phaseFactor);
             sum += inData[n] * exponentFactor;
         }
-        outData[k] = sum;
-
-        for (size_t f = 0; f < N; ++f)
-        {
-            std::printf("%02zu: %.2f, %.2f\n", f, (outData[f] ));
-        }
+        outData[k] = sum / static_cast<double>(N / 2.0);
 
     }
 }
@@ -102,7 +91,7 @@ void timeToFreqFft (std::vector<double>& data)
     data;
 }
 
-inline std::vector<double> generateFrequencyBins(int fft_size,double sampleRate)
+inline std::vector<double> generateFrequencyBins (const int fft_size, const double sampleRate)
 {
     auto frequencyPerBin = sampleRate / (fft_size);
     auto frequencyBins = std::vector<double>(fft_size/2);
