@@ -29,14 +29,14 @@ class PMOperator_new
 {
 public:
     /*
-    * @brief getFrequency gets the carrier frequency
-    * @return The frequency of the operator
-    */
+     * @brief getFrequency gets the carrier frequency
+     * @return The frequency of the operator
+     */
     [[nodiscard]] double getFrequency() const { return frequency; }
 
     /*
-    * @brief setFrequency sets the carrier frequency and sample rate
-    */
+     * @brief setFrequency sets the carrier frequency and sample rate
+     */
     void setFrequency (const double _frequency, const double _sampleRate)
     {
         frequency = _frequency;
@@ -45,30 +45,40 @@ public:
     }
 
     /*
-  * @brief getSampleRate gets the sample rate
-  * @return The sample rate of the operator
-  */
+     * @brief getSampleRate gets the sample rate
+     * @return The sample rate of the operator
+     */
     [[nodiscard]] double getSampleRate() const { return sampleRate; }
 
     /*
-   * @brief setFrequency sets the carrier frequency
-   */
+     * @brief setFrequency sets the carrier frequency
+     */
     void setSampleRate (const double _sampleRate) { sampleRate = _sampleRate; }
 
     /*
-  * @brief getModulationIndex gets the current modulation index
-  * @return The modulation index of the modulator
-  */
+     * @brief getModulationIndex gets the current modulation index
+     * @return The modulation index of the modulator
+     */
     [[nodiscard]] double getModulationIndex() const { return modIndex; }
+
+    /*
+     * @brief getModulationDepth gets the current modulation depth
+     * @return The modulation depth of the modulator
+     */
+    [[nodiscard]] double getModulationDepth() const { return modDepth; }
 
     /*
     * @brief setFrequency sets the carrier frequency
     */
-    void setModulation (const double modulationIndex) { modIndex = modulationIndex; }
+    void setModulation (const double modulationIndex, const double modulationDepth)
+    {
+        modIndex = modulationIndex;
+        modDepth = modulationDepth;
+    }
 
     /*
-    * @brief render generates the next sample.
-    */
+     * @brief render generates the next sample.
+     */
     double render()
     {
         // calculate modulator signal
@@ -79,8 +89,14 @@ public:
         currentPhase += phaseIncrement;
         currentModPhase += modPhaseIncrement;
         // wrap phase
-        while (currentPhase >= CASPI::Constants::TWO_PI<double>) { currentPhase -= CASPI::Constants::TWO_PI<double>; }
-        while (currentModPhase >= CASPI::Constants::TWO_PI<double>) { currentModPhase -= CASPI::Constants::TWO_PI<double>; }
+        while (currentPhase >= CASPI::Constants::TWO_PI<double>)
+        {
+            currentPhase -= CASPI::Constants::TWO_PI<double>;
+        }
+        while (currentModPhase >= CASPI::Constants::TWO_PI<double>)
+        {
+            currentModPhase -= CASPI::Constants::TWO_PI<double>;
+        }
 
         return output;
     }
