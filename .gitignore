@@ -5,5 +5,3 @@ cmake-build-release
 .idea
 .vscode
 .venv
-docs/*
-*~

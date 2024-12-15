@@ -9,17 +9,18 @@ Initialises correctly with no unintialised members
 [DONE] Can set carrier frequency
 [DONE] Can set sample rate
 [DONE] Can set modulator frequency/index
+Can set modulation depth
 [DONE] Renders nothing if no modulator
 [DONE] Setting frequency sets increment
 [DONE] Setting frequency sets sample rate
 [DONE] Phase increments each render call
 [DONE] Phase wraps at 2 pi
 [DONE] Can get a sine wave with no modulator frequency
-[
-
+Can generate a modulated sine wave
 Can change sample rate during render
 Can use doubles or floats
 Can use saw waves
+Can g
 
  */
 
@@ -30,6 +31,7 @@ Can use saw waves
 #include "test_helpers.h"
 
 // For testing, set private to public
+// DO NOT DO THIS IN PRODUCTION CODE
 #define private public
 #include "Oscillators/caspi_PMOperator_new.h"
 
@@ -37,7 +39,8 @@ Can use saw waves
 constexpr auto frequency = 1000.0;
 constexpr auto sampleRate = 44100.0;
 constexpr auto renderTime = 1;
-constexpr auto modIndex   = 0.8;
+constexpr auto modIndex   = 0.5;
+constexpr auto modDepth   = 100.0;
 constexpr double newSampleRate = 48000.0;
 
 
@@ -67,8 +70,9 @@ TEST(FMTests, PMOperatorSetSampleRate_test)
 TEST(FMTests, setModulationIndex_test)
 {
     CASPI::PMOperator_new osc;
-    osc.setModulation(modIndex);
+    osc.setModulation(modIndex,modDepth);
     EXPECT_EQ (modIndex,osc.getModulationIndex());
+    EXPECT_EQ (modDepth,osc.getModulationDepth());
 }
 
 TEST(FMTests,renderNothingWithNoFrequency_test)
@@ -122,4 +126,19 @@ TEST(FMTests,renderSine_test)
         samples.at(i) = osc.render();
         times.at(i) = static_cast<double>(i) / sampleRate;
     }
+}
+
+TEST(FMTests,renderModSine_test)
+{
+    CASPI::PMOperator_new osc;
+    osc.setFrequency (10.0,sampleRate);
+    osc.setModulation (modIndex,modDepth);
+    auto times = std::vector<double>(static_cast<int> (sampleRate),0.0);
+    std::vector<double> samples(static_cast<int> (sampleRate),0.0);
+    for (int i = 0; i < static_cast<int> (sampleRate) ; i++)
+    {
+        samples.at(i) = osc.render();
+        times.at(i) = static_cast<double>(i) / sampleRate;
+    }
+    saveToFile ("./GeneratedSignals/FM_modSine.csv",times,samples);
 }

@@ -1,4 +1,4 @@
-# gen_plots.sh
+# resetglorp.sh
 #!/bin/bash
 
 source .venv/Scripts/activate
