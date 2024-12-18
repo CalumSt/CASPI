@@ -10,6 +10,7 @@ include(GNUInstallDirs)
 
 # Optional: Specify the headers that are part of the library
 set(header_files
+        caspi.h
         Source/Oscillators/caspi_BlepOscillator.h
         Source/Oscillators/caspi_PMOperator.h
         Source/Filters/caspi_SvfFilter.h
@@ -30,8 +31,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source)
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
-
-include(${PROJECT_NAME} caspi.h)
 
 # Only do these if this is the main project, and not if it is included through add_subdirectory
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
