@@ -1,3 +1,5 @@
+#ifndef CASPI_PMOPERATOR_H
+#define CASPI_PMOPERATOR_H
 /************************************************************************
  .d8888b.                             d8b
 d88P  Y88b                            Y8P
@@ -14,86 +16,143 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_PMOperator.h
 * @author CS Islay
-* @class caspi_PMOperator
+* @class PMOperator
 * @brief A class implementing a basic phase modulation operator, i.e. with a modulator and a carrier.
 *
 ************************************************************************/
 
-#ifndef CASPI_PMOPERATOR_H
-#define CASPI_PMOPERATOR_H
-
-#include "Utilities/caspi_Assert.h"
 #include "Utilities/caspi_Constants.h"
 
+#include <Utilities/caspi_assert.h>
 
-namespace CASPI {
-    template <typename FloatType>
-    struct Phase {
-        /*
-         * This structure holds phase information. We use a separate one for the carrier and modulator.
-         * This is slightly different to the one in the CASPI::BlepOscillator, as we recalculate the increment
-         * each time.
-         */
-        void resetPhase() { phase = 0; }
+namespace CASPI
+{
+template <typename FloatType>
+class PMOperator
+{
+public:
+    /*
+     * @brief getFrequency gets the carrier frequency
+     * @return The frequency of the operator
+     */
+    [[nodiscard]] FloatType getFrequency() const { return frequency; }
 
-        void setFrequency(FloatType _frequency, FloatType _sampleRate) {
-            CASPI_ASSERT((_sampleRate > 0 && _frequency >= 0), "Sample Rate and Frequency must be larger than 0.");
-            increment = _frequency / _sampleRate;
-            this->sampleRate = _sampleRate;
+    /*
+     * @brief setFrequency sets the carrier frequency and sample rate
+     */
+    void setFrequency (const FloatType _frequency, const FloatType _sampleRate)
+    {
+        CASPI_ASSERT(_frequency > 0 && _sampleRate > 0, "Frequency and Sample Rate must be larger than 0.");
+        frequency      = _frequency;
+        sampleRate     = _sampleRate;
+        phaseIncrement = CASPI::Constants::TWO_PI<FloatType> * frequency / sampleRate;
+    }
+
+    /*
+     * @brief getSampleRate gets the sample rate
+     * @return The sample rate of the operator
+     */
+    [[nodiscard]] FloatType getSampleRate() const { return sampleRate; }
+
+    /*
+     * @brief setFrequency sets the carrier frequency
+     */
+    void setSampleRate (const FloatType _sampleRate) { sampleRate = _sampleRate; }
+
+    /*
+     * @brief getModulationIndex gets the current modulation index
+     * @return The modulation index of the modulator
+     */
+    [[nodiscard]] FloatType getModulationIndex() const { return modIndex; }
+
+    /*
+     * @brief getModulationDepth gets the current modulation depth
+     * @return The modulation depth of the modulator
+     */
+    [[nodiscard]] FloatType getModulationDepth() const { return modDepth; }
+
+    /*
+    * @brief setFrequency sets the carrier frequency
+    */
+    void setModulation (const FloatType modulationIndex, const FloatType modulationDepth)
+    {
+        modIndex          = modulationIndex;
+        modDepth          = modulationDepth;
+        modPhaseIncrement = CASPI::Constants::TWO_PI<FloatType> * modIndex * frequency / sampleRate;
+    }
+
+    /*
+     * @brief render generates the next sample.
+     */
+    FloatType render()
+    {
+        // calculate modulator signal
+        const auto modSignal = modDepth * std::sin (currentModPhase);
+        // calculate value
+        const auto output = std::sin (currentPhase + modSignal);
+        // increment phase
+        currentPhase    += phaseIncrement;
+        currentModPhase += modPhaseIncrement;
+        // wrap phase
+        while (currentPhase >= CASPI::Constants::TWO_PI<FloatType>)
+        {
+            currentPhase -= CASPI::Constants::TWO_PI<FloatType>;
+        }
+        while (currentModPhase >= CASPI::Constants::TWO_PI<FloatType>)
+        {
+            currentModPhase -= CASPI::Constants::TWO_PI<FloatType>;
         }
 
-        void modulateIncrement(FloatType frequency, FloatType modulation) {
-            auto modulatedFrequency = frequency + modulation;
-            increment = modulatedFrequency / sampleRate;
+        return output;
+    }
+
+    std::vector<FloatType> renderBlock (int blockSize)
+    {
+        auto output = std::vector<FloatType> (blockSize);
+        for (int i = 0; i < blockSize; i++)
+        {
+            output.at (i) = render();
         }
+        return output;
+    }
 
-        FloatType incrementPhase(FloatType wrapLimit) {
-            /// take previous phase value
-            auto phaseInternal = phase;
-            /// update phase counter
-            phase += increment;
-            /// wrap to the limit
-            while (phase >= wrapLimit) { phase -= wrapLimit; }
+    /*
+     * @brief resets the carrier and modulator phase.
+     */
+    void resetPhase()
+    {
+        currentPhase    = 0.0;
+        currentModPhase = 0.0;
+    }
 
-            return phaseInternal;
-        } /// wrap limit is 2pi for sine, 1 for others
-        FloatType sampleRate = static_cast<FloatType>(44100.0);
-        FloatType phase = 0;
-        FloatType increment = 0;
-    };
+    /*
+     * @brief resets the entire operator to its default state
+     */
+    void reset()
+    {
+        frequency         = 0.0;
+        phaseIncrement    = 0.0;
+        modIndex          = 0.0;
+        modPhaseIncrement = 0.0;
+        modDepth          = 0.0;
+        resetPhase();
+    }
 
-    template <typename FloatType>
-    struct PMOperator {
-        Phase<FloatType> carrierPhase;
-        Phase<FloatType> modulatorPhase;
-        const FloatType zero = static_cast<FloatType>(0.0f);
-        FloatType carrierFrequency    = zero;
-        FloatType modulationFrequency = zero;
-        FloatType modulationIndex     = zero;
+private:
+    /// Base parameters
+    FloatType sampleRate = 44100.0;
 
-        void reset() {
-            carrierFrequency    = zero;
-            modulationFrequency = zero;
-            modulationIndex     = zero;
-            carrierPhase.resetPhase();
-            modulatorPhase.resetPhase();
-        }
+    /// Carrier frequency parameters
+    FloatType frequency      = 0.0;
+    FloatType phaseIncrement = 0.0;
+    FloatType currentPhase   = 0.0;
 
-        void setFrequency(FloatType frequency, FloatType modIndex, FloatType sampleRate) {
-            carrierFrequency    = frequency;
-            modulationFrequency = modIndex * carrierFrequency;
-            modulationIndex     = modIndex;
-            carrierPhase.setFrequency(carrierFrequency, sampleRate);
-            modulatorPhase.setFrequency(modulationFrequency, sampleRate);
-        }
-
-        FloatType getNextSample() {
-            auto mod = std::sin(modulatorPhase.incrementPhase(CASPI::Constants::TWO_PI<FloatType>));
-            auto output = std::sin(carrierPhase.incrementPhase(CASPI::Constants::TWO_PI<FloatType>));
-            carrierPhase.modulateIncrement(carrierFrequency, mod);
-            return output;
-        }
-    };
-}
+    /// Modulator parameters
+    FloatType modIndex          = 0.0;
+    FloatType currentModPhase   = 0.0;
+    FloatType modPhaseIncrement = 0.0;
+    FloatType modDepth          = 0.0;
+};
+} // namespace CASPI
 
 #endif //CASPI_PMOPERATOR_H
