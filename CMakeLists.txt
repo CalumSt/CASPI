@@ -10,12 +10,12 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(Source)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER caspi.h)
-
-target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
-
 # Only do these if this is the main project, and not if it is included through add_subdirectory
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+
+    target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+
+    set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER caspi.h)
 
     # Optionally set things like CMAKE_CXX_STANDARD, CMAKE_POSITION_INDEPENDENT_CODE here
 
