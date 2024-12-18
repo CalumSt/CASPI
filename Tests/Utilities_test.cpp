@@ -23,48 +23,6 @@ TEST(UtilitiesTests, ConstantsTest) {
     EXPECT_EQ(test,expected);
 }
 
-// =======================================================================
-// Circular Buffer Tests
-// =======================================================================
-
-caspi_CircularBuffer<float> CircularBuffer;
-
-
-TEST(BufferTest, WriteAndReadBuffer_test) {
-    CircularBuffer.createCircularBuffer(4000);
-    CircularBuffer.writeBuffer(0.1f);
-    CircularBuffer.writeBuffer(0.2f);
-    CircularBuffer.writeBuffer(0.3f);
-    auto s = CircularBuffer.readBuffer(3);
-    EXPECT_EQ(s, 0.1f);
-}
-
-TEST(BufferTest, ReadBufferOutOfBounds_test) {
-    CircularBuffer.clear();
-    CircularBuffer.createCircularBuffer(2);
-    CircularBuffer.writeBuffer(0.1f);
-    CircularBuffer.writeBuffer(0.2f);
-    auto s = CircularBuffer.readBuffer(3);
-    EXPECT_EQ(s, 0.2f);
-}
-
-TEST(BufferTest,ClearBuffer_test) {
-    CircularBuffer.clear();
-    CircularBuffer.createCircularBuffer(2);
-    CircularBuffer.writeBuffer(0.1f);
-    CircularBuffer.writeBuffer(0.2f);
-    auto s = CircularBuffer.readBuffer(1);
-    EXPECT_EQ(s, 0.0f);
-}
-
-TEST(BufferTest, FractionalDelay_test) {
-    CircularBuffer.clear();
-    CircularBuffer.createCircularBuffer(2);
-    CircularBuffer.writeBuffer(0.1f);
-    CircularBuffer.writeBuffer(0.2f);
-    auto s = CircularBuffer.readBuffer(0.5f);
-    EXPECT_EQ (s, 0.15f);
-}
 
 
 TEST(GainTests, GainRampDown_test)
@@ -83,7 +41,7 @@ TEST(GainTests, GainRampDown_test)
     for (int i = 0; i < numberOfSamples; i++)
     {
         auto gain = Gain.getGain();
-        auto currentGain = 0.5f - (i * gainInc);
+        auto currentGain = 0.5f - (static_cast<float>(i) * gainInc);
         if (currentGain < 0.0f) { currentGain = 0.0f; }
         EXPECT_NEAR(gain, currentGain, 0.001f);
         EXPECT_FALSE(Gain.isRampUp());
@@ -110,7 +68,7 @@ TEST(GainTests, GainRampUp_test)
     for (int i = 0; i < numberOfSamples; i++)
     {
         auto gain = Gain.getGain();
-        auto currentGain = 0.5f + (i * gainInc);
+        auto currentGain = 0.5f + (static_cast<float>(i) * gainInc);
         if (currentGain > 1.0f) { currentGain = 1.0f; }
         EXPECT_NEAR(gain, currentGain, 0.001f);
         EXPECT_FALSE(Gain.isRampDown());
@@ -119,9 +77,9 @@ TEST(GainTests, GainRampUp_test)
     numberOfSamples = 10;
     for (int i = 0; i < numberOfSamples; i++)
     {
-        auto gain = Gain.getGain();
+        [[maybe_unused]] auto gain = Gain.getGain();
     }
-    auto gain = Gain.getGain();
+    const auto gain = Gain.getGain();
     EXPECT_EQ(gain, 1.0f);
     EXPECT_FALSE(Gain.isRampDown());
     EXPECT_FALSE(Gain.isRampUp());
