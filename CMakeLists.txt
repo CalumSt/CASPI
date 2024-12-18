@@ -6,20 +6,34 @@ message(STATUS "Configuring CASPI")
 
 project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 
-set(CMAKE_CXX_STANDARD 20)
+include(GNUInstallDirs)
 
-add_subdirectory(Source)
+# Optional: Specify the headers that are part of the library
+set(header_files
+        Source/Oscillators/caspi_BlepOscillator.h
+        Source/Oscillators/caspi_PMOperator.h
+        Source/Filters/caspi_SvfFilter.h
+        Source/Envelopes/caspi_EnvelopeGenerator.h
+        Source/Utilities/caspi_Constants.h
+        Source/Utilities/caspi_Gain.h
+        Source/Utilities/caspi_Maths.h
+        Source/Utilities/caspi_Assert.h
+        Source/Utilities/caspi_FFT.h
+        Source/Utilities/caspi_CircularBuffer.h
+        # ...
+)
+
+add_library(${PROJECT_NAME} INTERFACE ${header_files})
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source)
+
+target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
+
+target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+
 
 # Only do these if this is the main project, and not if it is included through add_subdirectory
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-
-    target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
-
-    set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER caspi.h)
-
-    # Optionally set things like CMAKE_CXX_STANDARD, CMAKE_POSITION_INDEPENDENT_CODE here
-
-    set_target_properties(CASPI PROPERTIES VERSION ${PROJECT_VERSION})
 
     # Let's ensure -std=c++xx instead of -std=g++xx
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -44,11 +58,10 @@ if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
     add_subdirectory(Tests)
 endif()
 
-add_library(${PROJECT_NAME} INTERFACE)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION include COMPONENT ${PROJECT_NAME})
 
-install(TARGETS ${PROJECT_NAME}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+
 
 
 
