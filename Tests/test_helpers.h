@@ -6,27 +6,9 @@
 #define TEST_HELPERS_H
 
 #include <filesystem>
-#include <matplot/matplot.h>
 #include <string>
 #include <vector>
 
-using namespace matplot;
-template <typename FloatType>
-void createPlot(std::vector<FloatType> x, std::vector<FloatType> y,const std::string& titleString, std::string filename) {
-
-    // Plot a red dashed line from given x and y data.
-    plot(x, y,"r");;
-    // Add graph title
-    title(titleString);
-    show();
-    // save figure
-
-    filename = "./Figures/" + filename + ".jpg";
-    std::ofstream file("plotlog.txt"); // create a file stream
-    std::cout.rdbuf(file.rdbuf()); // set the buffer to the file stream
-
-    save(filename);
-}
 
 template <typename FloatType>
 std::vector<FloatType> range(FloatType start, FloatType end, FloatType step)
@@ -63,6 +45,15 @@ inline void saveToFile(const std::string& filename, std::vector<double> x, std::
         file << x[i] << "," << y[i] << "\n";
     }
     file.close();
+}
+
+// Helper function to compare two vectors
+template <typename T>
+void compareVectors(const std::vector<T>& expected, const std::vector<T>& actual) {
+    ASSERT_EQ(expected.size(), actual.size());
+    for (size_t i = 0; i < expected.size(); ++i) {
+        EXPECT_EQ(expected[i], actual[i]) << "Vectors differ at index " << i;
+    }
 }
 
 
