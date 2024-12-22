@@ -1,24 +1,22 @@
 #ifndef CASPI_PMOPERATOR_H
 #define CASPI_PMOPERATOR_H
-/************************************************************************
- .d8888b.                             d8b
-d88P  Y88b                            Y8P
-888    888
-888         8888b.  .d8888b  88888b.  888
-888            "88b 88K      888 "88b 888
-888    888 .d888888 "Y8888b. 888  888 888
-Y88b  d88P 888  888      X88 888 d88P 888
- "Y8888P"  "Y888888  88888P' 88888P"  888
-                             888
-                             888
-                             888
-
-
+/*************************************************************************
+* .d8888b.                             d8b
+* d88P  Y88b                            Y8P
+* 888    888
+* 888         8888b.  .d8888b  88888b.  888
+* 888            "88b 88K      888 "88b 888
+* 888    888 .d888888 "Y8888b. 888  888 888
+* Y88b  d88P 888  888      X88 888 d88P 888
+*  "Y8888P"  "Y888888  88888P' 88888P"  888
+*                              888
+*                              888
+*                              888
+*
 * @file caspi_PMOperator.h
 * @author CS Islay
 * @class PMOperator
 * @brief A class implementing a basic phase modulation operator, i.e. with a modulator and a carrier.
-*
 ************************************************************************/
 
 #include "Utilities/caspi_Constants.h"
@@ -31,13 +29,13 @@ template <typename FloatType>
 class PMOperator
 {
 public:
-    /*
+    /**
      * @brief getFrequency gets the carrier frequency
      * @return The frequency of the operator
      */
     [[nodiscard]] FloatType getFrequency() const { return frequency; }
 
-    /*
+    /**
      * @brief setFrequency sets the carrier frequency and sample rate
      */
     void setFrequency (const FloatType _frequency, const FloatType _sampleRate)
@@ -48,30 +46,27 @@ public:
         phaseIncrement = CASPI::Constants::TWO_PI<FloatType> * frequency / sampleRate;
     }
 
-    /*
-     * @brief getSampleRate gets the sample rate
-     * @return The sample rate of the operator
+    /** @brief Gets the current sample rate.
+     * @return The sample rate of the operator.
      */
     [[nodiscard]] FloatType getSampleRate() const { return sampleRate; }
 
-    /*
-     * @brief setFrequency sets the carrier frequency
+    /** @brief Sets the sample rate of the operator.
      */
     void setSampleRate (const FloatType _sampleRate) { sampleRate = _sampleRate; }
 
-    /*
-     * @brief getModulationIndex gets the current modulation index
+    /** @brief Gets the current modulation index.
      * @return The modulation index of the modulator
      */
     [[nodiscard]] FloatType getModulationIndex() const { return modIndex; }
 
-    /*
+    /**
      * @brief getModulationDepth gets the current modulation depth
      * @return The modulation depth of the modulator
      */
     [[nodiscard]] FloatType getModulationDepth() const { return modDepth; }
 
-    /*
+    /**
     * @brief setFrequency sets the carrier frequency
     */
     void setModulation (const FloatType modulationIndex, const FloatType modulationDepth)
@@ -81,7 +76,7 @@ public:
         modPhaseIncrement = CASPI::Constants::TWO_PI<FloatType> * modIndex * frequency / sampleRate;
     }
 
-    /*
+    /**
      * @brief render generates the next sample.
      */
     FloatType render()
@@ -116,7 +111,7 @@ public:
         return output;
     }
 
-    /*
+    /**
      * @brief resets the carrier and modulator phase.
      */
     void resetPhase()
@@ -125,7 +120,7 @@ public:
         currentModPhase = 0.0;
     }
 
-    /*
+    /**
      * @brief resets the entire operator to its default state
      */
     void reset()
