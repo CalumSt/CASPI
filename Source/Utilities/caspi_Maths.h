@@ -12,7 +12,7 @@
 namespace CASPI::Maths {
 
 
-    /*
+    /**
      * Maps an input value between a given range to a value between a given range.
      * Assumes that inputMin < input < inputMax, and that outputMin < outputMax,
      * but doesn't assert this.
@@ -22,7 +22,7 @@ namespace CASPI::Maths {
 		return (((input - inputMin) / (inputMax - inputMin)) * (outputMax - outputMin)) + outputMin;
     }
 
-    /*
+    /**
      * converts a value from linear to dB
      */
     template <typename FloatType>
@@ -51,7 +51,7 @@ namespace CASPI::Maths {
     template <typename T>
     constexpr bool has_multiply_v = has_multiply<T, void>::value;
 
-    /**
+    /***
      * @brief Multiplies two vectors element-wise.
      *
      * The function multiplies elements of two given vectors and stores the result in a third vector.

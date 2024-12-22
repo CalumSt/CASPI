@@ -8,16 +8,16 @@
 #include "Utilities/caspi_FFT.h"
 #include "test_helpers.h"
 
-using namespace std;
+/*
+ * Can initialise an FFT engine
+ * Can calculate a discrete fourier transform on complex data
+ * Can calculate a discrete fourier transform on real data
+ * Can generate a twiddle look-up table for powers of two
+ *
+ * Can calculate a fast fourier transform on complex data
+ */
 
-// Helper function to compare two vectors
-template <typename T>
-void compareVectors(const std::vector<T>& expected, const std::vector<T>& actual) {
-    ASSERT_EQ(expected.size(), actual.size());
-    for (size_t i = 0; i < expected.size(); ++i) {
-        EXPECT_EQ(expected[i], actual[i]) << "Vectors differ at index " << i;
-    }
-}
+using namespace std;
 
 std::vector<double> constructExpectedFrequencyBins(int fft_size, double sampleRate)
 {

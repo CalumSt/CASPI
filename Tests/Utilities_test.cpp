@@ -18,8 +18,8 @@ TEST(UtilitiesTests, assert_test) {
 }
 
 TEST(UtilitiesTests, ConstantsTest) {
-    double expected = 3.14159265358979323846;
-    auto test = CASPI::Constants::PI<double>;
+    constexpr double expected = 3.14159265358979323846;
+    constexpr auto test = CASPI::Constants::PI<double>;
     EXPECT_EQ(test,expected);
 }
 

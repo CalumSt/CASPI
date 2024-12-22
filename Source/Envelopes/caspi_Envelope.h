@@ -12,13 +12,13 @@ Y88b  d88P 888  888      X88 888 d88P 888
                              888
 
 
-* @file caspi_Envelope.h
+* @file caspi_EnvelopeGenerator.h
 * @author CS Islay
 * @brief A class implementing a variety of envelopes using ADSR stages.
 *
 ************************************************************************/
-#ifndef caspi_EnvelopeGenerator_H
-#define caspi_EnvelopeGenerator_H
+#ifndef CASPI_ENVELOPEGENERATOR_H
+#define CASPI_ENVELOPEGENERATOR_H
 
 #include <Utilities/caspi_CircularBuffer.h>
 #include "Utilities/caspi_assert.h"
@@ -230,4 +230,4 @@ namespace CASPI::Envelope {
 
     };
 
-#endif
+#endif // CASPI_ENVELOPEGENERATOR_H
