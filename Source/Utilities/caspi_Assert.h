@@ -3,7 +3,11 @@
 
 #ifndef CASPI_ASSERT
 #include <cassert>
-#define CASPI_ASSERT(x,msg) assert(x && msg)
+#ifdef NDEBUG
+#define CASPI_ASSERT(x,msg) // empty macro
+#else
+#define CASPI_ASSERT(x,msg) assert(x && msg) // Assert in debug only
+#endif
 #endif
 
 #ifndef CASPI_STATIC_ASSERT
