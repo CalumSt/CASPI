@@ -21,7 +21,7 @@
 
 #include "Utilities/caspi_Constants.h"
 
-#include <Utilities/caspi_assert.h>
+#include <Utilities/caspi_Assert.h>
 
 namespace CASPI
 {

@@ -32,7 +32,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_BLEPOSCILLATOR_H
 #define CASPI_BLEPOSCILLATOR_H
 
-#include "Utilities/caspi_assert.h"
+#include "Utilities/caspi_Assert.h"
 #include "Utilities/caspi_CircularBuffer.h"
 #include "Utilities/caspi_Constants.h"
 #include <cmath>

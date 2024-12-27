@@ -20,7 +20,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #ifndef CASPI_CIRCULARBUFFER_NEW_H
 #define CASPI_CIRCULARBUFFER_NEW_H
-#include "caspi_assert.h"
+#include "caspi_Assert.h"
 
 namespace CASPI
 {
