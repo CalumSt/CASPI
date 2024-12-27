@@ -20,8 +20,8 @@
 ************************************************************************/
 
 #include "Utilities/caspi_Constants.h"
-
-#include <Utilities/caspi_Assert.h>
+#include "Utilities/caspi_Assert.h"
+#include <cmath>
 
 namespace CASPI
 {
