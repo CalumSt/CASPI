@@ -18,7 +18,7 @@ concurrency:
 env:
     BUILD_TYPE: Debug
     BUILD_DIR: Tests/Builds
-    TEST_DIR:  Tests/Builds/Debug
+    TEST_DIR:  Tests
     HOMEBREW_NO_INSTALL_CLEANUP: 1
     SCCACHE_GHA_ENABLED: true
     IPP_DIR: C:\Program Files (x86)\Intel\oneAPI\ipp\latest\lib\cmake\ipp
@@ -106,13 +106,13 @@ jobs:
               uses: mozilla-actions/sccache-action@v0.0.5
 
             - name: Configure
-              run: cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
+              run: cmake -S ${{ env.TEST_DIR }} -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
 
             - name: Build
               run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
 
             - name: Test
-              working-directory: ${{ env.TEST_DIR }}
+              working-directory: ${{ env.BUILD_DIR }}
               run: ctest
 
             - name: Upload coverage report (optional)
