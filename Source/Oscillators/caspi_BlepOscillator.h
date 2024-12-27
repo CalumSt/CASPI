@@ -24,8 +24,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 *
 * @see https://www.martin-finke.de/articles/audio-plugins-018-polyblep-oscillator/
 *
-* TODO: Add modulation
-* TODO: Make Stereo
+* TODO: Generate to buffer
+* TODO: Better docstring
 *
 ************************************************************************/
 
@@ -36,11 +36,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include "Utilities/caspi_CircularBuffer.h"
 #include "Utilities/caspi_Constants.h"
 #include <cmath>
-
-// TODO: Incorporate phase modulation into the oscillator to allow external modulation
-// This could be done by adding a method that adds the generated sample to the buffer,
-// then reads in from the buffer once its full
-// For now, can just call the appropriate waveform getSample
 
 namespace CASPI::BlepOscillator
 {
@@ -85,6 +80,26 @@ struct Phase
     FloatType hardSyncPhase     = 0;
     FloatType hardSyncIncrement = 0;
 };
+
+/// This is the core blep function
+template <typename FloatType>
+static FloatType blep (FloatType phase, FloatType increment)
+{
+    if (phase < increment)
+    {
+        /// internal phase variable
+        auto phaseInternal = phase / increment;
+        return (2 - phaseInternal) * phaseInternal - 1;
+    }
+
+    if (phase > 1 - increment)
+    {
+        auto phaseInternal = (phase - 1) / increment;
+        return (phaseInternal + 2) * phaseInternal + 1;
+    }
+    // Unsure how this return statement works
+    return {};
+}
 
 /// Sine oscillator
 template <typename FloatType>
@@ -151,26 +166,6 @@ private:
     Square<FloatType> square;
     FloatType sum = 1;
 };
-
-/// This is the core blep function
-template <typename FloatType>
-static FloatType blep (FloatType phase, FloatType increment)
-{
-    if (phase < increment)
-    {
-        /// internal phase variable
-        auto phaseInternal = phase / increment;
-        return (2 - phaseInternal) * phaseInternal - 1;
-    }
-
-    if (phase > 1 - increment)
-    {
-        auto phaseInternal = (phase - 1) / increment;
-        return (phaseInternal + 2) * phaseInternal + 1;
-    }
-    // Unsure how this return statement works
-    return {};
-}
 
 template <typename OscillatorType, typename FloatType>
 std::vector<FloatType> renderBlock (FloatType frequency, FloatType sampleRate, const int numberOfSamples = 1)
