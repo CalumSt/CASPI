@@ -112,8 +112,8 @@ jobs:
               run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }}
 
             - name: Test
-              working-directory: ${{ env.BUILD_DIR }}
-              run: ctest -C Debug -j 14
+              working-directory: ${{ env.TEST_DIR }}
+              run: ctest -C ${{ env.BUILD_TYPE }} -j 14
 
             - name: Upload coverage report (optional)
               uses: codecov/codecov-action@v1
