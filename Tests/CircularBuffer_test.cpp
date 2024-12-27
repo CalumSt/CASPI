@@ -24,7 +24,7 @@ TESTS
 [DONE] Can construct mono buffer from existing data (vector or plain array)
 [DONE] Can construct stereo buffer from existing data
 [DONE] Can read from buffer with fractional delay
-Can read from multichannel buffer with fractional delay
+[DONE] Can read from multichannel buffer with fractional delay
 [DONE] Can copy buffer to new buffer
 Can FFT on a buffer
 Can store floats and doubles
@@ -241,4 +241,10 @@ TEST (CircularBufferTests, stereoFractionalDelay_test)
     ASSERT_EQ (sample.at(0), 1.5);
     ASSERT_EQ (sample.at(1), 1.5);
 
+}
+
+TEST(CircularBufferTests, MultipleThreadsWriteSafely_test) {
+    CASPI::CircularBuffer buffer(10);
+
+    std::vector<std::thread> threads;
 }
