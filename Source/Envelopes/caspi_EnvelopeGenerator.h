@@ -21,7 +21,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #define CASPI_ENVELOPEGENERATOR_H
 
 #include <Utilities/caspi_CircularBuffer.h>
-#include "Utilities/caspi_assert.h"
+#include "Utilities/caspi_Assert.h"
 #include <string>
 #include <iostream>
 #include <Utilities/caspi_Constants.h>

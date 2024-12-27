@@ -74,7 +74,7 @@ TEST (OscillatorTests, SineGetNextSample_test)
 TEST (OscillatorTests, SineRenderWaveform_test)
 {
     const auto internal_pi                    = CASPI::Constants::TWO_PI<float>;
-    constexpr auto testInternalPhaseIncrement = internal_pi * phaseIncrement;
+    const auto testInternalPhaseIncrement = internal_pi * phaseIncrement;
     CASPI::BlepOscillator::Sine<float> osc;
     osc.setFrequency (frequency, sampleRate);
     EXPECT_NEAR (testInternalPhaseIncrement, osc.phase.increment, 0.001f);
