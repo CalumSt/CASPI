@@ -36,6 +36,6 @@ target_include_directories(${PROJECT_NAME}
     )    
 # --------------------------------------------------------------------------
     
-target_link_libraries(${PROJECT_NAME} PRIVATE gtest_main stdc++)
+target_link_libraries(${PROJECT_NAME} PRIVATE gtest_main cxx)
 
 gtest_discover_tests(${PROJECT_NAME})
