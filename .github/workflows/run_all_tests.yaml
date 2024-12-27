@@ -109,17 +109,11 @@ jobs:
               run: cmake -S ${{env.TEST_DIR}} -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
 
             - name: Build
-              run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
+              run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }}
 
             - name: Test
               working-directory: ${{ env.BUILD_DIR }}
-              run: ctest
-
-
-            - name: Upload test results (SARIF)
-              uses: github/codeql-action/upload-sarif@v3
-              with:
-                  sarif_file: reports/report.sarif
+              run: ctest -C Debug -j 14
 
             - name: Upload coverage report (optional)
               uses: codecov/codecov-action@v1
