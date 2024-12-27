@@ -1,11 +1,10 @@
-#pragma once
+
 #include "test_helpers.h"
 
 #include "Envelopes/caspi_EnvelopeGenerator.h"
 #include <gtest/gtest.h>
 #include <string>
 
-CASPI::Envelope::ADSR<float> ADSR; // This needs to be tidied up
 const int numberOfSettings = 6;
 const float sampleRate = 44100.0f;
 const std::vector<float> testTimeList = { 0.05f,0.1f,0.5f,0.75f,1.0f,2.0f };
@@ -14,6 +13,7 @@ const std::vector<float> testSustainList = { 0.00001f,0.01f,0.05f,0.1f,0.5f,1.0f
 // =================================================================================================
 TEST(AdsrTests,Constructor_test)
 {
+    CASPI::Envelope::ADSR<float> ADSR;
     const std::string expect = {"idle" };
     ADSR.setSampleRate(44100.0f);
     EXPECT_EQ (ADSR.getState(), expect);
@@ -22,6 +22,7 @@ TEST(AdsrTests,Constructor_test)
 
 TEST(AdsrTests, Setters_test) {
     float test = 0.0f;
+    CASPI::Envelope::ADSR<float> ADSR;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
         ADSR.setAttackTime(testTimeList[testIndex]);
         ADSR.setSustainLevel(testSustainList[testIndex]);
@@ -40,6 +41,7 @@ TEST(AdsrTests, Setters_test) {
 }
 
 TEST(AdsrTests, noteOn_test) {
+    CASPI::Envelope::ADSR<float> ADSR;
     ADSR.noteOn();
     std::string test = ADSR.getState();
     std::string expect = {"attack"};
@@ -49,6 +51,7 @@ TEST(AdsrTests, noteOn_test) {
 // We expect that the envelope has progressed to decay after the test time is up.
 // This is except for the last test, where no decay will occur and will progress straight to sustain.
 TEST(AdsrTests, Attack_test) {
+    CASPI::Envelope::ADSR<float> ADSR;
     int numberOfSamples;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
 
@@ -89,6 +92,7 @@ TEST(AdsrTests, Attack_test) {
 
 
 TEST(AdsrTests, Decay_test) {
+    CASPI::Envelope::ADSR<float> ADSR;
     int numberOfSamples;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
         // Arrange
@@ -120,6 +124,7 @@ TEST(AdsrTests, Decay_test) {
 
 /// This test checks that envelope actually sustains without switching itself off
 TEST(AdsrTests, Sustain_test) {
+    CASPI::Envelope::ADSR<float> ADSR;
     int numberOfSamples;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
         // Arrange
@@ -143,6 +148,7 @@ TEST(AdsrTests, Sustain_test) {
     }
 /// This test checks that the ADSR releases properly.
 TEST(AdsrTests, Release_test) {
+    CASPI::Envelope::ADSR<float> ADSR;
     int numberOfSamples;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
         // Arrange
@@ -183,7 +189,7 @@ TEST(AdsrTests, Release_test) {
 /// This test generates the envelope figure to make sure everything is working.
 TEST(AdsrTests, render_test)
 {
-
+    CASPI::Envelope::ADSR<float> ADSR;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
         int numberOfSamples = 0;
         auto totalTime = 4.0f * testTimeList[testIndex];
@@ -218,9 +224,6 @@ TEST(AdsrTests, render_test)
             output.at(numberOfSamples) = ADSR.render();
             numberOfSamples++;
         }
-        auto times = range (0.0f, totalTime, 1.0f / sampleRate);
-        const std::string filename = "Envelope" + std::to_string(testIndex);
-        //createPlot<float> (times, output, "Single Envelope", filename);
         EXPECT_EQ(ADSR.getState(),"idle");
         EXPECT_EQ(ADSR.render(),0.0f);
     }
