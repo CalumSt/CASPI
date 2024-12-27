@@ -242,9 +242,3 @@ TEST (CircularBufferTests, stereoFractionalDelay_test)
     ASSERT_EQ (sample.at(1), 1.5);
 
 }
-
-TEST(CircularBufferTests, MultipleThreadsWriteSafely_test) {
-    CASPI::CircularBuffer buffer(10);
-
-    std::vector<std::thread> threads;
-}
