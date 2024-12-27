@@ -17,7 +17,8 @@ concurrency:
 
 env:
     BUILD_TYPE: Debug
-    BUILD_DIR: Builds
+    BUILD_DIR: Tests/Builds
+    TEST_DIR:  Tests/Builds/Debug
     HOMEBREW_NO_INSTALL_CLEANUP: 1
     SCCACHE_GHA_ENABLED: true
     IPP_DIR: C:\Program Files (x86)\Intel\oneAPI\ipp\latest\lib\cmake\ipp
@@ -111,7 +112,7 @@ jobs:
               run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
 
             - name: Test
-              working-directory: ${{ env.BUILD_DIR }}
+              working-directory: ${{ env.TEST_DIR }}
               run: ctest
 
             - name: Upload coverage report (optional)
