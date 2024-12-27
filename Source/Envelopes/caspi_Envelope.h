@@ -30,13 +30,18 @@ namespace CASPI::Envelope {
         /// ADSR parameter interface
     template <typename FloatType>
         struct Parameters {
+            // Constants
+            const FloatType silence = static_cast<FloatType>(0.0001f);
+            const FloatType zero    = static_cast<FloatType>(0.0f);
+            const FloatType one     = static_cast<FloatType>(1.0f);
+            const FloatType two     = static_cast<FloatType>(2.0f);
             /// member variables
             /// Implemented with Redmon's analog equations
-            const FloatType attackTCO   = static_cast<FloatType>(exp(-1.5));
+            const FloatType attackTCO   = static_cast<FloatType>(std::exp(-1.5));
             FloatType attackCoefficient = zero;
             FloatType attackOffset      = zero;
 
-            const FloatType decayTCO   = static_cast<FloatType>(exp(-4.95));
+            const FloatType decayTCO   = static_cast<FloatType>(std::exp(-4.95));
             FloatType decayCoefficient = silence;
             FloatType decayOffset      = zero;
 
@@ -46,12 +51,6 @@ namespace CASPI::Envelope {
             FloatType releaseOffset      = zero;
 
             FloatType sampleRate         = static_cast<FloatType>(44100.0f);
-
-            // Constants
-            const FloatType silence = static_cast<FloatType>(0.0001f);
-            const FloatType zero    = static_cast<FloatType>(0.0f);
-            const FloatType one     = static_cast<FloatType>(1.0f);
-            const FloatType two     = static_cast<FloatType>(2.0f);
 
             /// setters
             void setAttackTime(FloatType _attackTime_s)   {
