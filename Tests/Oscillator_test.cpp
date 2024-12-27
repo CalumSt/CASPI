@@ -151,8 +151,7 @@ TEST (OscillatorTests, renderToBlock_test)
     auto test = std::vector<float> (1024);
     for (int i = 0; i < 1024; i++)
     {
-        auto s = osc.getNextSample();
-        test.push_back (s);
+        test.at(i) = osc.getNextSample();
     }
     osc.resetPhase();
     // This API is ugly but will work for now
