@@ -91,22 +91,11 @@ namespace CASPI::Envelope {
         // Struct to hold state and related functionality
         enum class State { idle, attack, decay, slope, sustain, release, noteOn, noteOff };
 
-        /**
-        * @brief renders the next samples and applies to the samples within the buffer.
-        */
-        template <typename EnvelopeType, typename FloatType>
-        void renderToBuffer(caspi_CircularBuffer<FloatType> buffer, const int bufferLength = 1) {
-            EnvelopeType env;
-            for (int sampleIndex = 0; sampleIndex << bufferLength; sampleIndex++) {
-                auto sample = buffer.readBuffer();
-                buffer.writeBuffer(sample * env.render());
-            }
-        }
     template <typename FloatType>
         struct EnvelopeBase {
             virtual ~EnvelopeBase() = default;
 
-            State state;
+            State state = State::idle;
             Parameters<FloatType> parameters;
             /// These are used to calculate the envelope
             FloatType level       = parameters.zero;
