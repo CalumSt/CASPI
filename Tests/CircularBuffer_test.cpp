@@ -3,7 +3,7 @@
 #include "test_helpers.h"
 
 #define private public // DO NOT DO THIS IN PRODUCTION
-#include "Utilities/caspi_CircularBuffer_new.h"
+#include "Utilities/caspi_CircularBuffer.h"
 
 /*
 TESTS
@@ -37,7 +37,7 @@ constexpr int numChannels   = 2;
 constexpr int newNumSamples = 1024;
 constexpr int newNumChannels = 3;
 
-void printBuffer (const CASPI::CircularBuffer_new& buffer)
+void printBuffer (const CASPI::CircularBuffer& buffer)
 {
     std::cout << "START BUFFER\n" << std::endl;
     for (int i = 0; i < buffer.getNumSamples(); i++)
@@ -49,20 +49,20 @@ void printBuffer (const CASPI::CircularBuffer_new& buffer)
 
 TEST (CircularBufferTests,constructBufferOfGivenSize_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     ASSERT_EQ (buffer.getNumSamples(), numSamples);
 }
 
 TEST (CircularBufferTests,readMonoBuffer_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     auto sample = buffer.read(100);
     ASSERT_EQ (sample,0.0);
 }
 
 TEST (CircularBufferTests,writeMonoBuffer_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     buffer.write(1.0);
     auto sample = buffer.read(numSamples+1);
     ASSERT_EQ (sample,1.0);
@@ -70,7 +70,7 @@ TEST (CircularBufferTests,writeMonoBuffer_test)
 
 TEST (CircularBufferTests,resizeMonoBuffer_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     buffer.resize(newNumSamples);
     ASSERT_EQ (buffer.getNumSamples(), newNumSamples);
     ASSERT_EQ (buffer.buffer->size(), newNumSamples);
@@ -79,7 +79,7 @@ TEST (CircularBufferTests,resizeMonoBuffer_test)
 
 TEST (CircularBufferTests,resizeAndKeepExistingMonoBuffer_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     for (int i = 0; i < numSamples; i++) { buffer.write(1.0); }
     buffer.resize(newNumSamples);
     // The first numSamples samples should be the same
@@ -90,7 +90,7 @@ TEST (CircularBufferTests,resizeAndKeepExistingMonoBuffer_test)
 
 TEST (CircularBufferTests,advanceWriteIndex_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     ASSERT_EQ (buffer.writeIndex, 0);
     buffer.write(1.0);
     ASSERT_EQ (buffer.writeIndex, 1);
@@ -100,7 +100,7 @@ TEST (CircularBufferTests,advanceWriteIndex_test)
 
 TEST (CircularBufferTests,writeIndexWrap_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     ASSERT_EQ (buffer.writeIndex, 0);
     for (int i = 0; i < numSamples; i++) { buffer.write(1.0); } // write numSamples times
     ASSERT_EQ (buffer.writeIndex, 0);
@@ -108,7 +108,7 @@ TEST (CircularBufferTests,writeIndexWrap_test)
 
 TEST (CircularBufferTests,readWrap_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     buffer.write(1.0);
     auto sample = buffer.read(numSamples + 1);
     ASSERT_EQ (sample, 1.0);
@@ -117,7 +117,7 @@ TEST (CircularBufferTests,readWrap_test)
 TEST (CircularBufferTests,constructOnVector_test)
 {
     const auto vector = std::vector<double> (numSamples, 1.0);
-    const CASPI::CircularBuffer_new buffer(vector);
+    const CASPI::CircularBuffer buffer(vector);
     ASSERT_EQ (buffer.getNumSamples(), numSamples);
     for (int i = 0; i < numSamples; i++) { ASSERT_EQ (buffer.read(i), 1.0); }
 }
@@ -125,7 +125,7 @@ TEST (CircularBufferTests,constructOnVector_test)
 TEST (CircularBufferTests,getVectorData_test)
 {
     const auto vector = std::vector<double> (numSamples, 1.0);
-    const CASPI::CircularBuffer_new buffer(vector);
+    const CASPI::CircularBuffer buffer(vector);
     auto newVector = buffer.getBufferAsVector();
     ASSERT_EQ (newVector.size(), numSamples);
     compareVectors (vector,newVector);
@@ -133,7 +133,7 @@ TEST (CircularBufferTests,getVectorData_test)
 
 TEST (CircularBufferTests,clearBuffer_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     for (int i = 0; i < numSamples; i++) { buffer.write(1.0); } // write numSamples times
     buffer.clear();
     for (int i = 0; i < numSamples; i++) { ASSERT_EQ (buffer.read(i), 0.0); } // check each value is 0
@@ -208,7 +208,7 @@ TEST (CircularBufferTests, constructStereoBufferFromData_test)
 
 TEST (CircularBufferTests, linearInterpolation_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     buffer.write(1.0);
     buffer.write (2.0);
     const auto fractionalDelay = static_cast<double>(numSamples)+ 1.5;
@@ -218,7 +218,7 @@ TEST (CircularBufferTests, linearInterpolation_test)
 
 TEST (CircularBufferTests, copyBuffer_test)
 {
-    CASPI::CircularBuffer_new buffer(numSamples);
+    CASPI::CircularBuffer buffer(numSamples);
     buffer.write (-1.0);
     buffer.write (2.0);
 
