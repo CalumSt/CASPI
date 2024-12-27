@@ -1,5 +1,5 @@
 /************************************************************************
-.d8888b.                             d8b
+ .d8888b.                             d8b
 d88P  Y88b                            Y8P
 888    888
 888         8888b.  .d8888b  88888b.  888
@@ -24,11 +24,11 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 namespace CASPI
 {
-class CircularBuffer
 /**
  * @class CircularBuffer
  * @brief A circular buffer for audio. Only contains one channel.
  */
+class CircularBuffer
 {
 public:
     explicit CircularBuffer (const size_t numSamples) noexcept : numSamples (numSamples)
@@ -53,7 +53,12 @@ public:
         return *this;
     }
 
-    // swap part of copy-swap idiom
+    /**
+ 	 * @brief Swaps the contents of two CircularBuffer objects.
+ 	 *
+	 * @param a The first CircularBuffer object.
+	 * @param b The second CircularBuffer object.
+	 */
     friend void swap (CircularBuffer& a, CircularBuffer& b) noexcept
     {
         using std::swap;
@@ -83,10 +88,20 @@ public:
           writeIndex(other.writeIndex)
     {
     }
-
-
+    /**
+     * @brief Gets the buffer length.
+     *
+     * @return The number of samples.
+     */
     [[nodiscard]] size_t getNumSamples() const { return numSamples; }
 
+
+	/**
+ 	 * @brief Reads a sample from the buffer.
+ 	 *
+	 * @param delayInSamples The delay in samples.
+	 * @return The read sample.
+	 */
     [[nodiscard]] double read (const int delayInSamples) const
     {
         // The buffer is linearised.
@@ -95,56 +110,15 @@ public:
         return buffer->at (readIndex);
     }
 
-    void write (const double value)
-    {
-        /*
-         * Write to a specific channel. Can only assign 1 channel at a time.
-         *
-         * @param value The value to write.
-         * @param channel The channel to write to (0-indexed).
-         */
-        buffer->at (writeIndex) = value;
-        writeIndex++;
-        writeIndex &= wrapMask;
-    }
+	/**
+	 * @brief Reads a sample from the buffer with interpolation.
+	 *
+	 * @param fractionalDelay The fractional delay.
+	 * @param interpolate Whether to interpolate or not.
+	 * @return The read sample.
+	 */
+	[[nodiscard]] double read (const double fractionalDelay, const bool interpolate = true) const
 
-    void resize (const size_t _numSamples)
-    {
-        auto newBuffer = std::vector<double> (_numSamples, 0.0);
-
-        if (_numSamples > numSamples)
-        {
-            for (int i = 0; i < numSamples; i++)
-            {
-                newBuffer.at (i) = buffer->at (i);
-            }
-        }
-        else if (_numSamples <= numSamples)
-        {
-            for (int i = 0; i < _numSamples; i++)
-            {
-                newBuffer.at (i) = buffer->at (i);
-            }
-        }
-
-        buffer     = std::make_unique<std::vector<double>> (newBuffer);
-        wrapMask   = static_cast<int> (_numSamples) - 1;
-        numSamples = _numSamples;
-    }
-
-    void clear()
-    {
-        buffer   = std::make_unique<std::vector<double>> (numSamples, 0.0);
-        wrapMask = static_cast<int> (numSamples) - 1;
-    }
-
-    [[nodiscard]] std::vector<double> getBufferAsVector() const
-    {
-        // dereference the unique pointer
-        return *buffer;
-    }
-
-    [[nodiscard]] double read (const double fractionalDelay, const bool interpolate = true) const
     {
         // Truncate and read the integer part of the delay
         const double y1 = read (static_cast<int> (fractionalDelay));
@@ -157,6 +131,67 @@ public:
         const double fraction = fractionalDelay - static_cast<int> (fractionalDelay);
 
         return linearInterpolation (y1, y2, fraction);
+    }
+
+	/**
+	 * @brief Writes a sample to the buffer.
+	 *
+	 * @param value The value to write.
+	 */
+    void write (const double value)
+    {
+        buffer->at (writeIndex) = value;
+        writeIndex++;
+        writeIndex &= wrapMask;
+    }
+
+	/**
+	 * @brief Resizes the buffer.
+	 *
+	 * @param _numSamples The new number of samples.
+	 */
+    void resize (const size_t _numSamples)
+    {
+        auto newBuffer = std::vector<double> (_numSamples, 0.0);
+
+        if (_numSamples > numSamples)
+        {
+            for (int i = 0; i < numSamples; i++)
+            {
+                newBuffer.at (i) = buffer->at (i);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < _numSamples; i++)
+            {
+                newBuffer.at (i) = buffer->at (i);
+            }
+        }
+
+        buffer     = std::make_unique<std::vector<double>> (newBuffer);
+        wrapMask   = static_cast<int> (_numSamples) - 1;
+        numSamples = _numSamples;
+    }
+
+	/**
+ 	 * @brief Clears the buffer.
+ 	 */
+    void clear()
+    {
+        buffer   = std::make_unique<std::vector<double>> (numSamples, 0.0);
+        wrapMask = static_cast<int> (numSamples) - 1;
+    }
+
+	/**
+	 * @brief Gets the buffer as a vector.
+	 *
+	 * @return The buffer as a vector.
+	 */
+    [[nodiscard]] std::vector<double> getBufferAsVector() const
+    {
+        // dereference the unique pointer
+        return *buffer;
     }
 
 private:
@@ -177,13 +212,19 @@ private:
     }
 };
 
-class MultichannelBuffer
 /**
  * @class MultichannelBuffer
  * @brief A circular buffer for holding multiple channels of data.
  */
+class MultichannelBuffer
 {
 public:
+	/**
+     * @brief Constructs a new MultichannelBuffer object.
+     *
+     * @param numSamples The number of samples in the buffer.
+     * @param numChannels The number of channels in the buffer.
+     */
     explicit MultichannelBuffer (const size_t numSamples, const size_t numChannels) : numSamples (numSamples), numChannels (numChannels)
     {
         buffer.resize (numChannels);
@@ -194,6 +235,12 @@ public:
         }
     }
 
+	/**
+     * @brief Constructs a new MultichannelBuffer object from a vector of data.
+     *
+     * @param data The vector of data to initialize the buffer with.
+     * @param numChannels The number of channels in the buffer.
+     */
     explicit MultichannelBuffer (const std::vector<double>& data, const size_t numChannels) : numSamples (data.size()), numChannels (numChannels)
     {
         buffer.resize (numChannels);
@@ -204,9 +251,26 @@ public:
         }
     }
 
+
+    /**
+     * @brief Gets the number of samples in the buffer.
+     *
+     * @return The number of samples.
+     */
     [[nodiscard]] size_t getNumSamples() const { return numSamples; }
+
+    /**
+     * @brief Gets the number of channels in the buffer.
+     *
+     * @return The number of channels.
+     */
     [[nodiscard]] size_t getNumChannels() const { return numChannels; }
 
+	/**
+     * @brief Writes a frame of data to the buffer.
+     *
+     * @param frame The frame of data to write.
+     */
     void write (const std::vector<double>& frame) const
     {
         CASPI_ASSERT (frame.size() == numChannels, "Frame size does not match number of channels to write.");
@@ -217,6 +281,12 @@ public:
         }
     }
 
+	/**
+     * @brief Reads a frame of data from the buffer.
+     *
+     * @param delayInSamples The delay in samples.
+     * @return The read frame of data.
+     */
     [[nodiscard]] std::vector<double> read (const int delayInSamples) const
     {
         auto frame = std::vector<double> (numChannels, 0.0);
@@ -227,6 +297,13 @@ public:
         return frame;
     }
 
+    /**
+	 * @brief Reads a frame of data from the buffer, linearly interpolating between samples.
+	 *
+	 * @param fractionalDelay The fractional delay in samples.
+     * @param interpolate Whether to interpolate or not.
+	 * @return The read frame of data.
+	 */
     [[nodiscard]] std::vector<double> read (const double fractionalDelay, const bool interpolate = true) const
     {
         auto frame = std::vector<double> (numChannels, 0.0);
@@ -237,6 +314,12 @@ public:
         return frame;
     }
 
+	/**
+     * @brief Resizes the buffer.
+     *
+     * @param _numSamples The new number of samples.
+     * @param _numChannels The new number of channels.
+     */
     void resize (const size_t _numSamples, const size_t _numChannels)
     {
         numSamples  = _numSamples;
@@ -248,6 +331,9 @@ public:
         }
     }
 
+	/**
+     * @brief Clears the buffer.
+     */
     void clear() const
     {
         for (int i = 0; i < numChannels; i++)
