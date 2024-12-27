@@ -6,6 +6,7 @@
 #include "Oscillators/caspi_BlepOscillator.h"
 #include "Oscillators/caspi_PMOperator.h"
 #include "test_helpers.h"
+#include <fstream>
 #include <utility>
 
 // Test params
@@ -17,42 +18,6 @@ constexpr auto modIndex   = 0.8f;
 // derived
 constexpr auto samplesToRender = renderTime * static_cast<int> (sampleRate);
 constexpr auto phaseIncrement  = frequency / sampleRate;
-
-// Helper
-template <typename OscType>
-void generateWaveformGraph (OscType& osc, float inputFrequency, float inputSampleRate, const float numberOfWavelengths, std::string filename)
-{
-    const auto renderTimeForSingleWaveform = numberOfWavelengths * 1.0f / inputFrequency;
-    const auto numberOfSamples             = static_cast<int> (renderTimeForSingleWaveform * inputSampleRate);
-    osc.resetPhase();
-    osc.setFrequency (inputFrequency, inputSampleRate);
-    auto times = std::vector<float> (numberOfSamples);
-    std::iota (std::begin (times), std::end (times), 0.0f);
-    auto samples = std::vector<float> (numberOfSamples);
-    for (int i = 0; i < numberOfSamples; i++)
-    {
-        samples.at (i) = osc.getNextSample();
-    }
-    createPlot<float> (times, samples, "Single Waveform", std::move (filename));
-}
-
-// Helper
-template <typename OscType>
-void generatePulseModulationWaveformGraph (OscType& osc, float inputFrequency, float inputModIndex, float inputSampleRate, const float numberOfWavelengths, std::string filename)
-{
-    const auto renderTimeForSingleWaveform = numberOfWavelengths * 1.0f / inputFrequency;
-    const auto numberOfSamples             = static_cast<int> (renderTimeForSingleWaveform * inputSampleRate);
-    osc.reset();
-    osc.setFrequency (inputFrequency, inputModIndex, inputSampleRate);
-    auto times = std::vector<float> (numberOfSamples);
-    std::iota (std::begin (times), std::end (times), 0.0f);
-    auto samples = std::vector<float> (numberOfSamples);
-    for (int i = 0; i < numberOfSamples; i++)
-    {
-        samples.at (i) = osc.getNextSample();
-    }
-    createPlot<float> (times, samples, "Single Waveform", std::move (filename));
-}
 
 TEST (OscillatorTests, test)
 {
