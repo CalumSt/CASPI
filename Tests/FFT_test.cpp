@@ -5,19 +5,31 @@
 #include <cmath>
 #include <gtest/gtest.h>
 #include "Oscillators/caspi_BlepOscillator.h"
-#include "Utilities/caspi_FFT.h"
 #include "test_helpers.h"
+#define private public
+#include "Utilities/caspi_FFT_new.h"
 
 /*
- * Can initialise an FFT engine
- * Can calculate a discrete fourier transform on complex data
- * Can calculate a discrete fourier transform on real data
- * Can generate a twiddle look-up table for powers of two
- *
- * Can calculate a fast fourier transform on complex data
+ Can initialise an FFT engine
+ Can create an FFT config for the requested FFT
+ Can generate frequency bins based on FFT size and sample rate
+ Can generate twiddle table based on FFT size and sample rate
+ Can check data is a power of 2
+ Can perform DFT of multiple sizes
+ Can perform IDFT of multiple sizes
+ Can perform FFT on real data
+     Can slice data into even and odd arrays
+     Can recurse FFT on even and odd arrays
+     Returns when size of arrays is no longer 2
+ Can perform IFFT on real data
+ Can perform FFT on complex data
+ Can perform IFFT on complex data
+ If given data that isn't a power of two, can warn or use DFT
+ Option between fallback of DFT or NONE
+ Can queue multiple FFT configs
+ Can assign priority to FFT configs
+ Can complete higher priority FFTs first
  */
-
-using namespace std;
 
 std::vector<double> constructExpectedFrequencyBins(int fft_size, double sampleRate)
 {
@@ -46,75 +58,19 @@ auto constructTestData(int blockSize, double sampleRate)
 const std::vector<int> FFT_sizes = {64,128,256,512,1024,2048,0,127};
 const std::vector<double> sampleRateList = {48000.0,44100.0,22050.0};
 
-TEST(FFT,DFT_test)
+TEST(FFTtests, constructor_test)
 {
-    int numSamples = 512;
-    double sampleRate = 512.0;
-    double testFrequency = 120.0;
-    auto timeData = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (testFrequency,sampleRate,numSamples);
-    auto outData = timeData;
-    CASPI::dft (timeData,outData);
-
-    auto frequencyBins = CASPI::generateFrequencyBins (numSamples,sampleRate);
-    // Get closest to test frequency
-    auto lowerBound = std::lower_bound (frequencyBins.begin(),frequencyBins.end(),testFrequency);
-    // Want the frequency bins around the test frequency to have highest magnitude
-    EXPECT_EQ (outData.size(), numSamples);
+    CASPI::FFT_new engine;
+    ASSERT_TRUE (true);
+    ASSERT_EQ (engine.radix,2);
+    ASSERT_EQ(engine.sampleRate, 44100);
+    ASSERT_EQ(engine.size, 256);
 }
 
-TEST(FFT,fft_size_test)
+TEST(FFTtests, generateFrequencyBins_test)
 {
-    // check to make sure we get the same size!
-    int numSamples = 512;
-    auto data = std::vector<std::complex<double>>(numSamples);
-    CASPI::fft (data);
-    EXPECT_TRUE (data.size() == numSamples);
-
-}
-
-TEST(FFT,FrequencyBins_test)
-{
-    for (int FFT_size : FFT_sizes)
-    {
-        for (double sampleRate : sampleRateList)
-        {
-            // Test generation of frequency bins
-            std::vector<double> frequencyBins = CASPI::generateFrequencyBins (FFT_size,sampleRate);
-            std::vector<double> expectedFrequencyBins = constructExpectedFrequencyBins (FFT_size,sampleRate);
-            compareVectors<double> (frequencyBins,expectedFrequencyBins);
-        }
-
-    }
-}
-
-
-TEST(FFT,fft_test)
-{
-    // Set up FFT size
-    int numSamples = 512;
-    // check to make sure we get the same size!
-
-    // Generate some data at 20Hz
-    auto realData  = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (20.0,44100.0,numSamples);
-
-    auto data = std::vector<std::complex<double>>(numSamples);
-    // Cast to complex
-    for (int i = 0; i < numSamples; i++)
-    {
-        data.at(i) = std::complex<double> (realData.at(i), 0.0);
-    }
-    // FFT
-    CASPI::fft (data);
-
-    // Take abs
-    auto realFFTdata = std::vector<double>(numSamples/2);
-    for (int i = 0; i < (numSamples/2); i++)
-    {
-        realFFTdata.at(i) = abs(data.at(i+1));
-    }
-
-    std::vector<double> frequencyBins = CASPI::generateFrequencyBins (numSamples,44100.0);
-    EXPECT_TRUE (frequencyBins.size() == realFFTdata.size());
-
-    // Create plot
+    auto bins = constructExpectedFrequencyBins(256,44100);
+    CASPI::FFT_new engine;
+    auto testBins = engine.generateFrequencyBins();
+    compareVectors (bins,testBins);
 }

@@ -19,7 +19,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 *
 * TODO: Add non-linear ramps
 * TODO: Add dB functionality
-* TODO: Fix gain up unit test
 *
 ************************************************************************/
 
