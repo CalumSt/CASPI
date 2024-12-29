@@ -30,6 +30,7 @@ def plotSignal(signalDataDirectory: pathlib.Path, outputDirectory: pathlib.Path)
         createPlot(data, title, outputDirectory) # give to plotting function
 
 def createPlot(data: pd.DataFrame, title: str, outputDir: pathlib.Path) -> None:
+    plt.clf()
     plt.plot(data.iloc[:, 0], data.iloc[:, 1])
     plt.title(title)
     if isinstance(data.iloc[1, 1], int): # check if second entry is time (non-int) or sample index (int)
@@ -39,6 +40,7 @@ def createPlot(data: pd.DataFrame, title: str, outputDir: pathlib.Path) -> None:
 
     filename = title + ".png"
     outputFilepath = outputDir.joinpath(filename)
+    outputDir.mkdir(parents=True, exist_ok=True);
     plt.savefig(outputFilepath, dpi=300, bbox_inches="tight")
     print("Saved to " + str(outputFilepath))
 
