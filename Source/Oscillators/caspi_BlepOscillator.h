@@ -159,7 +159,8 @@ struct Triangle
     FloatType getNextSample()
     {
         sum += 4 * square.phase.increment * square.getNextSample();
-        return sum;
+        constexpr auto offset = static_cast<FloatType>(0.05);
+        return sum - offset;
     }
 
 private:

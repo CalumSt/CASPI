@@ -142,6 +142,10 @@ TEST (OscillatorTests, TriangleRenderWaveform_test)
         EXPECT_LE (s, 1.0f);
         currentPhase += phaseIncrement;
     }
+
+    auto output = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Triangle<double>, double> (frequency, sampleRate, 1024);
+    auto times = range<double> (0.0, 1024.0f/44100.0f, 1024);
+    saveToFile ("./GeneratedSignals/TriangleOscillator.csv",times,output);
 }
 
 TEST (OscillatorTests, renderToBlock_test)

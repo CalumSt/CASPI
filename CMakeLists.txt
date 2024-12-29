@@ -20,6 +20,7 @@ set(header_files
         Source/Utilities/caspi_Maths.h
         Source/Utilities/caspi_Assert.h
         Source/Utilities/caspi_FFT.h
+        Source/Utilities/caspi_FFT_new.h
         Source/Utilities/caspi_CircularBuffer.h
         # ...
 )

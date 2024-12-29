@@ -16,9 +16,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_FFT_new.h
 * @author CS Islay
-* @brief FFT related functionality and processing classes.
-*        The base FFTs are provided as static functions, and the FFT_engine
-*        is templated and is intended for repeated FFTs of similar sizes.
+* @class FFT
+* @brief A class implementing a radix-2 FFT.
 *
 ************************************************************************/
 
@@ -37,13 +36,13 @@ public:
         return frequencyBins;
     }
 
-    void generateTwiddleTable(int size,double fs)
+    void DFT() {
+
+    }
+
+    void generateTwiddleTable()
     {
 
-        for (auto i = 0; i < size; ++i) {
-            for (auto j = 0; j < size; ++j) {
-            }
-        }
     }
 
 private:
@@ -52,6 +51,7 @@ private:
       double sampleRate = 44100;
 
     };
+}
 
 struct FFTConfig
 {
@@ -60,48 +60,4 @@ struct FFTConfig
     double sampleRate = 44100;
 };
 
-static void dft (const std::vector<double>& inData, std::vector<double>& outData) {
-
-}
-
-using Complex = std::complex<double>;
-using CArray  = std::vector<Complex>;
-
-static void perform (CArray& data)
-{
-    const size_t N = data.size();
-    if (N <= 1)
-    {
-        return;
-    }
-
-    // Slice even and odd arrays
-    auto even = CArray (N / 2);
-    auto odd  = even;
-
-    for (size_t i = 0; i < N / 2; ++i)
-    {
-        even[i] = data[2 * i];
-        odd[i]  = data[2 * i + 1];
-    }
-
-    // Recurse FFT
-    perform (even);
-    perform (odd);
-
-    // Butterfly with radix-2
-    for (size_t k = 0; k < N / 2; ++k)
-    {
-        auto phaseFactor = exp (Complex (0.0, -2.0 * CASPI::Constants::PI<double> * static_cast<double> (k) / static_cast<double> (N)));
-        data[k]          = even[k] + (phaseFactor * odd[k]);
-        data[k + N / 2]  = even[k] - (phaseFactor * odd[k]);
-    }
-}
-
-static void fft (CArray& data)
-{
-    perform (data);
-}
-
-}
 #endif //CASPI_FFT_NEW_H
