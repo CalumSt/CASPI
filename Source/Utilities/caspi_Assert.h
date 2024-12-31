@@ -3,15 +3,13 @@
 
 #ifndef CASPI_ASSERT
 #include <cassert>
-#ifdef NDEBUG
-#define CASPI_ASSERT(x,msg) // empty macro
-#else
-#define CASPI_ASSERT(x,msg) assert(x && msg) // Assert in debug only
-#endif
+// Assert in debug only. This is used for readability, but you may want to define additional assertion behaviour.
+#define CASPI_ASSERT(x,msg) assert(x && msg)
 #endif
 
 #ifndef CASPI_STATIC_ASSERT
 #include <cassert>
+// static assert that fails at compile time. Macro is used for readability.
 #define CASPI_STATIC_ASSERT(x,msg) static_assert(x && msg)
 #endif
 

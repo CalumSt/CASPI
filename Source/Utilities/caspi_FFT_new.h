@@ -16,8 +16,9 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_FFT_new.h
 * @author CS Islay
-* @class FFT
-* @brief A class implementing a radix-2 FFT.
+* @brief FFT related functionality and processing classes.
+*        The base FFTs are provided as static functions, and the FFT_engine
+*        is templated and is intended for repeated FFTs of similar sizes.
 *
 ************************************************************************/
 
@@ -36,13 +37,13 @@ public:
         return frequencyBins;
     }
 
-    void DFT() {
-
-    }
-
-    void generateTwiddleTable()
+    void generateTwiddleTable(int size,double fs)
     {
 
+        for (auto i = 0; i < size; ++i) {
+            for (auto j = 0; j < size; ++j) {
+            }
+        }
     }
 
 private:
@@ -51,7 +52,6 @@ private:
       double sampleRate = 44100;
 
     };
-}
 
 struct FFTConfig
 {
@@ -59,5 +59,23 @@ struct FFTConfig
     double radix      = 2;
     double sampleRate = 44100;
 };
+
+static void dft (const std::vector<double>& inData, std::vector<double>& outData) {
+
+}
+
+static void fft (std::vector<double>& data)
+{
+
+}
+
+static void perform (std::vector<double>& data)
+{
+    // recursion is isolated here
+}
+
+}
+
+
 
 #endif //CASPI_FFT_NEW_H
