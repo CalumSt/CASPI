@@ -37,7 +37,8 @@ constexpr int numChannels   = 2;
 constexpr int newNumSamples = 1024;
 constexpr int newNumChannels = 3;
 
-void printBuffer (const CASPI::CircularBuffer& buffer)
+template <typename T>
+void printBuffer (const CASPI::CircularBuffer<T>& buffer)
 {
     std::cout << "START BUFFER\n" << std::endl;
     for (int i = 0; i < buffer.getNumSamples(); i++)

@@ -97,8 +97,8 @@ static FloatType blep (FloatType phase, FloatType increment)
         auto phaseInternal = (phase - 1) / increment;
         return (phaseInternal + 2) * phaseInternal + 1;
     }
-    // Unsure how this return statement works
-    return {};
+
+    return CASPI::Constants::zero<FloatType>;
 }
 
 /// Sine oscillator

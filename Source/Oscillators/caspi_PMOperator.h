@@ -15,16 +15,19 @@
 *
 * @file caspi_PMOperator.h
 * @author CS Islay
-* @class PMOperator
-* @brief A class implementing a basic phase modulation operator, i.e. with a modulator and a carrier.
 ************************************************************************/
 
 #include "Utilities/caspi_Constants.h"
 #include "Utilities/caspi_Assert.h"
+#include "Utilities/caspi_CircularBuffer.h"
 #include <cmath>
 
 namespace CASPI
 {
+/**
+* @class PMOperator
+* @brief A class implementing a basic phase modulation operator, i.e. with a modulator and a carrier.
+ */
 template <typename FloatType>
 class PMOperator
 {
@@ -37,6 +40,8 @@ public:
 
     /**
      * @brief setFrequency sets the carrier frequency and sample rate
+     * @param _frequency The frequency of the operator
+     * @param _sampleRate The sample rate of the operator
      */
     void setFrequency (const FloatType _frequency, const FloatType _sampleRate)
     {
@@ -52,6 +57,7 @@ public:
     [[nodiscard]] FloatType getSampleRate() const { return sampleRate; }
 
     /** @brief Sets the sample rate of the operator.
+     * @param _sampleRate The sample rate of the operator
      */
     void setSampleRate (const FloatType _sampleRate) { sampleRate = _sampleRate; }
 
@@ -68,6 +74,8 @@ public:
 
     /**
     * @brief setFrequency sets the carrier frequency
+    * @param modulationIndex The modulation index of the modulator
+    * @param modulationDepth The modulation depth of the modulator
     */
     void setModulation (const FloatType modulationIndex, const FloatType modulationDepth)
     {
@@ -101,6 +109,11 @@ public:
         return output;
     }
 
+    /**
+     * @brief renders a block of samples to a vector.
+     * @param blockSize the number of samples to render.
+     * @return a vector of samples.
+     */
     std::vector<FloatType> renderBlock (int blockSize)
     {
         auto output = std::vector<FloatType> (blockSize);
@@ -109,6 +122,17 @@ public:
             output.at (i) = render();
         }
         return output;
+    }
+
+  /**
+   * @brief renders a block of samples to a Circular Buffer.
+   * @param blockSize the number of samples to render.
+   * @return a circular buffer containing the samples.
+   */
+  CASPI::CircularBuffer<FloatType> renderBuffer (int blockSize)
+    {
+      auto vector = renderBlock (blockSize);
+      return CASPI::CircularBuffer<FloatType> (vector);
     }
 
     /**

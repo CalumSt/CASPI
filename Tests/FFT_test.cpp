@@ -74,3 +74,10 @@ TEST(FFTtests, generateFrequencyBins_test)
     auto testBins = engine.generateFrequencyBins();
     compareVectors (bins,testBins);
 }
+
+TEST(FFTtests, generateTwiddleTable_test)
+{
+    CASPI::FFT_new engine;
+    ASSERT_EQ (engine.size, 256);
+
+}
