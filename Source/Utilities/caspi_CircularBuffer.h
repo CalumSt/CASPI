@@ -28,18 +28,19 @@ namespace CASPI
  * @class CircularBuffer
  * @brief A circular buffer for audio. Only contains one channel.
  */
+template <typename SampleType=double>
 class CircularBuffer
 {
 public:
     explicit CircularBuffer (const size_t numSamples) noexcept : numSamples (numSamples)
     {
-        buffer   = std::make_unique<std::vector<double>> (numSamples, 0.0);
+        buffer   = std::make_unique<std::vector<SampleType>> (numSamples, 0.0);
         wrapMask = static_cast<int> (numSamples) - 1;
     }
 
-    explicit CircularBuffer (const std::vector<double>& data) noexcept : numSamples (data.size())
+    explicit CircularBuffer (const std::vector<SampleType>& data) noexcept : numSamples (data.size())
     {
-        buffer   = std::make_unique<std::vector<double>> (data);
+        buffer   = std::make_unique<std::vector<SampleType>> (data);
         wrapMask = static_cast<int> (numSamples) - 1;
     }
 
@@ -82,7 +83,7 @@ public:
 
     // Copy constructor
     CircularBuffer (const CircularBuffer& other) noexcept
-        : buffer(std::make_unique<std::vector<double>>(*other.buffer)),
+        : buffer(std::make_unique<std::vector<SampleType>>(*other.buffer)),
           numSamples(other.numSamples),
           wrapMask(other.wrapMask),
           writeIndex(other.writeIndex)
@@ -102,7 +103,7 @@ public:
 	 * @param delayInSamples The delay in samples.
 	 * @return The read sample.
 	 */
-    [[nodiscard]] double read (const int delayInSamples) const
+    [[nodiscard]] SampleType read (const int delayInSamples) const
     {
         // The buffer is linearised.
         int readIndex  = writeIndex - delayInSamples;
@@ -117,18 +118,18 @@ public:
 	 * @param interpolate Whether to interpolate or not.
 	 * @return The read sample.
 	 */
-	[[nodiscard]] double read (const double fractionalDelay, const bool interpolate = true) const
+	[[nodiscard]] SampleType read (const SampleType fractionalDelay, const bool interpolate = true) const
 
     {
         // Truncate and read the integer part of the delay
-        const double y1 = read (static_cast<int> (fractionalDelay));
+        const SampleType y1 = read (static_cast<int> (fractionalDelay));
         // if no interpolation, return y1 as is
         if (! interpolate)
             return y1;
         // read sample before
-        const double y2 = read (static_cast<int> (fractionalDelay) + 1);
+        const SampleType y2 = read (static_cast<int> (fractionalDelay) + 1);
         // interpolate
-        const double fraction = fractionalDelay - static_cast<int> (fractionalDelay);
+        const SampleType fraction = fractionalDelay - static_cast<int> (fractionalDelay);
 
         return linearInterpolation (y1, y2, fraction);
     }
@@ -138,7 +139,7 @@ public:
 	 *
 	 * @param value The value to write.
 	 */
-    void write (const double value)
+    void write (const SampleType value)
     {
         buffer->at (writeIndex) = value;
         writeIndex++;
@@ -152,7 +153,7 @@ public:
 	 */
     void resize (const size_t _numSamples)
     {
-        auto newBuffer = std::vector<double> (_numSamples, 0.0);
+        auto newBuffer = std::vector<SampleType> (_numSamples, 0.0);
 
         if (_numSamples > numSamples)
         {
@@ -169,7 +170,7 @@ public:
             }
         }
 
-        buffer     = std::make_unique<std::vector<double>> (newBuffer);
+        buffer     = std::make_unique<std::vector<SampleType>> (newBuffer);
         wrapMask   = static_cast<int> (_numSamples) - 1;
         numSamples = _numSamples;
     }
@@ -179,7 +180,7 @@ public:
  	 */
     void clear()
     {
-        buffer   = std::make_unique<std::vector<double>> (numSamples, 0.0);
+        buffer   = std::make_unique<std::vector<SampleType>> (numSamples, 0.0);
         wrapMask = static_cast<int> (numSamples) - 1;
     }
 
@@ -188,21 +189,21 @@ public:
 	 *
 	 * @return The buffer as a vector.
 	 */
-    [[nodiscard]] std::vector<double> getBufferAsVector() const
+    [[nodiscard]] std::vector<SampleType> getBufferAsVector() const
     {
         // dereference the unique pointer
         return *buffer;
     }
 
 private:
-    std::unique_ptr<std::vector<double>> buffer = nullptr;
+    std::unique_ptr<std::vector<SampleType>> buffer = nullptr;
     size_t numSamples                           = 0;
     size_t numChannels                          = 1;
     int wrapMask                                = 0;
     int writeIndex                              = 0;
     int readIndex                               = 0;
 
-    static double linearInterpolation (const double y1, const double y2, const double fractional_X)
+    static SampleType linearInterpolation (const SampleType y1, const SampleType y2, const SampleType fractional_X)
     {
         // check for invalid inputs
         if (fractional_X >= 1.0)
@@ -216,6 +217,7 @@ private:
  * @class MultichannelBuffer
  * @brief A circular buffer for holding multiple channels of data.
  */
+template <typename SampleType=double>
 class MultichannelBuffer
 {
 public:
@@ -225,13 +227,13 @@ public:
      * @param numSamples The number of samples in the buffer.
      * @param numChannels The number of channels in the buffer.
      */
-    explicit MultichannelBuffer (const size_t numSamples, const size_t numChannels) : numSamples (numSamples), numChannels (numChannels)
+    explicit MultichannelBuffer (const size_t numSamples, const size_t numChannels) noexcept : numSamples (numSamples), numChannels (numChannels)
     {
         buffer.resize (numChannels);
 
         for (int i = 0; i < numChannels; i++)
         {
-            buffer.at (i) = std::make_unique<CircularBuffer> (CircularBuffer (numSamples));
+            buffer.at (i) = std::make_unique<CircularBuffer<SampleType>> (CircularBuffer<SampleType> (numSamples));
         }
     }
 
@@ -241,13 +243,13 @@ public:
      * @param data The vector of data to initialize the buffer with.
      * @param numChannels The number of channels in the buffer.
      */
-    explicit MultichannelBuffer (const std::vector<double>& data, const size_t numChannels) : numSamples (data.size()), numChannels (numChannels)
+    explicit MultichannelBuffer (const std::vector<SampleType>& data, const size_t numChannels) noexcept : numSamples (data.size()), numChannels (numChannels)
     {
         buffer.resize (numChannels);
 
         for (int i = 0; i < numChannels; i++)
         {
-            buffer.at (i) = std::make_unique<CircularBuffer> (CircularBuffer (data));
+            buffer.at (i) = std::make_unique<CircularBuffer<SampleType>> (CircularBuffer<SampleType> (data));
         }
     }
 
@@ -271,7 +273,7 @@ public:
      *
      * @param frame The frame of data to write.
      */
-    void write (const std::vector<double>& frame) const
+    void write (const std::vector<SampleType>& frame) const
     {
         CASPI_ASSERT (frame.size() == numChannels, "Frame size does not match number of channels to write.");
 
@@ -287,9 +289,9 @@ public:
      * @param delayInSamples The delay in samples.
      * @return The read frame of data.
      */
-    [[nodiscard]] std::vector<double> read (const int delayInSamples) const
+    [[nodiscard]] std::vector<SampleType> read (const int delayInSamples) const
     {
-        auto frame = std::vector<double> (numChannels, 0.0);
+        auto frame = std::vector<SampleType> (numChannels, 0.0);
         for (int i = 0; i < numChannels; i++)
         {
             frame.at (i) = buffer.at (i)->read (delayInSamples);
@@ -304,9 +306,9 @@ public:
      * @param interpolate Whether to interpolate or not.
 	 * @return The read frame of data.
 	 */
-    [[nodiscard]] std::vector<double> read (const double fractionalDelay, const bool interpolate = true) const
+    [[nodiscard]] std::vector<SampleType> read (const SampleType fractionalDelay, const bool interpolate = true) const
     {
-        auto frame = std::vector<double> (numChannels, 0.0);
+        auto frame = std::vector<SampleType> (numChannels, 0.0);
         for (int i = 0; i < numChannels; i++)
         {
             frame.at (i) = buffer.at (i)->read (fractionalDelay, interpolate);
@@ -343,7 +345,7 @@ public:
     }
 
 private:
-    std::vector<std::unique_ptr<CircularBuffer>> buffer;
+    std::vector<std::unique_ptr<CircularBuffer<SampleType>>> buffer;
     size_t numSamples  = 0;
     size_t numChannels = 2;
 };
