@@ -1,4 +1,4 @@
-#pragma once
+
 #include <gtest/gtest.h>
 #include "Filters/caspi_SvfFilter.h"
 #include "Oscillators/caspi_BlepOscillator.h"
