@@ -64,18 +64,44 @@ static void dft (const std::vector<double>& inData, std::vector<double>& outData
 
 }
 
-static void fft (std::vector<double>& data)
+using Complex = std::complex<double>;
+using CArray  = std::vector<Complex>;
+
+static void perform (CArray& data)
 {
+    const size_t N = data.size();
+    if (N <= 1)
+    {
+        return;
+    }
 
+    // Slice even and odd arrays
+    auto even = CArray (N / 2);
+    auto odd  = even;
+
+    for (size_t i = 0; i < N / 2; ++i)
+    {
+        even[i] = data[2 * i];
+        odd[i]  = data[2 * i + 1];
+    }
+
+    // Recurse FFT
+    perform (even);
+    perform (odd);
+
+    // Butterfly with radix-2
+    for (size_t k = 0; k < N / 2; ++k)
+    {
+        auto phaseFactor = exp (Complex (0.0, -2.0 * CASPI::Constants::PI<double> * static_cast<double> (k) / static_cast<double> (N)));
+        data[k]          = even[k] + (phaseFactor * odd[k]);
+        data[k + N / 2]  = even[k] - (phaseFactor * odd[k]);
+    }
 }
 
-static void perform (std::vector<double>& data)
+static void fft (CArray& data)
 {
-    // recursion is isolated here
+    perform (data);
 }
 
 }
-
-
-
 #endif //CASPI_FFT_NEW_H

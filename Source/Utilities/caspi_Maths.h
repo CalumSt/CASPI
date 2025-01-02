@@ -119,6 +119,12 @@ static FloatType dBFSToLinear (const FloatType dBFS)
     }
     return CASPI::Constants::MINUS_INF_DBFS<FloatType>;
 }
+
+template <typename FloatType>
+static FloatType midiNoteToHz(const int noteNumber)
+{
+    return static_cast<FloatType>(Constants::A4_FREQUENCY<FloatType> * std::pow(2, (static_cast<double>(noteNumber) - Constants::A4_MIDI<FloatType>) / Constants::NOTES_IN_OCTAVE<FloatType>));
+}
 } // namespace CASPI::Maths
 
 #endif //CASPI_MATHS_H
