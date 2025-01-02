@@ -23,6 +23,7 @@ set(SOURCES
         PMOperator_test.cpp
         Gain_test.cpp
         FFT_test.cpp
+        Maths_test.cpp
 )
 # --------------------------------------------------------------------------
 
