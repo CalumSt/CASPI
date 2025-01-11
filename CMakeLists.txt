@@ -13,6 +13,7 @@ set(header_files
         caspi.h
         Source/Oscillators/caspi_BlepOscillator.h
         Source/Oscillators/caspi_PMOperator.h
+        Source/Oscillators/caspi_PM.h
         Source/Filters/caspi_SvfFilter.h
         Source/Envelopes/caspi_EnvelopeGenerator.h
         Source/Utilities/caspi_Constants.h
