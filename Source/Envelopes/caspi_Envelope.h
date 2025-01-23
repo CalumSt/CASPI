@@ -12,7 +12,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
                              888
 
 
-* @file caspi_EnvelopeGenerator.h
+* @file caspi_Envelope.h
 * @author CS Islay
 * @brief A class implementing a variety of envelopes using ADSR stages.
 *

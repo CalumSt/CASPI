@@ -21,6 +21,7 @@ set(SOURCES
         Filter_test.cpp
         Envelope_test.cpp
         PMOperator_test.cpp
+        PMAlgorithm_test.cpp
         Gain_test.cpp
         FFT_test.cpp
         Maths_test.cpp

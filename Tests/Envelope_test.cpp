@@ -1,7 +1,7 @@
 
 #include "test_helpers.h"
 
-#include "Envelopes/caspi_EnvelopeGenerator.h"
+#include "Envelopes/caspi_Envelope.h"
 #include <gtest/gtest.h>
 #include <string>
 
@@ -107,7 +107,7 @@ TEST(AdsrTests, Decay_test) {
         auto output = 0.0f;
         numberOfSamples = static_cast<int>(46000.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
-            output = ADSR.render();
+            [[maybe_unused]] output = ADSR.render();
         }
         // Assert
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {

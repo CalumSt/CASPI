@@ -17,32 +17,28 @@
 * @author CS Islay
 ************************************************************************/
 
+#include "Envelopes/caspi_Envelope.h"
 #include "Utilities/caspi_Assert.h"
-#include "Utilities/caspi_CircularBuffer.h"
 #include "Utilities/caspi_Constants.h"
 #include <cmath>
-
-namespace CASPI
+namespace CASPI::PM
 {
 /**
-* @class PMOperator
-* @brief A class implementing a basic phase modulation operator, i.e. with a modulator and a carrier.
-* @details The PM Operator implemented here is a simple modulator-carrier with modulator feedback.
-* This is where there are two sine oscillators, with one modulating (the modulator) another which
-* provides the output signal (the carrier). The modulator can also modulate itself.
+* @class Operator
+* @brief A class implementing a basic phase modulation operator.
+* @details The PM Operator implemented here is a sine signal generator with self-feedback.
 * The amount of modulation is determined by the modulation index and modulation depth. Modulation
 * index is the frequency of the modulator, expressed as a fraction of the carrier frequency.
-* Modulation depth is the output level of the modulator as it is applied to the carrier.
+* Modulation depth (or output level, if it is the carrier) is the output level of the modulator as
+* it is applied to the carrier.
 * Modulation feedback is the amount of self-modulation of the modulator.
 * Note that for implementation, there is a unit delay associated with this.
 *
 * What could be improved here?
-*     Split this up into PMOperator and PMAlgorithm
-*     Operator should be a fundamental block that can modulate or be modulated
-*     Then PMAlgorithm is a collection of FM algorithms (DX7 and beyond?)
+*     The frequency/modIndex API is clunky.
  */
-template <typename FloatType>
-class PMOperator
+template <typename FloatType = double>
+class Operator
 {
 public:
     /**
@@ -72,7 +68,11 @@ public:
     /** @brief Sets the sample rate of the operator.
      * @param _sampleRate The sample rate of the operator
      */
-    void setSampleRate (const FloatType _sampleRate) { sampleRate = _sampleRate; }
+    void setSampleRate (const FloatType _sampleRate)
+    {
+        sampleRate = _sampleRate;
+        Envelope.setSampleRate (_sampleRate);
+    }
 
     /** @brief Gets the current modulation index.
      * @return The modulation index of the modulator
@@ -113,19 +113,17 @@ public:
     * @brief setModDepth sets the modulator depth.
     * @param newModDepth The new modulator depth.
     */
-    void setModDepth (const FloatType newModDepth)
-    {
-        modDepth = newModDepth;
-    }
+    void setModDepth (const FloatType newModDepth) { modDepth = newModDepth; }
 
     /**
-     * @brief setModIndex sets the modulator index.
+     * @brief setModIndex sets the modulator index. Updates the frequency accordingly.
+     * If setting up a modulator, it requires the frequency to be set first equal to the carrier first.
      * @param newModIndex The new modulator index.
      */
     void setModIndex (const FloatType newModIndex)
     {
-        modIndex          = newModIndex;
-        modPhaseIncrement = CASPI::Constants::TWO_PI<FloatType> * modIndex * frequency / sampleRate;
+        modIndex = newModIndex;
+        setFrequency (modIndex * frequency, sampleRate);
     }
 
     /**
@@ -135,98 +133,115 @@ public:
     void setModFeedback (const FloatType newModFeedback)
     {
         modFeedback = newModFeedback;
+        modFeedback == CASPI::Constants::zero<FloatType> ? isSelfModulating = false : isSelfModulating = true;
     }
 
-    /**
-     * @brief render generates the next sample.
-     */
+    void enableEnvelope()
+    {
+        envelopeEnabled = true;
+    }
+
+    void disableEnvelope()
+    {
+        envelopeEnabled = false;
+    }
+
+    void noteOn()
+    {
+        Envelope.noteOn();
+    }
+
+    void noteOff()
+    {
+        Envelope.noteOff();
+    }
+
+    void setADSR (const FloatType attackTime_s, const FloatType decayTime_s, const FloatType sustainLevel, const FloatType releaseTime_s)
+    {
+        Envelope.setSustainLevel (sustainLevel);
+        Envelope.setAttackTime (attackTime_s);
+        Envelope.setDecayTime (decayTime_s);
+        Envelope.setReleaseTime (releaseTime_s);
+    }
+
+    void setAttackTime (const FloatType attackTime_s) { Envelope.setAttackTime (attackTime_s); }
+    void setDecayTime (const FloatType decayTime_s) { Envelope.setDecayTime (decayTime_s); }
+    void setSustainLevel (const FloatType sustainLevel) { Envelope.setSustainLevel (sustainLevel); }
+    void setReleaseTime (const FloatType releaseTime_s) { Envelope.setReleaseTime (releaseTime_s); }
+
     FloatType render()
     {
-        // calculate modulator signal
-        currentModSignal = modDepth * std::sin (currentModPhase + modFeedback * currentModSignal);
-        // calculate value
-        const auto output = std::sin (currentPhase + currentModSignal);
-        // increment phase
-        currentPhase    += phaseIncrement;
-        currentModPhase += modPhaseIncrement;
-        // wrap phase
+        auto envAmount = CASPI::Constants::one<FloatType>;
+
+        if (envelopeEnabled)
+        {
+            envAmount = Envelope.render();
+        }
+
+        auto sineSignal = modDepth * std::sin (currentPhase + modFeedback * output);
+
+        output = envAmount * sineSignal;
+
+        currentPhase += phaseIncrement;
+
         while (currentPhase >= CASPI::Constants::TWO_PI<FloatType>)
         {
             currentPhase -= CASPI::Constants::TWO_PI<FloatType>;
         }
-        while (currentModPhase >= CASPI::Constants::TWO_PI<FloatType>)
-        {
-            currentModPhase -= CASPI::Constants::TWO_PI<FloatType>;
-        }
-
         return output;
     }
 
-    /**
-     * @brief renders a block of samples to a vector.
-     * @param blockSize the number of samples to render.
-     * @return a vector of samples.
-     */
-    std::vector<FloatType> renderBlock (int blockSize)
+    FloatType render (FloatType modulationSignal)
     {
-        auto output = std::vector<FloatType> (blockSize);
-        for (int i = 0; i < blockSize; i++)
+        auto envAmount = CASPI::Constants::one<FloatType>;
+
+        if (envelopeEnabled)
         {
-            output.at (i) = render();
+            envAmount = Envelope.render();
+        }
+
+        auto sineSignal = modDepth * std::sin (currentPhase + modulationSignal + modFeedback * output);
+
+        output = envAmount * sineSignal;
+
+        currentPhase += phaseIncrement;
+
+        while (currentPhase >= CASPI::Constants::TWO_PI<FloatType>)
+        {
+            currentPhase -= CASPI::Constants::TWO_PI<FloatType>;
         }
         return output;
     }
 
-    /**
-   * @brief renders a block of samples to a Circular Buffer.
-   * @param blockSize the number of samples to render.
-   * @return a circular buffer containing the samples.
-   */
-    CASPI::CircularBuffer<FloatType> renderBuffer (int blockSize)
-    {
-        auto vector = renderBlock (blockSize);
-        return CASPI::CircularBuffer<FloatType> (vector);
-    }
-
-    /**
-     * @brief resets the carrier and modulator phase.
-     */
-    void resetPhase()
-    {
-        currentPhase    = 0.0;
-        currentModPhase = 0.0;
-    }
-
-    /**
-     * @brief resets the entire operator to its default state
-     */
     void reset()
     {
-        frequency         = 0.0;
-        phaseIncrement    = 0.0;
-        modIndex          = 0.0;
-        modPhaseIncrement = 0.0;
-        modDepth          = 0.0;
-        resetPhase();
+        isSelfModulating = false;
+        envelopeEnabled  = false;
+        sampleRate       = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
+        modIndex         = CASPI::Constants::one<FloatType>;
+        modDepth         = CASPI::Constants::one<FloatType>;
+        modFeedback      = CASPI::Constants::zero<FloatType>;
+        frequency        = CASPI::Constants::zero<FloatType>;
+        phaseIncrement   = CASPI::Constants::zero<FloatType>;
+        currentPhase     = CASPI::Constants::zero<FloatType>;
+        output           = CASPI::Constants::zero<FloatType>;
     }
 
 private:
-    /// Base parameters
-    FloatType sampleRate = 44100.0;
+    bool isSelfModulating    = false;
+    bool envelopeEnabled     = false;
+    FloatType sampleRate     = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
+    FloatType modIndex       = CASPI::Constants::one<FloatType>;
+    FloatType modDepth       = CASPI::Constants::one<FloatType>;
+    FloatType modFeedback    = CASPI::Constants::zero<FloatType>;
+    FloatType frequency      = CASPI::Constants::zero<FloatType>;
+    FloatType phaseIncrement = CASPI::Constants::zero<FloatType>;
+    FloatType currentPhase   = CASPI::Constants::zero<FloatType>;
+    FloatType output         = CASPI::Constants::zero<FloatType>;
 
-    /// Carrier frequency parameters
-    FloatType frequency      = 0.0;
-    FloatType phaseIncrement = 0.0;
-    FloatType currentPhase   = 0.0;
-
-    /// Modulator parameters
-    FloatType modIndex          = 0.0;
-    FloatType currentModPhase   = 0.0;
-    FloatType modPhaseIncrement = 0.0;
-    FloatType modDepth          = 0.0;
-    FloatType modFeedback       = 0.0;
-    FloatType currentModSignal  = 0.0;
+    // Envelope
+    Envelope::ADSR<FloatType> Envelope;
 };
-} // namespace CASPI
 
+} // namespace CASPI::PM
 #endif //CASPI_PMOPERATOR_H
