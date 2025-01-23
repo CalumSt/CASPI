@@ -93,7 +93,6 @@ TEST(AdsrTests, Attack_test) {
 
 TEST(AdsrTests, Decay_test) {
     CASPI::Envelope::ADSR<float> ADSR;
-    int numberOfSamples;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
         // Arrange
         ADSR.reset();
@@ -104,10 +103,10 @@ TEST(AdsrTests, Decay_test) {
 
         // Act
         ADSR.noteOn();
-        auto output = 0.0f;
-        numberOfSamples = static_cast<int>(46000.0f * testTimeList[testIndex]);
+        auto output               = 0.0f;
+        const int numberOfSamples = static_cast<int> (46000.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
-            [[maybe_unused]] output = ADSR.render();
+            ADSR.render();
         }
         // Assert
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
@@ -125,7 +124,6 @@ TEST(AdsrTests, Decay_test) {
 /// This test checks that envelope actually sustains without switching itself off
 TEST(AdsrTests, Sustain_test) {
     CASPI::Envelope::ADSR<float> ADSR;
-    int numberOfSamples;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
         // Arrange
         ADSR.reset();
@@ -138,9 +136,9 @@ TEST(AdsrTests, Sustain_test) {
         ADSR.noteOn();
         auto output = 0.0f;
         // Get a lot of samples
-        numberOfSamples = static_cast<int>(4.0f * 46000.0f * testTimeList[testIndex]);
+        const int numberOfSamples = static_cast<int> (4.0f * 46000.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
-            output = ADSR.render();
+            ADSR.render();
         }
 
         EXPECT_EQ(ADSR.getState(),"sustain");
@@ -149,7 +147,6 @@ TEST(AdsrTests, Sustain_test) {
 /// This test checks that the ADSR releases properly.
 TEST(AdsrTests, Release_test) {
     CASPI::Envelope::ADSR<float> ADSR;
-    int numberOfSamples;
     for (int testIndex = 0; testIndex < numberOfSettings; testIndex++) {
         // Arrange
         ADSR.reset();
@@ -162,16 +159,16 @@ TEST(AdsrTests, Release_test) {
         ADSR.noteOn();
         auto output = 0.0f;
         // Get a lot of samples
-        numberOfSamples = static_cast<int>(44100.0f * testTimeList[testIndex]);
+        int numberOfSamples = static_cast<int> (44100.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
-            output = ADSR.render();
+             ADSR.render();
         }
 
         ADSR.noteOff();
         EXPECT_EQ(ADSR.getState(),"release");
         numberOfSamples = static_cast<int>(2000.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
-            output = ADSR.render();
+            ADSR.render();
         }
         if (testIndex > 1) {
             EXPECT_EQ(ADSR.getState(),"release"); // Test to see make sure the envelope doesn't release too quickly.
@@ -179,7 +176,7 @@ TEST(AdsrTests, Release_test) {
         }
         numberOfSamples = static_cast<int>(44100.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
-            output = ADSR.render();
+            ADSR.render();
         }
         EXPECT_EQ(ADSR.getState(),"idle");
         EXPECT_EQ(ADSR.render(),0.0f);
