@@ -6,6 +6,7 @@
 #define CASPI_MATHS_H
 
 #include "caspi_Constants.h"
+#include <cmath>
 #include <vector>
 
 namespace CASPI::Maths
