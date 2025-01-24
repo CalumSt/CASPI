@@ -67,19 +67,19 @@ namespace CASPI::PM::Algorithms
     *
     *        The OpCodes enum is used to determine if you are applying the function to the Carrier or Modulator.
     */
+        enum class BasicCascadeOpCodes
+        {
+            Carrier,
+            Modulator,
+            All
+        };;
+
     template <typename FloatType>
     class BasicCascade final : public AlgBase<FloatType>
     {
         using OP = CASPI::PM::Operator<FloatType>;
 
     public:
-        enum class OpCodes
-        {
-            Carrier,
-            Modulator,
-            All
-        };
-
         void noteOn() override
         {
             Carrier.noteOn();
@@ -100,6 +100,13 @@ namespace CASPI::PM::Algorithms
 
         void setModulation() override
         {
+            /* Currently unimplemented for this algorithm */
+        }
+
+        void setSampleRate(const FloatType newSampleRate)
+        {
+            Carrier.setSampleRate (newSampleRate);
+            Modulator.setSampleRate (newSampleRate);
         }
 
         void setOutputLevel (const FloatType outputLevel) { Carrier.setModDepth (outputLevel); }
@@ -108,14 +115,14 @@ namespace CASPI::PM::Algorithms
 
         void setModulationFeedback (FloatType modFeedback) { Modulator.setModFeedback (modFeedback); }
 
-        void enableADSR() override { enableADSR (OpCodes::All); }
+        void enableADSR() override { enableADSR (BasicCascadeOpCodes::All); }
 
-        void disableADSR() override { disableADSR (OpCodes::All); }
+        void disableADSR() override { disableADSR (BasicCascadeOpCodes::All); }
 
 
-        void enableADSR (const OpCodes op) { getOperator(op)->enableEnvelope(); }
+        void enableADSR (const BasicCascadeOpCodes op) { getOperator(op)->enableEnvelope(); }
 
-        void disableADSR (const OpCodes op) { getOperator(op)->disableEnvelope(); }
+        void disableADSR (const BasicCascadeOpCodes op) { getOperator(op)->disableEnvelope(); }
 
         FloatType render() override
         {
@@ -135,18 +142,18 @@ namespace CASPI::PM::Algorithms
             // Do nothing!
         }
 
-        void setADSR (const OpCodes op, FloatType attackTime_s, FloatType decayTime_s, FloatType sustainLevel, FloatType releaseType_s)
+        void setADSR (const BasicCascadeOpCodes op, FloatType attackTime_s, FloatType decayTime_s, FloatType sustainLevel, FloatType releaseType_s)
         {
-            setAttack (op, attackTime_s);
-            setSustain (op, sustainLevel);
-            setDecay (op, decayTime_s);
-            setRelease (op, releaseType_s);
+            setAttackTime (op, attackTime_s);
+            setSustainLevel (op, sustainLevel);
+            setDecayTime (op, decayTime_s);
+            setReleaseTime (op, releaseType_s);
         }
 
-        void setAttack (const OpCodes op, const FloatType attackTime_s) { getOperator (op)->setAttackTime (attackTime_s); }
-        void setDecay (const OpCodes op, const FloatType decayTime_s) { getOperator (op)->setDecayTime (decayTime_s); }
-        void setSustain (const OpCodes op, const FloatType sustainLevel) { getOperator (op)->setSustainLevel (sustainLevel); }
-        void setRelease (const OpCodes op, const FloatType releaseTime_s) { getOperator (op)->setReleaseTime (releaseTime_s); }
+        void setAttackTime (const BasicCascadeOpCodes op, const FloatType attackTime_s) { getOperator (op)->setAttackTime (attackTime_s); }
+        void setDecayTime (const BasicCascadeOpCodes op, const FloatType decayTime_s) { getOperator (op)->setDecayTime (decayTime_s); }
+        void setSustainLevel (const BasicCascadeOpCodes op, const FloatType sustainLevel) { getOperator (op)->setSustainLevel (sustainLevel); }
+        void setReleaseTime (const BasicCascadeOpCodes op, const FloatType releaseTime_s) { getOperator (op)->setReleaseTime (releaseTime_s); }
 
     private:
         OP Carrier;
@@ -156,15 +163,15 @@ namespace CASPI::PM::Algorithms
         /*
          * returns a pointer to the operator. This is private as it's used to avoid repeated switch statements (this is more of an issue with algs with more operators!)
          */
-        OP* getOperator (const OpCodes op)
+        OP* getOperator (const BasicCascadeOpCodes op)
         {
             switch (op)
             {
-                case OpCodes::Carrier:
+                case BasicCascadeOpCodes::Carrier:
                     return &Carrier;
-                case OpCodes::Modulator:
+                case BasicCascadeOpCodes::Modulator:
                     return &Modulator;
-                case OpCodes::All:
+                case BasicCascadeOpCodes::All:
                     std::cout << "OpCode::All not yet implemented!" << std::endl;
                     return nullptr;
                 default:

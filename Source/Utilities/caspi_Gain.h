@@ -39,16 +39,17 @@ struct Gain
      * @brief Sets the gain value with ramping functionality. Clamps gain to be between 0 and 1.
      *        Override flag allows you to bypass ramping functionality.
      * @param newGain the new target gain to ramp to.
-     * @param sampleRate the sample rate of the audio signal.
+     * @param newSampleRate the sample rate of the audio signal.
      * @param override set TRUE to override the current gain value (i.e. ignore the target gain).
      */
-    void setGain (FloatType newGain, FloatType sampleRate, const bool override = false)
+    void setGain (FloatType newGain, FloatType newSampleRate, const bool override = false)
     {
-        setSampleRate (sampleRate);
+        setSampleRate (newSampleRate);
 
         if (override)
         {
             gain = newGain;
+            targetGain = newGain;
         }
 
         if (newGain > gain)
@@ -69,23 +70,23 @@ struct Gain
      * @brief Sets the gain value with ramping functionality. Clamps gain to be between 0 and 1.
      *        Override flag allows you to bypass ramping functionality.
      * @param newGain_db the new target gain to ramp to in dBs.
-     * @param sampleRate the sample rate of the audio signal.
+     * @param newSampleRate the sample rate of the audio signal.
      * @param override set TRUE to override the current gain value (i.e. ignore the target gain).
      */
-    void setGain_db (FloatType newGain_db, FloatType sampleRate, const bool override = false)
+    void setGain_db (FloatType newGain_db, FloatType newSampleRate, const bool override = false)
     {
-        setGain (Maths::dBFSToLinear (newGain_db), sampleRate, override);
+        setGain (Maths::dBFSToLinear (newGain_db), newSampleRate, override);
     }
 
     /**
     * @brief Sets the gain ramp duration in seconds.
     * @param newTime_s the ramp duration in seconds.
-    * @param sampleRate the sample rate of the audio signal.
+    * @param newSampleRate the sample rate of the audio signal.
     */
-    void setGainRampDuration (FloatType newTime_s, const FloatType sampleRate)
+    void setGainRampDuration (FloatType newTime_s, const FloatType newSampleRate)
     {
-        setSampleRate (sampleRate);
-        newTime_s      = (newTime_s < CASPI::Constants::zero<FloatType>) ? static_cast<FloatType> (0.02) : newTime_s;
+        setSampleRate (newSampleRate);
+        newTime_s      = (newTime_s < CASPI::Constants::zero<FloatType>) ? static_cast<FloatType> (0.001) : newTime_s;
         rampDuration_s = newTime_s;
         setGainIncrement();
     }
