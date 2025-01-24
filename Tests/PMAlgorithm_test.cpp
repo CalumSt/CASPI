@@ -35,7 +35,7 @@ constexpr auto modFeedback = 3.0;
 constexpr double newSampleRate = 22050.0;
 using OP = CASPI::PM::Operator<double>;
 using Cascade = CASPI::PM::Algorithms::BasicCascade<double>;
-using enum CASPI::PM::Algorithms::BasicCascade<double>::OpCodes;
+using enum CASPI::PM::Algorithms::BasicCascadeOpCodes;
 
 TEST(BasicCascadeTests,Initialises_test)
 {
