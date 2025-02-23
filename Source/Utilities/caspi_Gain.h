@@ -52,6 +52,11 @@ struct Gain
             targetGain = newGain;
         }
 
+        if (gain == newGain)
+        {
+            targetGain = gain;
+        }
+
         if (newGain > gain)
         {
             newGain    = (newGain > CASPI::Constants::one<FloatType>) ? CASPI::Constants::one<FloatType> : newGain;
