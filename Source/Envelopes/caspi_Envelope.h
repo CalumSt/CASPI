@@ -67,10 +67,12 @@ namespace CASPI::Envelope {
                 decayOffset          = (sustainLevel - decayTCO) * (one - decayCoefficient);
             }
 
-            void setSustainLevel(FloatType _sustainLevel) {
-                if (_sustainLevel <= zero) { _sustainLevel = zero; }
-                CASPI_ASSERT(sustainLevel < one, "Sustain level must be between 0 and 1.");
+            bool setSustainLevel(FloatType _sustainLevel) noexcept
+            {
+                if (_sustainLevel <= zero) { _sustainLevel = zero; return false; }
+                if (_sustainLevel > one) { _sustainLevel = one; return false; }
                 sustainLevel = _sustainLevel;
+                return true;
             }
 
             void setReleaseTime(FloatType _releaseTime_s) {
