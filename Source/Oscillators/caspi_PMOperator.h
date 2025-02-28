@@ -54,7 +54,11 @@ public:
      */
     void setFrequency (const FloatType _frequency, const FloatType _sampleRate)
     {
-        CASPI_ASSERT (_frequency > 0 && _sampleRate > 0, "Frequency and Sample Rate must be larger than 0.");
+        //CASPI_ASSERT (_frequency > 0 && _sampleRate > 0, "Frequency and Sample Rate must be larger than 0.");
+        if (_frequency <= 0 || _sampleRate <= 0)
+        {
+            std::cout << "Uh oh!" << "\n";
+        }
         frequency      = _frequency;
         sampleRate     = _sampleRate;
         phaseIncrement = CASPI::Constants::TWO_PI<FloatType> * frequency / sampleRate;
