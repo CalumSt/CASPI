@@ -107,7 +107,7 @@ struct Sine
 {
     void resetPhase() { phase.resetPhase(); }
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (CASPI::Constants::TWO_PI<float> * frequency, sampleRate); }
-    FloatType getNextSample() { return std::sin (phase.incrementPhase (CASPI::Constants::TWO_PI<float>)); }
+    FloatType render() { return std::sin (phase.incrementPhase (CASPI::Constants::TWO_PI<float>)); }
     Phase<FloatType> phase;
 };
 
@@ -116,7 +116,7 @@ struct Saw
 {
     void resetPhase() { phase.resetPhase(); }
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (frequency, sampleRate); }
-    FloatType getNextSample()
+    FloatType render()
     {
         auto phaseInternal = phase.incrementPhase (1);
         return 2 * phaseInternal - 1 - blep<FloatType> (phaseInternal, phase.increment);
@@ -131,7 +131,7 @@ struct Square
     void resetPhase() { phase.resetPhase(); }
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (frequency, sampleRate); }
 
-    FloatType getNextSample()
+    FloatType render()
     {
         auto phaseInternal = phase.incrementPhase (1);
         auto half          = static_cast<FloatType> (0.5);
@@ -156,9 +156,9 @@ struct Triangle
     }
     void setFrequency (FloatType frequency, FloatType sampleRate) { square.setFrequency (frequency, sampleRate); }
 
-    FloatType getNextSample()
+    FloatType render()
     {
-        sum += 4 * square.phase.increment * square.getNextSample();
+        sum += 4 * square.phase.increment * square.render();
         constexpr auto offset = static_cast<FloatType>(0.05);
         return sum - offset;
     }
@@ -177,10 +177,24 @@ std::vector<FloatType> renderBlock (FloatType frequency, FloatType sampleRate, c
     for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++)
     {
         // get sample from (mono) oscillator
-        auto sample             = osc.getNextSample();
+        auto sample             = osc.render();
         output.at (sampleIndex) = sample;
     }
     return output;
+}
+
+template <typename OscillatorType, typename BufferType=std::vector<float>, typename FloatType=float>
+void renderBlock (BufferType &buffer, FloatType frequency, FloatType sampleRate, const int numberOfSamples = 1)
+{
+    OscillatorType osc;
+    buffer.clear();
+    osc.setFrequency (frequency, sampleRate);
+    for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++)
+    {
+        // get sample from (mono) oscillator
+        auto sample             = osc.render();
+       buffer[sampleIndex] = sample;
+    }
 }
 
 }; // namespace CASPI::BlepOscillator

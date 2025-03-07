@@ -21,6 +21,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_CIRCULARBUFFER_NEW_H
 #define CASPI_CIRCULARBUFFER_NEW_H
 #include "caspi_Assert.h"
+#include <vector>
+#include <memory>
 
 namespace CASPI
 {
@@ -106,9 +108,9 @@ public:
     [[nodiscard]] SampleType read (const int delayInSamples) const
     {
         // The buffer is linearised.
-        int readIndex  = writeIndex - delayInSamples;
-        readIndex     &= wrapMask;
-        return buffer->at (readIndex);
+        int _readIndex  = writeIndex - delayInSamples;
+        _readIndex     &= wrapMask;
+        return buffer->at (_readIndex);
     }
 
 	/**

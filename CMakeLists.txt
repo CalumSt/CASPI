@@ -17,10 +17,10 @@ set(header_files
         Source/Filters/caspi_SvfFilter.h
         Source/Envelopes/caspi_Envelope.h
         Source/Utilities/caspi_Constants.h
-        Source/Utilities/caspi_Gain.h
+        Source/AudioUtilities/caspi_Gain.h
         Source/Utilities/caspi_Maths.h
         Source/Utilities/caspi_Assert.h
-        Source/Utilities/caspi_FFT.h
+        Source/AudioUtilities/caspi_FFT.h
         Source/Utilities/caspi_FFT_new.h
         Source/Utilities/caspi_CircularBuffer.h
         # ...
