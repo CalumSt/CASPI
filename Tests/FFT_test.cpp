@@ -1,5 +1,3 @@
-#pragma once
-
 #include <complex>
 #include <vector>
 #include <cmath>
