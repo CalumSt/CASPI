@@ -63,7 +63,7 @@ TEST (OscillatorTests, SineGetNextSample_test)
 {
     CASPI::BlepOscillator::Sine<float> osc;
     osc.setFrequency (frequency, sampleRate);
-    const auto s = osc.getNextSample();
+    const auto s = osc.render();
     EXPECT_GE (s, -1.0f);
     EXPECT_LE (s, 1.0f);
     EXPECT_NEAR (s, 0.0f, 0.01f);
@@ -81,7 +81,7 @@ TEST (OscillatorTests, SineRenderWaveform_test)
 
     for (int i = 0; i < samplesToRender; i++)
     {
-        auto s = osc.getNextSample();
+        auto s = osc.render();
         EXPECT_GE (s, -1.0f);
         EXPECT_LE (s, 1.0f);
     }
@@ -99,7 +99,7 @@ TEST (OscillatorTests, SawRenderWaveform_test)
     }
     for (int i = 0; i < samplesToRender; i++)
     {
-        auto s = osc.getNextSample();
+        auto s = osc.render();
         EXPECT_GE (s, -1.0f);
         EXPECT_LE (s, 1.0f);
         currentPhase += phaseIncrement;
@@ -118,7 +118,7 @@ TEST (OscillatorTests, SquareRenderWaveform_test)
     }
     for (int i = 0; i < samplesToRender; i++)
     {
-        auto s = osc.getNextSample();
+        auto s = osc.render();
         EXPECT_GE (s, -1.0f);
         EXPECT_LE (s, 1.0f);
         currentPhase += phaseIncrement;
@@ -137,7 +137,7 @@ TEST (OscillatorTests, TriangleRenderWaveform_test)
     }
     for (int i = 0; i < samplesToRender; i++)
     {
-        auto s = osc.getNextSample();
+        auto s = osc.render();
         EXPECT_GE (s, -1.0f);
         EXPECT_LE (s, 1.0f);
         currentPhase += phaseIncrement;
@@ -155,7 +155,7 @@ TEST (OscillatorTests, renderToBlock_test)
     auto test = std::vector<float> (1024);
     for (int i = 0; i < 1024; i++)
     {
-        test.at(i) = osc.getNextSample();
+        test.at(i) = osc.render();
     }
     osc.resetPhase();
     // This API is ugly but will work for now

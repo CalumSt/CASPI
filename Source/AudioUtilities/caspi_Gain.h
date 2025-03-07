@@ -21,10 +21,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #ifndef CASPI_GAIN_H
 #define CASPI_GAIN_H
-#include "caspi_CircularBuffer.h"
-#include "caspi_Constants.h"
-#include "caspi_Maths.h"
-#include <algorithm>
+#include "Utilities/caspi_Constants.h"
+#include "Utilities/caspi_Maths.h"
 
 namespace CASPI
 {
