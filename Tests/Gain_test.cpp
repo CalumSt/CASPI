@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 #define private public
-#include <Utilities/caspi_Gain.h>
+#include <AudioUtilities/caspi_Gain.h>
 /*
  * [DONE] Can initialise gain object
  * [DONE] Can set gain levels
