@@ -33,31 +33,33 @@ jobs:
             matrix:
                 os: [ubuntu-latest, windows-latest, macos-latest]
                 build_type: [Debug]
-                c_compiler: [gcc, clang, cl]
-                include:
-                    - os: windows-latest
-                      c_compiler: cl
-                      cpp_compiler: cl
-                    - os: ubuntu-latest
-                      c_compiler: gcc
-                      cpp_compiler: g++
-                    - os: ubuntu-latest
-                      c_compiler: clang
-                      cpp_compiler: clang++
-                    - os: macos-latest
-                      c_compiler: clang
-                      cpp_compiler: clang++
-                exclude:
-                    - os: windows-latest
-                      c_compiler: gcc
-                    - os: windows-latest
-                      c_compiler: clang
-                    - os: ubuntu-latest
-                      c_compiler: cl
-                    - os: macos-latest
-                      c_compiler: cl
-                    - os: macos-latest
-                      c_compiler: gcc
+                config:
+                    - {
+                        name: "Windows Latest MSVC", artifact: "Windows-MSVC.tar.xz",
+                        os: windows-latest,
+                        cc: "cl", cxx: "cl",
+                        environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
+                    }
+                    - {
+                        name: "Windows Latest MinGW", artifact: "Windows-MinGW.tar.xz",
+                        os: windows-latest,
+                         cc: "gcc", cxx: "g++"
+                    }
+                    - {
+                        name: "Ubuntu Latest GCC", artifact: "Linux.tar.xz",
+                        os: ubuntu-latest,
+                        cc: "gcc", cxx: "g++"
+                    }
+                    - {
+                        name: "Ubuntu Latest Clang", artifact: "Linux.tar.xz",
+                        os: ubuntu-latest,
+                        cc: "clang", cxx: "clang++"
+                    }
+                    - {
+                        name: "macOS Latest Clang", artifact: "macOS.tar.xz",
+                        os: macos-latest,
+                        cc: "clang", cxx: "clang++"
+                    }
 
         steps:
             - uses: actions/checkout@v4
