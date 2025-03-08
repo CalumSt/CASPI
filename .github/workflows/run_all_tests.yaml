@@ -80,7 +80,8 @@ jobs:
               run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
               
             - name: Ensure Testing Directory Exists
-              run: mkdir -p ${{ env.BUILD_DIR }}/Testing/Temporary
+              run: mkdir -p ${{ env.BUILD_DIR }}/Testing/ |
+                   mkdir -p ${{ env.BUILD_DIR }}/Testing/Temporary
 
             - name: Test
               working-directory: ${{ env.BUILD_DIR }}
