@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CXX_STANDARD 20)
 # Set up the testing project
-project(TESTING)
+project(UnitTests)
 # allow testing from this directory
 enable_testing()
 
