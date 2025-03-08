@@ -71,7 +71,7 @@ jobs:
                   echo "build-output-dir=${{ env.TEST_DIR }}/build" >> "$GITHUB_OUTPUT"
                   
             - name: Create Build Directory (if not exists)
-              run: mkdir -p ${{ steps.strings.outputs.build-output-dir }}
+              run: mkdir -p ${{ env.BUILD_DIR }}
 
             - name: Configure CMake
                 # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -79,15 +79,19 @@ jobs:
               run:
                   cmake 
                   -S ${{env.TEST_DIR}}
-                  -B ${{ steps.strings.outputs.build-output-dir }}
+                  -B ${{ env.BUILD_DIR }}
                   -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
                   -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
                   -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
             - name: Build
                 # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-              run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+              run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
+
+            - name: Fix Permissions (macOS)
+              if: matrix.os == 'macos-latest'
+              run: chmod -R 777 ${{ env.BUILD_DIR }}
 
             - name: Test
-              working-directory: ${{ steps.strings.outputs.build-output-dir }}
+              working-directory: ${{ env.BUILD_DIR }}
               run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
