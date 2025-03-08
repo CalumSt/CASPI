@@ -70,6 +70,11 @@ jobs:
               shell: bash
               run: |
                   echo "build-output-dir=${{ env.TEST_DIR }}/build" >> "$GITHUB_OUTPUT"
+                  
+            - name: Create Build Directory (if not exists)
+              run: mkdir -p ${{ steps.strings.outputs.build-output-dir }}
+
+            - name: Set up CMake
 
             - name: Configure CMake
                 # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -85,10 +90,6 @@ jobs:
             - name: Build
                 # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
               run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
-
-            - name: Fix Permissions (macOS)
-              if: matrix.os == 'macos-latest'
-              run: chmod -R 777 ${{ steps.strings.outputs.build-output-dir }}
 
             - name: Test
               working-directory: ${{ steps.strings.outputs.build-output-dir }}
