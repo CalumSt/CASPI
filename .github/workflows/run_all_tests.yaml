@@ -78,10 +78,17 @@ jobs:
             - name: Build
                 # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
               run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
-
-            - name: Fix Permissions (macOS)
+              
+            - name: Debug File Permissions (macOS)
               if: matrix.os == 'macos-latest'
-              run: chmod -R 777 ${{ env.BUILD_DIR }}
+              run: |
+                    echo "Current User: $(whoami)"
+                    echo "Testing Directory Permissions:"
+                    ls -ld ${{ env.BUILD_DIR }}
+                    echo "Files in Build Directory:"
+                    ls -la ${{ env.BUILD_DIR }}
+                  
+                
 
             - name: Test
               working-directory: ${{ env.BUILD_DIR }}
