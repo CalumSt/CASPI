@@ -14,6 +14,7 @@ concurrency:
 env:
     BUILD_TYPE: Debug
     TEST_DIR: Tests
+    BUILD_DIR: build
 
 jobs:
     build:
