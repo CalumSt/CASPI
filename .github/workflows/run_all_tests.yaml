@@ -44,9 +44,6 @@ jobs:
                       c_compiler: clang
                       cpp_compiler: clang++
                     - os: macos-latest
-                      c_compiler: gcc
-                      cpp_compiler: g++
-                    - os: macos-latest
                       c_compiler: clang
                       cpp_compiler: clang++
                 exclude:
@@ -58,6 +55,8 @@ jobs:
                       c_compiler: cl
                     - os: macos-latest
                       c_compiler: cl
+                    - os: macos-latest
+                      c_compiler: gcc
 
         steps:
             - uses: actions/checkout@v4
@@ -91,6 +90,4 @@ jobs:
 
             - name: Test
               working-directory: ${{ steps.strings.outputs.build-output-dir }}
-                # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-                # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
               run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
