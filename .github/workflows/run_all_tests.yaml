@@ -79,15 +79,6 @@ jobs:
                 # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
               run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
 
-            -   name: Debug Testing Directory
-                if: matrix.os == 'macos-latest'
-                run: |
-                    ls -la ${{ env.BUILD_DIR }}
-              
-            - name: Ensure Testing Directory Exists
-              run: mkdir -p ${{ env.BUILD_DIR }}/Testing/ |
-                   mkdir -p ${{ env.BUILD_DIR }}/Testing/Temporary
-
             - name: Test
               working-directory: ${{ env.BUILD_DIR }}
               run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
