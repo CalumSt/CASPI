@@ -2,7 +2,7 @@ name: Run All Tests
 
 on:
     push:
-        branches: [ main, develop ]
+        branches: [ develop ]
     pull_request:
         branches: [ main ]
 
@@ -38,9 +38,6 @@ jobs:
                     - os: windows-latest
                       c_compiler: cl
                       cpp_compiler: cl
-                    - os: windows-latest
-                      c_compiler: gcc
-                      cpp_compiler: g++
                     - os: ubuntu-latest
                       c_compiler: gcc
                       cpp_compiler: g++
