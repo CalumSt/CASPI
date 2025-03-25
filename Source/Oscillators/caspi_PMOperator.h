@@ -89,6 +89,8 @@ public:
      */
     [[nodiscard]] FloatType getModulationDepth() const { return modDepth; }
 
+    [[nodiscard]] FloatType getModulationFeedback() const { return modFeedback; }
+
     /**
     * @brief setModulation sets the modulation index, depth and feedback.
     * @param modulationIndex The modulation index of the modulator

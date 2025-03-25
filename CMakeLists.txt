@@ -17,7 +17,8 @@ set(header_files
         Source/Filters/caspi_SvfFilter.h
         Source/Envelopes/caspi_Envelope.h
         Source/Utilities/caspi_Constants.h
-        Source/AudioUtilities/caspi_Gain.h
+        Source/Gain/caspi_Gain.h
+        Source/Gain/caspi_Waveshaper.h
         Source/Utilities/caspi_Maths.h
         Source/Utilities/caspi_Assert.h
         Source/AudioUtilities/caspi_FFT.h

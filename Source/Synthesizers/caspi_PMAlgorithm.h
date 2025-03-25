@@ -19,7 +19,6 @@
 
 #include "Oscillators/caspi_PMOperator.h"
 #include "Utilities/caspi_Constants.h"
-#include "Utilities/caspi_LeakDetector.h"
 
 /**
  * @namespace Algorithms
@@ -38,160 +37,30 @@ namespace CASPI::PM::Algorithms
     class AlgBase
     {
     public:
-        virtual void noteOn()                                                  = 0;
-        virtual void noteOff()                                                 = 0;
-        virtual FloatType render()                                             = 0;
-        virtual void reset()                                                   = 0;
-        virtual void setModulation()                                           = 0;
-        virtual void setFrequency (FloatType frequency, FloatType sampleRate)  = 0;
+        virtual void noteOn()                                                       = 0;
+        virtual void noteOff()                                                      = 0;
+        virtual FloatType render()                                                  = 0;
+        virtual void reset()                                                        = 0;
+        virtual void setModulation()                                                = 0;
+        virtual void setFrequency (FloatType newFrequency, FloatType newSampleRate) = 0;
+        virtual void setSampleRate (FloatType newSampleRate)                        = 0;
         virtual void setADSR (FloatType attackTime_s, FloatType decayTime_s,
-                              FloatType sustainLevel, FloatType releaseType_s) = 0;
-        virtual void enableADSR()                                              = 0;
-        virtual void disableADSR()                                             = 0;
-        virtual ~AlgBase()                                                     = default;
+                              FloatType sustainLevel, FloatType releaseType_s)      = 0;
+        virtual void enableADSR()                                                   = 0;
+        virtual void disableADSR()                                                  = 0;
+        virtual void prepareToPlay ()                                               = 0;
+        virtual ~AlgBase()                                                          = default;
         [[nodiscard]] int getNumOperators() const { return numOperators; }
+
+        FloatType getSampleRate () const { return sampleRate; }
+        FloatType getFrequency () const { return frequency; }
 
     private:
         int numOperators     = 0;
         FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
+        FloatType frequency  = CASPI::Constants::one<FloatType>; // non-zero to prevent assertion hitting
     };
 
-    /**
-    * @class BasicCascade
-    * @brief A class implementing a 2-Operator linear algorithm.
-    *        1 Modulator modulates the carrier, with an option for ADSR on either using an enum.
-    *        The modulator can also self-feedback.
-    *
-    *         __________
-    *        |    _____|_____        __________
-    *        |   |           |      |          |
-    *        |-->| Modulator |----->|  Carrier | -----> Output
-    *            |___________|      |__________|
-    *
-    *        The OpCodes enum is used to determine if you are applying the function to the Carrier or Modulator.
-    */
-        enum class BasicCascadeOpCodes
-        {
-            Carrier,
-            Modulator,
-            All
-        };;
-
-    template <typename FloatType>
-    class BasicCascade final : public AlgBase<FloatType>
-    {
-        using OP = CASPI::PM::Operator<FloatType>;
-
-    public:
-        void noteOn() override
-        {
-            Carrier.noteOn();
-            Modulator.noteOn();
-        }
-
-        void noteOff() override
-        {
-            Carrier.noteOff();
-            Modulator.noteOff();
-        }
-
-        void setFrequency (const FloatType frequency, const FloatType sampleRate) override
-        {
-            Carrier.setFrequency (frequency, sampleRate);
-            Modulator.setFrequency (frequency, sampleRate);
-        }
-
-        void setModulation() override
-        {
-            /* Currently unimplemented for this algorithm */
-        }
-
-        void setSampleRate(const FloatType newSampleRate)
-        {
-            Carrier.setSampleRate (newSampleRate);
-            Modulator.setSampleRate (newSampleRate);
-        }
-
-        void setOutputLevel (const FloatType outputLevel)
-        {
-            Carrier.setModDepth (outputLevel);
-        }
-
-        void setModulation (FloatType modIndex, FloatType modDepth)
-        {
-            Modulator.setModulation (modIndex, modDepth);
-        }
-
-        void setModulationFeedback (FloatType modFeedback)
-        {
-            Modulator.setModFeedback (modFeedback);
-        }
-
-        void enableADSR() override { enableADSR (BasicCascadeOpCodes::All); }
-
-        void disableADSR() override { disableADSR (BasicCascadeOpCodes::All); }
-
-
-        void enableADSR (const BasicCascadeOpCodes op) { getOperator(op)->enableEnvelope(); }
-
-        void disableADSR (const BasicCascadeOpCodes op) { getOperator(op)->disableEnvelope(); }
-
-        FloatType render() override
-        {
-            auto modSignal = Modulator.render();
-            auto signal    = Carrier.render (modSignal);
-            return signal;
-        }
-
-        void reset() override
-        {
-            Carrier.reset();
-            Modulator.reset();
-        }
-
-        void setADSR (FloatType attackTime_s, FloatType decayTime_s, FloatType sustainLevel, FloatType releaseType_s) override
-        {
-            setADSR (BasicCascadeOpCodes::Carrier, attackTime_s, decayTime_s, sustainLevel, releaseType_s);
-            setADSR (BasicCascadeOpCodes::Modulator, attackTime_s, decayTime_s, sustainLevel, releaseType_s);
-        }
-
-        void setADSR (const BasicCascadeOpCodes op, FloatType attackTime_s, FloatType decayTime_s, FloatType sustainLevel, FloatType releaseType_s)
-        {
-            setAttackTime (op, attackTime_s);
-            setSustainLevel (op, sustainLevel);
-            setDecayTime (op, decayTime_s);
-            setReleaseTime (op, releaseType_s);
-        }
-
-        void setAttackTime (const BasicCascadeOpCodes op, const FloatType attackTime_s) { getOperator (op)->setAttackTime (attackTime_s); }
-        void setDecayTime (const BasicCascadeOpCodes op, const FloatType decayTime_s) { getOperator (op)->setDecayTime (decayTime_s); }
-        void setSustainLevel (const BasicCascadeOpCodes op, const FloatType sustainLevel) { getOperator (op)->setSustainLevel (sustainLevel); }
-        void setReleaseTime (const BasicCascadeOpCodes op, const FloatType releaseTime_s) { getOperator (op)->setReleaseTime (releaseTime_s); }
-
-    private:
-        OP Carrier;
-        OP Modulator;
-        int numOperators = 2;
-
-        /*
-         * returns a pointer to the operator. This is private as it's used to avoid repeated switch statements (this is more of an issue with algs with more operators!)
-         */
-        OP* getOperator (const BasicCascadeOpCodes op)
-        {
-            switch (op)
-            {
-                case BasicCascadeOpCodes::Carrier:
-                    return &Carrier;
-                case BasicCascadeOpCodes::Modulator:
-                    return &Modulator;
-                case BasicCascadeOpCodes::All:
-                    std::cout << "OpCode::All not yet implemented!" << std::endl;
-                    return nullptr;
-                default:
-                    return nullptr;
-            }
-        }
-    };
 
     enum class Algorithms
     {
@@ -206,91 +75,162 @@ namespace CASPI::PM::Algorithms
         All
     };
 
-    template <typename FloatType>
-    class TwoOperatorAlgs final:  AlgBase<FloatType>
+/**
+* @class TwoOperatorAlgs
+* @brief A class containing all possible two operator algorithms.
+*
+*        Basic Cascade:
+*        1 Modulator modulates the carrier, with an option for ADSR on either using an enum.
+*        The modulator can also self-feedback.
+*
+*         __________
+*        |    _____|_____        __________
+*        |   |           |      |          |
+*        |-->|    A      |----->|     B    | -----> Output
+*            |___________|      |__________|
+*
+*        Two Carriers :
+*        Two sine waves are summed together, where both can self-modulate
+*
+*         __________
+*        |    _____|_____
+*        |   |           |
+*        |-->|     A     |-----|
+*            |___________|     |
+*                              |
+*         __________           |-----------> Output
+*        |    _____|_____      |
+*        |   |           |     |
+*        |-->|     B     |-----|
+*            |___________|
+*
+*
+*/
+    template <typename FloatType=double>
+    class TwoOperatorAlgs final: public AlgBase<FloatType>
     {
         using OP = CASPI::PM::Operator<FloatType>;
 
     public:
 
+        TwoOperatorAlgs() = default;
         TwoOperatorAlgs(const TwoOperatorAlgs&) = default;
         TwoOperatorAlgs(TwoOperatorAlgs&&) = default;
         TwoOperatorAlgs& operator=(const TwoOperatorAlgs&) = default;
         TwoOperatorAlgs& operator=(TwoOperatorAlgs&&) = default;
 
-        void noteOn() override
+        void noteOn() override { OperatorB.noteOn(); OperatorA.noteOn(); }
+        void noteOff() override { OperatorB.noteOff(); OperatorA.noteOff(); }
+
+        void setFrequency (const FloatType newFrequency, const FloatType newSampleRate) override
         {
-            OperatorB.noteOn();
-            OperatorA.noteOn();
+            this->frequency = newFrequency;
+            this->sampleRate = newSampleRate;
+            OperatorB.setFrequency (newFrequency, newSampleRate);
+            OperatorA.setFrequency (newFrequency, newSampleRate);
         }
 
-        void noteOff() override
-        {
-            OperatorB.noteOff();
-            OperatorA.noteOff();
-        }
-
-        void setFrequency (const FloatType frequency, const FloatType sampleRate) override
-        {
-            OperatorB.setFrequency (frequency, sampleRate);
-            OperatorA.setFrequency (frequency, sampleRate);
-        }
-
-        void setModulation() override
+        void setModulation () override
         {
             /* Currently unimplemented for this algorithm */
         }
 
-        void setSampleRate(const FloatType newSampleRate)
+        void setSampleRate (const FloatType newSampleRate) override
         {
             OperatorB.setSampleRate (newSampleRate);
             OperatorA.setSampleRate (newSampleRate);
+            this->sampleRate = newSampleRate;
         }
 
         void setOutputLevel (const FloatType outputLevel)
         {
+            if (currentAlg == Algorithms::TwoCarriers)
+            {
+                OperatorA.setModDepth (outputLevel);
+            }
             OperatorB.setModDepth (outputLevel);
         }
 
         void setModulation (FloatType modIndex, FloatType modDepth)
         {
-            OperatorA.setModulation (modIndex, modDepth);
+            if (currentAlg == Algorithms::BasicCascade)
+            {
+                OperatorA.setModulation (modIndex, modDepth);
+            }
         }
 
-        void setModulationFeedback (FloatType modFeedback)
+        void setModulationFeedback (OpIndex op, FloatType modFeedback)
         {
-            OperatorA.setModFeedback (modFeedback);
+            OP *Operator = operatorMap[op];
+            if (Operator == nullptr)
+            {
+                OperatorA.setModFeedback (modFeedback);
+                OperatorB.setModFeedback (modFeedback);
+            } else
+            {
+                Operator->setModFeedback (modFeedback);
+            }
         }
 
-        void enableADSR() override
+        void enableADSR () override
         {
-            enableADSR (BasicCascadeOpCodes::All);
+            enableADSR (OpIndex::All);
         }
 
-        void disableADSR() override
+        void disableADSR () override
         {
-            disableADSR (BasicCascadeOpCodes::All);
+            disableADSR (OpIndex::All);
         }
 
 
         void enableADSR (OpIndex op)
         {
-            auto Operator = operatorMap[op];
-            Operator->enableEnvelope();
+            OP *Operator = operatorMap[op];
+            if (Operator == nullptr)
+            {
+                OperatorA.enableEnvelope();
+                OperatorB.enableEnvelope();
+            } else
+            {
+                Operator->enableEnvelope();
+            }
         }
 
-        void disableCarrierADSR (OpIndex op)
+        void disableADSR (OpIndex op)
         {
-            auto Operator = operatorMap[op];
-            Operator->disableEnvelope();
+            OP *Operator = operatorMap[op];
+            if (Operator == nullptr)
+            {
+                OperatorA.disableEnvelope();
+                OperatorB.disableEnvelope();
+            } else
+            {
+                Operator->disableEnvelope();
+            }
+
         }
 
         void setAlgorithm (const Algorithms algToUse)
         {
-            currentAlg = algToUse;
+            switch (algToUse)
+            {
+                case Algorithms::BasicCascade:
+                    initialiseBasicCascade();
+                    break;
+                case Algorithms::TwoCarriers:
+                    initialiseTwoCarriers();
+                    break;
+                default:
+                    break;
+            }
         }
 
-        FloatType render() override
+        void prepareToPlay () override
+        {
+            setAlgorithm(currentAlg);
+        }
+
+        FloatType render () override
         {
             if (currentAlg == Algorithms::BasicCascade)
             {
@@ -308,7 +248,7 @@ namespace CASPI::PM::Algorithms
             return CASPI::Constants::zero<FloatType>;
         }
 
-        void reset() override
+        void reset () override
         {
             OperatorB.reset();
             OperatorA.reset();
@@ -316,7 +256,7 @@ namespace CASPI::PM::Algorithms
 
         void setADSR ( OpIndex op,
             FloatType attackTime_s, FloatType decayTime_s,
-            FloatType sustainLevel, FloatType releaseType_s)
+            FloatType sustainLevel, FloatType releaseType_s )
         {
             auto Operator = operatorMap[op];
             if (Operator == nullptr)
@@ -396,13 +336,27 @@ namespace CASPI::PM::Algorithms
             }
         }
 
+        void setModFeedback(OpIndex op, const FloatType modFeedback)
+        {
+            auto Operator = operatorMap[op];
+
+            if (Operator == nullptr)
+            {
+                OperatorA.setModFeedback(modFeedback);
+                OperatorB.setModFeedback(modFeedback);
+            } else
+            {
+                Operator->setModFeedback(modFeedback);
+            }
+        }
+
     private:
 
         OP OperatorA;
 
         OP OperatorB;
 
-        int numOperators = 2;
+        const int numOperators = 2;
 
         Algorithms currentAlg = Algorithms::BasicCascade;
 
@@ -410,11 +364,90 @@ namespace CASPI::PM::Algorithms
         {
             { OpIndex::OpA, &OperatorA },
             { OpIndex::OpB, &OperatorB },
-            { OpIndex::OpB, nullptr }
+            { OpIndex::All, nullptr }
         };
 
+        void resetAll()
+        {
+            OperatorA.reset();
+            OperatorB.reset();
+        }
 
-        CASPI_LEAK_DETECTOR(TwoOperatorAlgs);
+        void initialiseBasicCascade ()
+        {
+            resetAll();
+
+            OperatorA.setFrequency(this->frequency, this->sampleRate);
+
+            OperatorB.setFrequency(this->frequency, this->sampleRate);
+
+            OperatorA.setModulation(OperatorA.getModulationIndex(),
+                        OperatorA.getModulationDepth(),
+                        OperatorA.getModulationFeedback());
+
+            currentAlg = Algorithms::BasicCascade;
+        }
+
+        void initialiseTwoCarriers ()
+        {
+            resetAll();
+
+            OperatorA.setFrequency(this->frequency, this->sampleRate);
+
+            OperatorB.setFrequency(this->frequency, this->sampleRate);
+
+            OperatorA.setModDepth(OperatorB.getModulationDepth());
+
+            currentAlg = Algorithms::TwoCarriers;
+        }
+
+    };
+
+    template <typename FloatType=double>
+    class FourOperatorAlgs final : public AlgBase<FloatType>
+    {
+        using OP = CASPI::PM::Operator<FloatType>;
+
+        enum class Algorithms
+        {
+            Cascade,
+            TwoCascades
+        };
+
+        enum class OpIndex
+        {
+            OpA,
+            OpB,
+            OpC,
+            OpD,
+            All
+        };
+
+        public:
+
+
+        private:
+            OP OperatorA;
+
+            OP OperatorB;
+
+            OP OperatorC;
+
+            OP OperatorD;
+
+            const int numOperators = 4;
+
+            FloatType frequency = CASPI::Constants::one<FloatType>;
+
+            FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
+
+            void initialiseCascade ()
+            {
+                OperatorA.setFrequency(this->frequency, this->sampleRate);
+                OperatorB.setFrequency(this->frequency, this->sampleRate);
+                OperatorC.setFrequency(this->frequency, this->sampleRate);
+                OperatorD.setFrequency(this->frequency, this->sampleRate);
+            }
     };
 
 

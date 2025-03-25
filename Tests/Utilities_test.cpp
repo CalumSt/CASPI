@@ -1,8 +1,10 @@
+#include <gtest/gtest-spi.h>
 #include <gtest/gtest.h>
-#include <Utilities/caspi_Constants.h>
 #include <Utilities/caspi_Assert.h>
+#include <Utilities/caspi_Constants.h>
 
-TEST(UtilitiesTests, assert_test) {
+TEST (UtilitiesTests, assert_test)
+{
     EXPECT_NO_THROW(CASPI_ASSERT(true,"If this has failed, sorry."));
 }
 
@@ -11,3 +13,4 @@ TEST(UtilitiesTests, ConstantsTest) {
     constexpr auto test = CASPI::Constants::PI<double>;
     EXPECT_EQ(test,expected);
 }
+
