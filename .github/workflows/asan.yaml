@@ -1,4 +1,4 @@
-name: Thread Sanitizer
+name: Address Sanitizer
 
 on:
     push:
@@ -60,6 +60,6 @@ jobs:
                 # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
               run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }} -j4
 
-            - name: Test
+            - name: Test under ASan
               working-directory: ${{ env.BUILD_DIR }}
               run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
