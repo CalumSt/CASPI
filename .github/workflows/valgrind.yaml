@@ -1,4 +1,4 @@
-name: Thread Sanitizer
+name: Valgrind
 
 on:
     push:
