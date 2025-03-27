@@ -1,5 +1,0 @@
-ignore:
-  - "Libs/**"
-  - "Builds/**"
-  - "Tests/**"
-  - "Examples/**"

@@ -1,7 +1,9 @@
 ---
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: false
+AlignConsecutiveAssignments:
+  Enabled: true
+  AlignCompound: true
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
 AlignOperands: Align
@@ -42,7 +44,7 @@ MaxEmptyLinesToKeep: 1
 NamespaceIndentation: Inner
 PointerAlignment: Left
 ReflowComments: false
-SortIncludes: false
+SortIncludes: "CaseInsensitive"
 SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: true
 SpaceBeforeAssignmentOperators: true
@@ -72,4 +74,3 @@ PointerAlignment: Left
 SpacesBeforeTrailingComments: 1
 TabWidth: 4
 UseTab: Never
-...
