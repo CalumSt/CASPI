@@ -1,7 +1,7 @@
-#pragma once
+
 #include <gtest/gtest.h>
-#include "Filters/caspi_filters.h"
-#include "Oscillators/BLEP/caspi_BlepOscillator.h"
+#include "Filters/caspi_SvfFilter.h"
+#include "Oscillators/caspi_BlepOscillator.h"
 
 /// TODO: Implement better testing strategy. Use 3 sine waveforms, sum them, apply the filter, then FFT the result and check that the frequency has been removed.
 
@@ -21,11 +21,11 @@ TEST(SvfFilterTests, Filter_test)
     filter.reset();
     filter.setSampleRate (44100.0f);
     filter.updateCoefficients(1000.0f,0.707f);
-    caspi_BlepOscillator<float>::Saw osc;
+    CASPI::BlepOscillator::Saw<float> osc;
     osc.setFrequency(1000.0f, 44100.0f);
     int numberOfSamples = 44100; // 1 second of samples
     for (int i = 0; i < numberOfSamples; i++) {
-        const float oscSample = osc.getNextSample();
+        const float oscSample = osc.render();
         const float nextValue = filter.render(oscSample);
         EXPECT_GE(nextValue, -1.0f);
         EXPECT_LE(nextValue, 1.0f);

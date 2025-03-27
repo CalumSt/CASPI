@@ -1,5 +1,9 @@
 Builds/*
+Tests/Builds/*
 cmake-build-debug
 cmake-build-release
 .idea
 .vscode
+.venv
+docs/*
+*~

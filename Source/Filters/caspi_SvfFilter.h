@@ -23,8 +23,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #pragma once
 #include <cmath>
-#include <Oscillators/BLEP/caspi_BlepOscillator.h>
-#include "Utilities/caspi_assert.h"
+#include "Utilities/caspi_Assert.h"
 #include "Utilities/caspi_Constants.h"
 
 template <typename FloatType>
@@ -44,8 +43,7 @@ public:
     {
         CASPI_ASSERT(cutoff > 0 && Q > 0, "Cutoff and Q must be positive.");
     	auto one = static_cast<FloatType>(1.0);
-       /// TODO: make variables more intuitively named
-        g = std::tan (CASPI::TWO_PI<float> * cutoff / sampleRate);
+        g = std::tan (CASPI::Constants::TWO_PI<FloatType> * cutoff / sampleRate);
         k = one / Q;
         a1 = one / (one + g * (g + k));
         a2 = g * a1;
@@ -74,15 +72,22 @@ public:
      * @param x The input sample.
      * @return The filtered output sample.
      */
-    float render(float x)
+    auto render(FloatType x)
     {
-        float v3 = x - ic2eq;
-        float v1 = a1 * ic1eq + a2 * v3;
-        float v2 = ic2eq + a2 * ic1eq + a3 * v3;
+        FloatType v3 = x - ic2eq;
+        FloatType v1 = a1 * ic1eq + a2 * v3;
+        FloatType v2 = ic2eq + a2 * ic1eq + a3 * v3;
         ic1eq = 2.0f * v1 - ic1eq;
         ic2eq = 2.0f * v2 - ic2eq;
+        /// TODO: change return to different v values based on lowpass / highpass etc
         return v2;
     }
+
+    auto getFrequencyResponse(FloatType freq) {
+        /// TODO: Implement me
+    }
+
+
 
 private:
     FloatType sampleRate = static_cast<FloatType>(44100.0); ///< The sample rate of the filter
