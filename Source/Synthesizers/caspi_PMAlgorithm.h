@@ -55,7 +55,6 @@ namespace CASPI::PM::Algorithms
         FloatType getSampleRate () const { return sampleRate; }
         FloatType getFrequency () const { return frequency; }
 
-    private:
         int numOperators     = 0;
         FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
         FloatType frequency  = CASPI::Constants::one<FloatType>; // non-zero to prevent assertion hitting
@@ -107,7 +106,7 @@ namespace CASPI::PM::Algorithms
 *
 */
     template <typename FloatType=double>
-    class TwoOperatorAlgs final: public AlgBase<FloatType>
+    class TwoOperatorAlgs final: private AlgBase<FloatType>
     {
         using OP = CASPI::PM::Operator<FloatType>;
 
