@@ -54,13 +54,15 @@ public:
      */
     void setFrequency (const FloatType _frequency, const FloatType _sampleRate)
     {
-        //CASPI_ASSERT (_frequency > 0 && _sampleRate > 0, "Frequency and Sample Rate must be larger than 0.");
+        CASPI_ASSERT (_frequency > 0 && _sampleRate > 0, "Frequency and Sample Rate must be larger than 0.");
         if (_frequency <= 0 || _sampleRate <= 0)
         {
             std::cout << "Uh oh!" << "\n";
         }
         frequency      = _frequency;
+
         sampleRate     = _sampleRate;
+
         phaseIncrement = CASPI::Constants::TWO_PI<FloatType> * frequency / sampleRate;
     }
 
@@ -122,14 +124,17 @@ public:
     void setModDepth (const FloatType newModDepth) { modDepth = newModDepth; }
 
     /**
-     * @brief setModIndex sets the modulator index. Updates the frequency accordingly.
+     * @brief setModIndex sets the modulator index. Updates the phase increment accordingly.
      * If setting up a modulator, it requires the frequency to be set first equal to the carrier first.
      * @param newModIndex The new modulator index.
      */
     void setModIndex (const FloatType newModIndex)
     {
         modIndex = newModIndex;
-        setFrequency (modIndex * frequency, sampleRate);
+
+        modFrequency = modIndex * frequency;
+
+        phaseIncrement = CASPI::Constants::TWO_PI<FloatType> * modFrequency / sampleRate;
     }
 
     /**
@@ -139,7 +144,8 @@ public:
     void setModFeedback (const FloatType newModFeedback)
     {
         modFeedback = newModFeedback;
-        modFeedback == CASPI::Constants::zero<FloatType> ? isSelfModulating = false : isSelfModulating = true;
+
+        isSelfModulating = (modFeedback == CASPI::Constants::zero<FloatType>) ? false : true;
     }
 
     void enableEnvelope()
@@ -228,6 +234,7 @@ public:
         modDepth         = CASPI::Constants::one<FloatType>;
         modFeedback      = CASPI::Constants::zero<FloatType>;
         frequency        = CASPI::Constants::zero<FloatType>;
+        modFrequency     = CASPI::Constants::zero<FloatType>;
         phaseIncrement   = CASPI::Constants::zero<FloatType>;
         currentPhase     = CASPI::Constants::zero<FloatType>;
         output           = CASPI::Constants::zero<FloatType>;
@@ -241,6 +248,7 @@ private:
     FloatType modDepth       = CASPI::Constants::one<FloatType>;
     FloatType modFeedback    = CASPI::Constants::zero<FloatType>;
     FloatType frequency      = CASPI::Constants::zero<FloatType>;
+    FloatType modFrequency   = CASPI::Constants::zero<FloatType>;
     FloatType phaseIncrement = CASPI::Constants::zero<FloatType>;
     FloatType currentPhase   = CASPI::Constants::zero<FloatType>;
     FloatType output         = CASPI::Constants::zero<FloatType>;
