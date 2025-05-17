@@ -137,6 +137,16 @@ public:
         phaseIncrement = CASPI::Constants::TWO_PI<FloatType> * modFrequency / sampleRate;
     }
 
+    void enableModFeedback() noexcept
+    {
+        isSelfModulating = true;
+    }
+
+    void disableModFeedback() noexcept
+    {
+        isSelfModulating = false;
+    }
+
     /**
     * @brief setModFeedback sets the modulator self-feedback.
     * @param newModFeedback The new modulator feedback amount.
@@ -144,8 +154,6 @@ public:
     void setModFeedback (const FloatType newModFeedback)
     {
         modFeedback = newModFeedback;
-
-        isSelfModulating = (modFeedback == CASPI::Constants::zero<FloatType>) ? false : true;
     }
 
     void enableEnvelope()
@@ -190,7 +198,13 @@ public:
             envAmount = Envelope.render();
         }
 
-        auto sineSignal = modDepth * std::sin (currentPhase + modFeedback * output);
+        FloatType selfMod = CASPI::Constants::zero<FloatType>;
+        if (isSelfModulating)
+        {
+            selfMod = modFeedback * output;
+        }
+
+        auto sineSignal = modDepth * std::sin (currentPhase + selfMod);
 
         output = envAmount * sineSignal;
 
@@ -212,7 +226,13 @@ public:
             envAmount = Envelope.render();
         }
 
-        auto sineSignal = modDepth * std::sin (currentPhase + modulationSignal + modFeedback * output);
+        FloatType selfMod = CASPI::Constants::zero<FloatType>;
+        if (isSelfModulating)
+        {
+            selfMod = modFeedback * output;
+        }
+
+        auto sineSignal = modDepth * std::sin (currentPhase + modulationSignal + selfMod);
 
         output = envAmount * sineSignal;
 

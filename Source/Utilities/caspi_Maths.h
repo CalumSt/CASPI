@@ -83,6 +83,19 @@ static FloatType midiNoteToHz(const int noteNumber)
 {
     return static_cast<FloatType>(Constants::A4_FREQUENCY<FloatType> * std::pow(2, (static_cast<double>(noteNumber) - Constants::A4_MIDI<FloatType>) / Constants::NOTES_IN_OCTAVE<FloatType>));
 }
+
+template <typename FloatType>
+FloatType clamp(const FloatType value, const FloatType lower, const FloatType upper)
+{
+    return value < lower ? lower : (value > upper ? upper : value);
+}
+
+template <typename FloatType>
+void clamp(FloatType& value, const FloatType lower, const FloatType upper)
+{
+    value = (value < lower ? lower : (value > upper ? upper : value));
+}
+
 } // namespace CASPI::Maths
 
 #endif //CASPI_MATHS_H

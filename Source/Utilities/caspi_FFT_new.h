@@ -40,8 +40,11 @@ public:
     void generateTwiddleTable(int size,double fs)
     {
 
-        for (auto i = 0; i < size; ++i) {
-            for (auto j = 0; j < size; ++j) {
+        for (auto i = 0; i < size; ++i)
+        {
+            for (auto j = 0; j < size; ++j)
+            {
+                //twiddleTable.at (i).at (j) = std::exp (std::complex<double> (0, -2 * M_PI * i * j / size));
             }
         }
     }
