@@ -15,16 +15,16 @@ set(This Tests)
 # --------------------------------------------------------------------------
 # ADD TEST FILES HERE
 set(SOURCES
-        CircularBuffer_test.cpp
-        Oscillator_test.cpp
-        Utilities_test.cpp
-        Filter_test.cpp
-        Envelope_test.cpp
-        PMOperator_test.cpp
-        PMAlgorithm_test.cpp
-        Gain_test.cpp
-        FFT_test.cpp
-        Maths_test.cpp
+        AudioUtilities/CircularBuffer_test.cpp
+        AudioSources/Oscillator_test.cpp
+        Utilities/Utilities_test.cpp
+        AudioProcessors/Filter_test.cpp
+        AudioProcessors/Envelope_test.cpp
+        AudioSources/PMOperator_test.cpp
+        SynthesizerModules/PMAlgorithm_test.cpp
+        AudioProcessors/Gain_test.cpp
+        AudioUtilities/FFT_test.cpp
+        Utilities/Maths_test.cpp
 )
 # --------------------------------------------------------------------------
 

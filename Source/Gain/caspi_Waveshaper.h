@@ -9,6 +9,7 @@
 #include <functional>
 #include <string>
 #include "Utilities/caspi_Constants.h"
+#include "Utilities/caspi_Maths.h"
 
 namespace CASPI::Gain
 
@@ -137,7 +138,7 @@ namespace CASPI::Gain
 
        void setGainDBFS (FloatType newGainDBFS)
        {
-           gain = CASPI::Maths::dbfsToGain(newGainDBFS);
+           gain = CASPI::Maths::dBFSToLinear(newGainDBFS);
        }
 
        private:

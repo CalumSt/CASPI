@@ -36,7 +36,7 @@ Initialises
 
 #include <gtest/gtest.h>
 #include <utility>
-#include "test_helpers.h"
+#include "../test_helpers.h"
 
 // For testing, set private to public
 // DO NOT DO THIS IN PRODUCTION CODE

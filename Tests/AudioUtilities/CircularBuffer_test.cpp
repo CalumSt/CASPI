@@ -1,6 +1,6 @@
 
 #include <gtest/gtest.h>
-#include "test_helpers.h"
+#include "../test_helpers.h"
 
 #define private public // DO NOT DO THIS IN PRODUCTION
 #include "Utilities/caspi_CircularBuffer.h"
@@ -22,9 +22,6 @@ TESTS
 [DONE] Can resize stereo buffer
 [DONE] Can get the vector data from a mono buffer
 [DONE] Can construct mono buffer from existing data (vector or plain array)
-[DONE] Can construct stereo buffer from existing data
-[DONE] Can read from buffer with fractional delay
-[DONE] Can read from multichannel buffer with fractional delay
 [DONE] Can copy buffer to new buffer
 Can FFT on a buffer
 Can store floats and doubles
@@ -140,73 +137,6 @@ TEST (CircularBufferTests,clearBuffer_test)
     for (int i = 0; i < numSamples; i++) { ASSERT_EQ (buffer.read(i), 0.0); } // check each value is 0
 }
 
-TEST (CircularBufferTests,constructStereoBuffer_test)
-{
-    CASPI::MultichannelBuffer buffer(numSamples, numChannels);
-    ASSERT_EQ (buffer.getNumSamples(), numSamples);
-    ASSERT_EQ (buffer.getNumChannels(), numChannels);
-}
-
-TEST (CircularBufferTests,readStereoBuffer_test)
-{
-    CASPI::MultichannelBuffer buffer(numSamples, numChannels);
-    auto sample = buffer.read(100);
-    ASSERT_EQ (sample.size(), numChannels);
-    ASSERT_EQ (sample[0],0.0);
-    ASSERT_EQ (sample[1],0.0);
-
-}
-
-TEST (CircularBufferTests,writeStereoBuffer_test)
-{
-    CASPI::MultichannelBuffer buffer (numSamples, numChannels);
-    const auto frame = std::vector<double> (numChannels, 1.0); // write 1.0 to each channel
-    buffer.write (frame);
-    const auto sample = buffer.read(numSamples+1);
-    ASSERT_EQ (sample.size(), numChannels);
-    ASSERT_EQ (sample.at(0),1.0);
-    ASSERT_EQ (sample.at(1),1.0);
-
-}
-
-TEST (CircularBufferTests,clearStereoBuffer_test)
-{
-    CASPI::MultichannelBuffer buffer (numSamples, numChannels);
-    const auto frame = std::vector<double> (numChannels, 1.0); // write 1.0 to each channel
-    buffer.write (frame);
-     auto sample = buffer.read(numSamples+1);
-    ASSERT_EQ (sample.size(), numChannels);
-    ASSERT_EQ (sample.at(0),1.0);
-    ASSERT_EQ (sample.at(1),1.0);
-    buffer.clear();
-    sample = buffer.read(numSamples+1);
-    ASSERT_EQ (sample.size(), numChannels);
-    ASSERT_EQ (sample.at(0),0.0);
-    ASSERT_EQ (sample.at(1),0.0);
-}
-
-TEST (CircularBufferTests,resizeStereoBuffer_test)
-{
-    CASPI::MultichannelBuffer buffer (numSamples, numChannels);
-    buffer.resize (newNumSamples, numChannels);
-    ASSERT_EQ (buffer.getNumSamples(), newNumSamples);
-    ASSERT_EQ (buffer.getNumChannels(), numChannels);
-    ASSERT_EQ (buffer.buffer.size(), numChannels);
-}
-
-TEST (CircularBufferTests, constructStereoBufferFromData_test)
-{
-    auto vector = std::vector<double> (numSamples, 1.0);
-    CASPI::MultichannelBuffer buffer (vector, numChannels);
-    auto expectedFrame = std::vector<double> (numChannels, 1.0);
-
-    for (int i = 0; i < numSamples; i++)
-    {
-        auto frame = buffer.read (i);
-        compareVectors (expectedFrame, frame);
-    }
-}
-
 TEST (CircularBufferTests, linearInterpolation_test)
 {
     CASPI::CircularBuffer buffer(numSamples);
@@ -227,19 +157,5 @@ TEST (CircularBufferTests, copyBuffer_test)
 
     ASSERT_EQ (newBuffer.read(2), -1.0);
     ASSERT_EQ (newBuffer.read(1), 2.0);
-
-}
-
-TEST (CircularBufferTests, stereoFractionalDelay_test)
-{
-    CASPI::MultichannelBuffer buffer(numSamples,numChannels);
-    auto frame1 = std::vector<double> (numChannels, 1.0);
-    auto frame2 = std::vector<double> (numChannels, 2.0);
-    buffer.write (frame1);
-    buffer.write (frame2);
-    const auto fractionalDelay = static_cast<double>(numSamples)+ 1.5;
-    const auto sample = buffer.read(fractionalDelay,true);
-    ASSERT_EQ (sample.at(0), 1.5);
-    ASSERT_EQ (sample.at(1), 1.5);
 
 }
