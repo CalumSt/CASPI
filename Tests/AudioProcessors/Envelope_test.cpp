@@ -1,8 +1,8 @@
 
-#include "test_helpers.h"
+#include "../test_helpers.h"
 
 #include "Envelopes/caspi_Envelope.h"
-#include <gtest/gtest.h>
+#include <include/gtest/gtest.h>
 #include <string>
 
 const int numberOfSettings = 6;

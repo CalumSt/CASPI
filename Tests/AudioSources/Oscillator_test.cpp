@@ -5,7 +5,7 @@
 
 #include "Oscillators/caspi_BlepOscillator.h"
 #include "Oscillators/caspi_PMOperator.h"
-#include "test_helpers.h"
+#include "../test_helpers.h"
 #include <fstream>
 #include <utility>
 

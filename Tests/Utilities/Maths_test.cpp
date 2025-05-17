@@ -1,7 +1,7 @@
-#include <gtest/gtest.h>
 #include "Utilities/caspi_Maths.h"
+#include "gtest/gtest.h"
 
-TEST(MathsTest,MidiToHz_test)
+TEST (MathsTest,MidiToHz_test)
 {
     const std::vector<int> noteNums = {69, 25, 128};
     const std::vector<double>  results = {440.0,34.648,13289.75};
