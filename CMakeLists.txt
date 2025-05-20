@@ -6,9 +6,7 @@ message(STATUS "Configuring CASPI")
 
 project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 
-include(GNUInstallDirs)
-
-# Optional: Specify the headers that are part of the library
+# Specify the headers that are part of the library
 set(header_files
         caspi.h
         Source/Oscillators/caspi_BlepOscillator.h
@@ -21,7 +19,6 @@ set(header_files
         Source/Gain/caspi_Waveshaper.h
         Source/Utilities/caspi_Maths.h
         Source/Utilities/caspi_Assert.h
-        Source/AudioUtilities/caspi_FFT.h
         Source/Utilities/caspi_FFT_new.h
         Source/Utilities/caspi_CircularBuffer.h
         # ...
@@ -30,8 +27,6 @@ set(header_files
 add_library(${PROJECT_NAME} INTERFACE ${header_files})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source)
-
-target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -60,8 +55,6 @@ if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
         AND BUILD_TESTING)
     add_subdirectory(Tests)
 endif()
-
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION include COMPONENT ${PROJECT_NAME})
 
 
 

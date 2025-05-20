@@ -339,3 +339,5 @@ TEST(FMTests, FullRender_test)
     }
     saveToFile ("./GeneratedSignals/FM_modSineADSR.csv",times,samples);
 }
+
+#undef private

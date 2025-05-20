@@ -122,3 +122,5 @@ TEST(GainTests,GainDecibels_test)
     Gain.setGain_db (-10.0,sampleRate);
     EXPECT_NEAR (Gain.targetGain,0.316227766,1e-4);
 }
+
+#undef private

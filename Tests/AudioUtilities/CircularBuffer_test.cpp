@@ -159,3 +159,5 @@ TEST (CircularBufferTests, copyBuffer_test)
     ASSERT_EQ (newBuffer.read(1), 2.0);
 
 }
+
+#undef private
