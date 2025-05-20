@@ -9,7 +9,6 @@ Algorithm Tests
 [DONE] Can Render sine wave
 [DONE] Can reset
 [DONE] Can render Basic Cascade
-[DONE] Can render Two Carriers
 [DONE] Can switch between algorithms
  */
 
@@ -20,7 +19,6 @@ Algorithm Tests
 #include "../test_helpers.h"
 
 // For testing, set private to public
-// DO NOT DO THIS IN PRODUCTION CODE
 #define private public
 #include "Oscillators/caspi_PMOperator.h"
 #include "Synthesizers/caspi_PMAlgorithm.h"
@@ -250,3 +248,4 @@ TEST(TwoOperatorAlgsTests, SwitchAlg_test)
     }
 }
 
+#undef private

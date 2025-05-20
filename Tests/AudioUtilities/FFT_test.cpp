@@ -79,3 +79,5 @@ TEST(FFTtests, generateTwiddleTable_test)
     ASSERT_EQ (engine.size, 256);
 
 }
+
+#undef private
