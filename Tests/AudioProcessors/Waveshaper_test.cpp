@@ -2,3 +2,4 @@
 #define private public
 #include <Gain/caspi_Waveshaper.h>
 
+#undef private
