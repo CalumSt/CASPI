@@ -85,7 +85,7 @@ static FloatType midiNoteToHz(const int noteNumber)
 }
 
 template <typename FloatType>
-FloatType clamp(const FloatType value, const FloatType lower, const FloatType upper)
+FloatType clamp(const FloatType value, const FloatType lower, const FloatType upper) [[nodiscard]]
 {
     return value < lower ? lower : (value > upper ? upper : value);
 }
