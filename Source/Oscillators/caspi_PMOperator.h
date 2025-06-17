@@ -245,6 +245,16 @@ public:
         return output;
     }
 
+    template <typename BufferType = std::vector<FloatType>>
+    void render(BufferType &buffer, const int numberOfSamples)
+    {
+        for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++)
+        {
+            buffer[sampleIndex] = render();
+        }
+    }
+
+
     void reset()
     {
         isSelfModulating = false;
