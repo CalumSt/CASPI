@@ -15,8 +15,8 @@ Algorithm Tests
 
 
 #include <gtest/gtest.h>
-#include <utility>
 #include "../test_helpers.h"
+#include "Utilities/caspi_Constants.h"
 
 // For testing, set private to public
 #define private public
@@ -46,12 +46,12 @@ public:
         switch (currentAlgorithm)
         {
             case TwoOperatorAlgorithms::Series:
-                modSignal = operators.at(std::to_underlying(OpIndex::OpA)).render();
-            out       = operators.at(std::to_underlying(OpIndex::OpB)).render(modSignal);
+                modSignal = operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).render();
+            out       = operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).render(modSignal);
             break;
             case TwoOperatorAlgorithms::Parallel:
-                modSignal = operators.at(std::to_underlying(OpIndex::OpA)).render();
-            out       = operators.at(std::to_underlying(OpIndex::OpB)).render();
+                modSignal = operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).render();
+            out       = operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).render();
             out       = (out + modSignal) / 2;
             break;
             default:
@@ -112,19 +112,19 @@ TEST(TwoOperatorAlgsTests,ADSR_test)
     using enum CASPI::PM::OpIndex;
     TwoOperatorTestImplementation alg;
     alg.enableADSR (OpA);
-    EXPECT_TRUE (alg.operators.at(std::to_underlying(OpA)).envelopeEnabled);
+    EXPECT_TRUE (alg.operators.at(CASPI::Maths::to_underlying(OpA)).envelopeEnabled);
     alg.disableADSR(OpA);
-    EXPECT_FALSE (alg.operators.at(std::to_underlying(OpA)).envelopeEnabled);
+    EXPECT_FALSE (alg.operators.at(CASPI::Maths::to_underlying(OpA)).envelopeEnabled);
     alg.enableADSR (OpB);
-    EXPECT_TRUE (alg.operators.at(std::to_underlying(OpB)).envelopeEnabled);
+    EXPECT_TRUE (alg.operators.at(CASPI::Maths::to_underlying(OpB)).envelopeEnabled);
     alg.disableADSR(OpB);
-    EXPECT_FALSE (alg.operators.at(std::to_underlying(OpB)).envelopeEnabled);
+    EXPECT_FALSE (alg.operators.at(CASPI::Maths::to_underlying(OpB)).envelopeEnabled);
     alg.enableADSR ();
-    EXPECT_TRUE (alg.operators.at(std::to_underlying(OpA)).envelopeEnabled);
-    EXPECT_TRUE (alg.operators.at(std::to_underlying(OpB)).envelopeEnabled);
+    EXPECT_TRUE (alg.operators.at(CASPI::Maths::to_underlying(OpA)).envelopeEnabled);
+    EXPECT_TRUE (alg.operators.at(CASPI::Maths::to_underlying(OpB)).envelopeEnabled);
     alg.disableADSR();
-    EXPECT_FALSE (alg.operators.at(std::to_underlying(OpA)).envelopeEnabled);
-    EXPECT_FALSE (alg.operators.at(std::to_underlying(OpB)).envelopeEnabled);
+    EXPECT_FALSE (alg.operators.at(CASPI::Maths::to_underlying(OpA)).envelopeEnabled);
+    EXPECT_FALSE (alg.operators.at(CASPI::Maths::to_underlying(OpB)).envelopeEnabled);
 }
 
 TEST(TwoOperatorAlgsTests,SeriesModulation_test)
@@ -137,16 +137,16 @@ TEST(TwoOperatorAlgsTests,SeriesModulation_test)
         alg.setModulation (CASPI::PM::OpIndex::OpA,modIndex, modDepth, modFeedback);
         alg.setModulation (CASPI::PM::OpIndex::OpB,modIndex, modDepth, modFeedback);
         EXPECT_EQ (alg.frequency, frequency);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).modFrequency, frequency * modIndex);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).modIndex, modIndex);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).modDepth, modDepth);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).modFeedback, modFeedback);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).frequency, frequency);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).modFrequency, frequency * modIndex);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).modIndex, modIndex);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).modDepth, modDepth);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).modFeedback, modFeedback);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).frequency, frequency);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modFrequency, frequency * modIndex);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modIndex, modIndex);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modDepth, modDepth);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modFeedback, modFeedback);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).frequency, frequency);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modFrequency, frequency * modIndex);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modIndex, modIndex);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modDepth, modDepth);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modFeedback, modFeedback);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).frequency, frequency);
         EXPECT_EQ (alg.getFrequency(), frequency);
     }
 
@@ -196,16 +196,16 @@ TEST(TwoOperatorAlgsTests,ParallelCarriers_test)
         alg.setModulation (CASPI::PM::OpIndex::OpA,modIndex, modDepth, modFeedback);
         alg.setModulation (CASPI::PM::OpIndex::OpB,modIndex, modDepth, modFeedback);
         EXPECT_EQ (alg.frequency, frequency);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).modFrequency, frequency * modIndex);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).modIndex, modIndex);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).modDepth, modDepth);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).modFeedback, modFeedback);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpA)).frequency, frequency);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).modFrequency, frequency * modIndex);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).modIndex, modIndex);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).modDepth, modDepth);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).modFeedback, modFeedback);
-        EXPECT_EQ (alg.operators.at(std::to_underlying(OpIndex::OpB)).frequency, frequency);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modFrequency, frequency * modIndex);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modIndex, modIndex);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modDepth, modDepth);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modFeedback, modFeedback);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).frequency, frequency);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modFrequency, frequency * modIndex);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modIndex, modIndex);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modDepth, modDepth);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modFeedback, modFeedback);
+        EXPECT_EQ (alg.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).frequency, frequency);
         EXPECT_EQ (alg.getFrequency(), frequency);
     }
 
@@ -232,11 +232,11 @@ TEST(TwoOperatorAlgsTests, SwitchAlg_test)
         alg2.setModulation (OpIndex::OpB, modIndex, modDepth, modFeedback);
         alg1.setAlgorithm (TwoOperatorAlgorithms::Parallel);
 
-        EXPECT_EQ (alg1.operators.at(std::to_underlying(OpIndex::OpA)).frequency, alg1.operators.at(std::to_underlying(OpIndex::OpB)).frequency);
-        EXPECT_EQ (alg1.operators.at(std::to_underlying(OpIndex::OpA)).frequency, alg2.operators.at(std::to_underlying(OpIndex::OpA)).frequency);
-        EXPECT_EQ (alg1.frequency, alg1.operators.at(std::to_underlying(OpIndex::OpB)).frequency);
-        EXPECT_EQ (alg1.operators.at(std::to_underlying(OpIndex::OpA)).modDepth, alg1.operators.at(std::to_underlying(OpIndex::OpB)).modDepth);
-        EXPECT_EQ (alg1.operators.at(std::to_underlying(OpIndex::OpA)).modDepth, alg2.operators.at(std::to_underlying(OpIndex::OpA)).modDepth);
+        EXPECT_EQ (alg1.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).frequency, alg1.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).frequency);
+        EXPECT_EQ (alg1.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).frequency, alg2.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).frequency);
+        EXPECT_EQ (alg1.frequency, alg1.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).frequency);
+        EXPECT_EQ (alg1.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modDepth, alg1.operators.at(CASPI::Maths::to_underlying(OpIndex::OpB)).modDepth);
+        EXPECT_EQ (alg1.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modDepth, alg2.operators.at(CASPI::Maths::to_underlying(OpIndex::OpA)).modDepth);
 
         for (int i = 0; i < renderTime * sampleRate; i++)
         {

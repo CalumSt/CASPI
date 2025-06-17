@@ -96,6 +96,12 @@ void clamp(FloatType& value, const FloatType lower, const FloatType upper)
     value = (value < lower ? lower : (value > upper ? upper : value));
 }
 
+template <typename Enum>
+std::underlying_type_t<Enum> to_underlying(Enum e) noexcept
+{
+    return static_cast<std::underlying_type_t<Enum>>(e);
+}
+
 } // namespace CASPI::Maths
 
 #endif //CASPI_MATHS_H
