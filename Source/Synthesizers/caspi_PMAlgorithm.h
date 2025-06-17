@@ -193,7 +193,7 @@ namespace CASPI::PM
         void setADSR (const OpIndex op, const FloatType attackTime_s, const FloatType decayTime_s,
                               const FloatType sustainLevel, const FloatType releaseType_s) noexcept
         {
-            if (op < OpIndex::All) { operators.at(std::to_underlying(op)).setADSR(attackTime_s, decayTime_s, sustainLevel, releaseType_s); }
+            if (op < OpIndex::All) { operators.at(Maths::to_underlying(op)).setADSR(attackTime_s, decayTime_s, sustainLevel, releaseType_s); }
         }
 
         /**
@@ -203,7 +203,7 @@ namespace CASPI::PM
          */
         void setAttackTime(const OpIndex op, const FloatType attackTime_s) noexcept
         {
-            if (op < OpIndex::All) { operators.at(std::to_underlying(op)).setAttackTime(attackTime_s); }
+            if (op < OpIndex::All) { operators.at(Maths::to_underlying(op)).setAttackTime(attackTime_s); }
         }
 
         /**
@@ -213,7 +213,7 @@ namespace CASPI::PM
          */
         void setDecayTime(const OpIndex op, const FloatType decayTime_s) noexcept
         {
-            if (op < OpIndex::All) { operators.at(std::to_underlying(op)).setDecayTime(decayTime_s); }
+            if (op < OpIndex::All) { operators.at(Maths::to_underlying(op)).setDecayTime(decayTime_s); }
         }
 
         /**
@@ -223,7 +223,7 @@ namespace CASPI::PM
          */
         void setSustainLevel(const OpIndex op, const FloatType sustainLevel) noexcept
         {
-            if (op < OpIndex::All) { operators.at(std::to_underlying(op)).setSustainLevel(sustainLevel); }
+            if (op < OpIndex::All) { operators.at(Maths::to_underlying(op)).setSustainLevel(sustainLevel); }
         }
 
         /**
@@ -233,7 +233,7 @@ namespace CASPI::PM
          */
         void setReleaseTime(const OpIndex op, const FloatType releaseTime_s) noexcept
         {
-            if (op < OpIndex::All) { operators.at(std::to_underlying(op)).setReleaseTime(releaseTime_s); }
+            if (op < OpIndex::All) { operators.at(Maths::to_underlying(op)).setReleaseTime(releaseTime_s); }
         }
 
         /**
@@ -247,7 +247,7 @@ namespace CASPI::PM
          */
         void enableADSR(const OpIndex op) noexcept
         {
-            if (op < OpIndex::All) { operators.at(std::to_underlying(op)).enableEnvelope(); }
+            if (op < OpIndex::All) { operators.at(Maths::to_underlying(op)).enableEnvelope(); }
         }
 
         /**
@@ -263,7 +263,7 @@ namespace CASPI::PM
         {
             if (op < OpIndex::All)
             {
-                operators.at(std::to_underlying(op)).disableEnvelope();
+                operators.at(Maths::to_underlying(op)).disableEnvelope();
             }
         }
 
@@ -276,7 +276,7 @@ namespace CASPI::PM
         {
             if (op < OpIndex::All)
             {
-                operators.at(std::to_underlying(op)).setModulationIndex(modIndex);
+                operators.at(Maths::to_underlying(op)).setModulationIndex(modIndex);
             }
         }
 
@@ -290,7 +290,7 @@ namespace CASPI::PM
             if (op < OpIndex::All)
             {
                 CASPI::Maths::clamp(modDepth, 0, 1);
-                operators.at(std::to_underlying(op)).setModulationDepth(modDepth);
+                operators.at(Maths::to_underlying(op)).setModulationDepth(modDepth);
             }
         }
 
@@ -305,7 +305,7 @@ namespace CASPI::PM
         {
             if (op < OpIndex::All)
             {
-                operators.at(std::to_underlying(op)).setModulation(modIndex, modDepth, modFeedback);
+                operators.at(Maths::to_underlying(op)).setModulation(modIndex, modDepth, modFeedback);
             }
         }
 
@@ -319,8 +319,8 @@ namespace CASPI::PM
         {
             if (op < OpIndex::All)
             {
-                operators.at(std::to_underlying(op)).setModIndex(modIndex);
-                operators.at(std::to_underlying(op)).setModDepth(modDepth);
+                operators.at(Maths::to_underlying(op)).setModIndex(modIndex);
+                operators.at(Maths::to_underlying(op)).setModDepth(modDepth);
             }
         }
         /**
@@ -333,7 +333,7 @@ namespace CASPI::PM
             if (op < OpIndex::All)
             {
                 auto clampedFeedback = CASPI::Maths::clamp<FloatType>(modFeedback, 0, 1);
-                operators.at(std::to_underlying(op)).setModFeedback(clampedFeedback);
+                operators.at(Maths::to_underlying(op)).setModFeedback(clampedFeedback);
             }
         }
 
@@ -345,7 +345,7 @@ namespace CASPI::PM
         {
             if (op < OpIndex::All)
             {
-                operators.at(std::to_underlying(op)).enableModFeedback();
+                operators.at(Maths::to_underlying(op)).enableModFeedback();
             }
         }
 
@@ -357,7 +357,7 @@ namespace CASPI::PM
         {
             if (op < OpIndex::All)
             {
-                operators.at(std::to_underlying(op)).disableModFeedback();
+                operators.at(Maths::to_underlying(op)).disableModFeedback();
             }
         }
 
