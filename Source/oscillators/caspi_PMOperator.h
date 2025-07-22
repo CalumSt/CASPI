@@ -17,9 +17,9 @@
 * @author CS Islay
 ************************************************************************/
 
-#include "Envelopes/caspi_Envelope.h"
-#include "Utilities/caspi_Assert.h"
-#include "Utilities/caspi_Constants.h"
+#include "envelopes/caspi_Envelope.h"
+#include "core/caspi_Assert.h"
+#include "core/caspi_Constants.h"
 #include <cmath>
 namespace CASPI::PM
 {

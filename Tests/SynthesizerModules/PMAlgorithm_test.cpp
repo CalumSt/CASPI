@@ -16,14 +16,14 @@ Algorithm Tests
 
 #include <gtest/gtest.h>
 #include "../test_helpers.h"
-#include "Utilities/caspi_Constants.h"
+#include "core/caspi_Constants.h"
 
 // For testing, set private to public
 #define private public
-#include "Oscillators/caspi_PMOperator.h"
-#include "Synthesizers/caspi_PMAlgorithm.h"
+#include "oscillators/caspi_PMOperator.h"
+#include "oscillators/caspi_BlepOscillator.h"
+#include "synthesizers/caspi_PMAlgorithm.h"
 
-#include <Oscillators/caspi_BlepOscillator.h>
 
 
 using OpIndex = CASPI::PM::OpIndex;

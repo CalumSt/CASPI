@@ -21,8 +21,13 @@ Y88b  d88P 888  888      X88 888 d88P 888
 *        is templated and is intended for repeated FFTs of similar sizes.
 *
 ************************************************************************/
+#include <complex>
+#include <vector>
 
-namespace CASPI {
+#include "core/caspi_Constants.h"
+
+namespace CASPI
+{
 
 class FFT_new {
 public:

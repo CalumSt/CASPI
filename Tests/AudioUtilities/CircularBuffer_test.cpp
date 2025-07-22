@@ -3,7 +3,7 @@
 #include "../test_helpers.h"
 
 #define private public // DO NOT DO THIS IN PRODUCTION
-#include "Utilities/caspi_CircularBuffer.h"
+#include "core/caspi_CircularBuffer.h"
 
 /*
 TESTS

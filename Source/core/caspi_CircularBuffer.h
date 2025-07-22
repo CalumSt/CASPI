@@ -197,6 +197,11 @@ public:
     return *buffer;
   }
 
+  [[nodiscard]] SampleType* ptr() const
+  {
+    return buffer->data();
+  }
+
 private:
   std::unique_ptr<std::vector<SampleType>> buffer = nullptr;
   size_t numSamples                           = 0;

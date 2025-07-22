@@ -20,12 +20,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_ENVELOPEGENERATOR_H
 #define CASPI_ENVELOPEGENERATOR_H
 
-#include <Utilities/caspi_CircularBuffer.h>
-#include "Utilities/caspi_Assert.h"
+#include <core/caspi_CircularBuffer.h>
+#include "core/caspi_Assert.h"
 #include <string>
 #include <cmath>
-#include <iostream>
-#include <Utilities/caspi_Constants.h>
 namespace CASPI::Envelope {
 
         /// ADSR parameter interface
