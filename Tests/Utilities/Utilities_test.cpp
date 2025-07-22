@@ -1,7 +1,7 @@
 #include <gtest/gtest-spi.h>
 #include <gtest/gtest.h>
-#include <Utilities/caspi_Assert.h>
-#include <Utilities/caspi_Constants.h>
+#include <core/caspi_Assert.h>
+#include <core/caspi_Constants.h>
 
 TEST (UtilitiesTests, assert_test)
 {

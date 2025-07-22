@@ -17,12 +17,9 @@
 * @author CS Islay
 ************************************************************************/
 
-#include "Oscillators/caspi_PMOperator.h"
-#include "Utilities/caspi_Constants.h"
-
-#include <Utilities/caspi_Maths.h>
-
-#include <utility>
+#include "oscillators/caspi_PMOperator.h"
+#include "core/caspi_Constants.h"
+#include "maths/caspi_Maths.h"
 
 /**
  * @namespace Algorithms
