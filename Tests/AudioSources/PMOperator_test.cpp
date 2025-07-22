@@ -41,7 +41,7 @@ Initialises
 // For testing, set private to public
 // DO NOT DO THIS IN PRODUCTION CODE
 #define private public
-#include "Oscillators/caspi_PMOperator.h"
+#include "oscillators/caspi_PMOperator.h"
 
 // Test params
 constexpr auto frequency = 10.0;

@@ -23,8 +23,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #pragma once
 #include <cmath>
-#include "Utilities/caspi_Assert.h"
-#include "Utilities/caspi_Constants.h"
+#include "core/caspi_Assert.h"
+#include "core/caspi_Constants.h"
 
 template <typename FloatType>
 class caspi_SvfFilter

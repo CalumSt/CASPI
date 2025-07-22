@@ -6,32 +6,17 @@ message(STATUS "Configuring CASPI")
 
 project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 
-# Specify the headers that are part of the library
-set(header_files
-        caspi.h
-        Source/Oscillators/caspi_BlepOscillator.h
-        Source/Oscillators/caspi_PMOperator.h
-        Source/Synthesizers/caspi_PMAlgorithm.h
-        Source/Filters/caspi_SvfFilter.h
-        Source/Envelopes/caspi_Envelope.h
-        Source/Utilities/caspi_Constants.h
-        Source/Gain/caspi_Gain.h
-        Source/Gain/caspi_Waveshaper.h
-        Source/Utilities/caspi_Maths.h
-        Source/Utilities/caspi_Assert.h
-        Source/Utilities/caspi_FFT_new.h
-        Source/Utilities/caspi_CircularBuffer.h
-        # ...
-)
-
-add_library(${PROJECT_NAME} INTERFACE ${header_files})
+add_library(${PROJECT_NAME} INTERFACE)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source)
 
-target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Source>
+        $<INSTALL_INTERFACE:include>
+)
 
 # Only do these if this is the main project, and not if it is included through add_subdirectory
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
     # Let's ensure -std=c++xx instead of -std=g++xx
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -56,7 +41,12 @@ if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
     add_subdirectory(Tests)
 endif()
 
+install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}Targets)
 
+install(DIRECTORY Source/
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h")
 
 
 

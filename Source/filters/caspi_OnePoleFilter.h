@@ -25,8 +25,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_ONEPOLEFILTER_H
 #define CASPI_ONEPOLEFILTER_H
 
-#include "Utilities/caspi_assert.h"
-#include "Utilities/caspi_Constants.h"
+#include "core/caspi_assert.h"
+#include "core/caspi_Constants.h"
 
 template <typename FloatType>
 class caspi_OnePoleFilter {

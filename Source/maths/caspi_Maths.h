@@ -5,7 +5,7 @@
 #ifndef CASPI_MATHS_H
 #define CASPI_MATHS_H
 
-#include "caspi_Constants.h"
+#include "core/caspi_Constants.h"
 #include <cmath>
 #include <vector>
 

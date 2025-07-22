@@ -3,8 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#include "Oscillators/caspi_BlepOscillator.h"
-#include "Oscillators/caspi_PMOperator.h"
+#include "oscillators/caspi_BlepOscillator.h"
+#include "oscillators/caspi_PMOperator.h"
 #include "../test_helpers.h"
 #include <fstream>
 #include <utility>

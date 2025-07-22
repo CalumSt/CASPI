@@ -1,7 +1,7 @@
 
 #include <gtest/gtest.h>
-#include "Filters/caspi_SvfFilter.h"
-#include "Oscillators/caspi_BlepOscillator.h"
+#include "filters/caspi_SvfFilter.h"
+#include "oscillators/caspi_BlepOscillator.h"
 
 /// TODO: Implement better testing strategy. Use 3 sine waveforms, sum them, apply the filter, then FFT the result and check that the frequency has been removed.
 
