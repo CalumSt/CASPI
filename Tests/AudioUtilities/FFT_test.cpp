@@ -5,7 +5,7 @@
 #include "Oscillators/caspi_BlepOscillator.h"
 #include "../test_helpers.h"
 #define private public
-#include "Utilities/caspi_FFT_new.h"
+#include "maths/caspi_FFT_new.h"
 
 /*
  Can initialise an FFT engine

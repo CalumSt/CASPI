@@ -1,4 +1,4 @@
-#include "Utilities/caspi_Maths.h"
+#include "maths/caspi_Maths.h"
 #include "gtest/gtest.h"
 
 TEST (MathsTest,MidiToHz_test)
