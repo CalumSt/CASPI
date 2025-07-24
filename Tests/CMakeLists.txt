@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.29)
 set(CMAKE_CXX_STANDARD 20)
 # Set up the testing project
 project(UnitTests)
@@ -7,11 +7,26 @@ enable_testing()
 
 message(STATUS "Configuring CASPI Tests")
 
-# set up sources
-include(GoogleTest)
-add_subdirectory(Libs/googletest/)
+include(FetchContent)
 
-set(This Tests)
+# Define download location for third-party libs
+set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs CACHE PATH "Base directory for FetchContent downloads")
+
+# Prevent GoogleTest from overriding your compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+# Fetch GoogleTest
+FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/heads/main.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+
+# Make it available
+FetchContent_MakeAvailable(googletest)
+
+include(GoogleTest)
+
 # --------------------------------------------------------------------------
 # ADD TEST FILES HERE
 set(SOURCES
@@ -30,16 +45,11 @@ set(SOURCES
 
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-
-# --------------------------------------------------------------------------
-# ADD DEPENDENCIES HERE
-target_include_directories(${PROJECT_NAME}
-    PRIVATE
-        Libs/googletest/googletest/include
-        ../Source
-    )    
 # --------------------------------------------------------------------------
     
-target_link_libraries(${PROJECT_NAME} PRIVATE gtest_main)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        gtest_main
+        CASPI
+)
 
 gtest_discover_tests(${PROJECT_NAME})

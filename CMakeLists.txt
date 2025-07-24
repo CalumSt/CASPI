@@ -1,18 +1,23 @@
 cmake_minimum_required(VERSION 3.29)
 
+option(CASPI_BUILD_TESTING "Build CASPI tests" ON)
+option(CASPI_BUILD_BENCHMARKS "Build CASPI benchmarks" OFF)
+
 set(PROJECT_NAME "CASPI")
 
 message(STATUS "Configuring CASPI")
 
 project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 
-add_library(${PROJECT_NAME} INTERFACE)
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source)
+add_library(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h)
 
 target_include_directories(${PROJECT_NAME} INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Source>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/CASPI>
         $<INSTALL_INTERFACE:include>
+)
+# explicitly list the unified header for IDEs (has no build effect)
+target_sources(CASPI INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h
 )
 
 # Only do these if this is the main project, and not if it is included through add_subdirectory
@@ -26,25 +31,28 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
     # Docs only available if this is the main app
     find_package(Doxygen)
-    if(Doxygen_FOUND)
-        add_subdirectory(docs)
+    find_package(Doxygen REQUIRED)
+    if(DOXYGEN_FOUND)
+        add_custom_target(doc_doxygen
+                COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                COMMENT "Generating documentation with Doxygen"
+                VERBATIM
+        )
     else()
         message(STATUS "Doxygen not found, not building docs")
     endif()
 endif()
 
-
 # Testing only available if this is the main app
-# Emergency override MODERN_CMAKE_BUILD_TESTING provided as well
-if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
-        AND BUILD_TESTING)
+if(CASPI_BUILD_TESTING)
     add_subdirectory(Tests)
 endif()
 
 install(TARGETS ${PROJECT_NAME}
         EXPORT ${PROJECT_NAME}Targets)
 
-install(DIRECTORY Source/
+install(DIRECTORY Library/
         DESTINATION include
         FILES_MATCHING PATTERN "*.h")
 

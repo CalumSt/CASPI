@@ -71,7 +71,7 @@ TEST (CircularBufferTests,resizeMonoBuffer_test)
     CASPI::CircularBuffer buffer(numSamples);
     buffer.resize(newNumSamples);
     ASSERT_EQ (buffer.getNumSamples(), newNumSamples);
-    ASSERT_EQ (buffer.buffer->size(), newNumSamples);
+    ASSERT_EQ (buffer.buffer.size(), newNumSamples);
 
 }
 
