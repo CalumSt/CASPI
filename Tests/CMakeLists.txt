@@ -30,16 +30,16 @@ include(GoogleTest)
 # --------------------------------------------------------------------------
 # ADD TEST FILES HERE
 set(SOURCES
-        AudioUtilities/CircularBuffer_test.cpp
-        AudioSources/Oscillator_test.cpp
-        Utilities/Utilities_test.cpp
-        AudioProcessors/Filter_test.cpp
-        AudioProcessors/Envelope_test.cpp
-        AudioSources/PMOperator_test.cpp
-        SynthesizerModules/PMAlgorithm_test.cpp
-        AudioProcessors/Gain_test.cpp
-        AudioUtilities/FFT_test.cpp
-        Utilities/Maths_test.cpp
+        base/CircularBuffer_test.cpp
+        sources/Oscillator_test.cpp
+        base/Utilities_test.cpp
+        processors/Filter_test.cpp
+        processors/Envelope_test.cpp
+        sources/PMOperator_test.cpp
+        synthesizers/PMAlgorithm_test.cpp
+        processors/Gain_test.cpp
+        maths/FFT_test.cpp
+        maths/Maths_test.cpp
 )
 # --------------------------------------------------------------------------
 

@@ -1,5 +1,5 @@
-#include "maths/caspi_Maths.h"
-#include "gtest/gtest.h"
+#include "../../CASPI/maths/caspi_Maths.h"
+#include "../../Builds/Debug/_deps/googletest-src/googletest/include/gtest/gtest.h"
 
 TEST (MathsTest,MidiToHz_test)
 {
