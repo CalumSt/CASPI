@@ -18,7 +18,7 @@
 ************************************************************************/
 
 #include "oscillators/caspi_PMOperator.h"
-#include "core/caspi_Constants.h"
+#include "base/caspi_Constants.h"
 #include "maths/caspi_Maths.h"
 
 /**

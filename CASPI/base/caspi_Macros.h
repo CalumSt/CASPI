@@ -1,5 +1,3 @@
-#ifndef CASPI_FEATURES_H
-#define CASPI_FEATURES_H
 /************************************************************************
  .d8888b.                             d8b
 d88P  Y88b                            Y8P
@@ -14,23 +12,19 @@ Y88b  d88P 888  888      X88 888 d88P 888
                              888
 
 
-* @file caspi_Features.h
+* @file caspi_Macros.h
 * @author CS Islay
-* @brief A collection of macros to define features based on platform.
+* @brief A collection of marcos for useful purposes.
 *
 ************************************************************************/
 
-#include "caspi_Platform.h"
+#ifndef CASPI_MACROS_H
+#define CASPI_MACROS_H
 
-/**
-* The following features are defined based on the platform:
-*    CASPI_FEATURES_HAS_CONCEPTS
-*/
-
-#if defined(CASPI_CPP_VERSION) &&(CASPI_CPP_VERSION >= 202002L) && defined(__cpp_concepts) && (__cpp_concepts >= 201907L)
-    #define CASPI_FEATURES_HAS_CONCEPTS
+#if defined(CASPI_DISABLE_HEAP) && !defined(CASPI_FORCE_ENABLE_HEAP)
+#define CASPI_DISABLE_HEAP(Class) \
+    void* operator new (std::size_t) = delete; \
+    void operator delete (void*) = delete;
 #endif
 
-
-
-#endif //CASPI_FEATURES_H
+#endif //CASPI_MACROS_H

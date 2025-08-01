@@ -1,13 +1,18 @@
 #ifndef CASPI_H
 #define CASPI_H
 
+// Base
+#include "base/caspi_Assert.h"
+#include "base/caspi_Constants.h"
+#include "base/caspi_Features.h"
+#include "base/caspi_Platform.h"
+#include "base/caspi_Traits.h"
+
 // Core
-#include "core/caspi_Platform.h"
-#include "core/caspi_Features.h"
-#include "core/caspi_Base.h"
-#include "core/caspi_Assert.h"
 #include "core/caspi_CircularBuffer.h"
-#include "core/caspi_Constants.h"
+#include "core/caspi_Core.h"
+#include "core/caspi_Expected.h"
+#include "core/caspi_Phase.h"
 // Audio Utils
 
 // Utilities
@@ -20,9 +25,9 @@
 #include "oscillators/caspi_PMOperator.h"
 
 // Filters
-#include "filters/caspi_SvfFilter.h"
 #include "filters/caspi_LadderFilter.h"
 #include "filters/caspi_OnePoleFilter.h"
+#include "filters/caspi_SvfFilter.h"
 
 // Gain
 #include "gain/caspi_Gain.h"

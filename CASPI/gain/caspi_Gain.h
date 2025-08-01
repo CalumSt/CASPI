@@ -21,8 +21,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #ifndef CASPI_GAIN_H
 #define CASPI_GAIN_H
-#include "core/caspi_Assert.h"
-#include "core/caspi_Constants.h"
+#include "base/caspi_Assert.h"
+#include "base/caspi_Constants.h"
 #include "maths/caspi_Maths.h"
 
 namespace CASPI

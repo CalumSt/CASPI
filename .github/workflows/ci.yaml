@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TEST_DIR: Tests
+  BUILD_DIR: build
+
+jobs:
+  build-test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build_type: Debug
+            c_compiler: gcc
+            cpp_compiler: g++
+          - os: ubuntu-latest
+            build_type: Release
+            c_compiler: gcc
+            cpp_compiler: g++
+          - os: ubuntu-latest
+            build_type: Debug
+            c_compiler: clang
+            cpp_compiler: clang++
+          - os: macos-latest
+            build_type: Release
+            c_compiler: clang
+            cpp_compiler: clang++
+          - os: windows-latest
+            build_type: Debug
+            c_compiler: cl
+            cpp_compiler: cl
+          - os: windows-latest
+            build_type: Release
+            c_compiler: cl
+            cpp_compiler: cl
+
+    # Filter matrix entries to only valid OS/compiler combos
+    # (optional if you use this matrix structure)
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Configure CMake
+        run: |
+          cmake \
+            -S . \
+            -B ${{ env.BUILD_DIR }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+
+      - name: Build
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
+
+      - name: Run Unit Tests
+        working-directory: ${{ env.BUILD_DIR }}
+        run: ctest --build-config ${{ matrix.build_type }} --output-on-failure --test-dir ${{ env.TEST_DIR }}
+
+      - name: Run Benchmarks
+        if: matrix.build_type == 'Release'
+        working-directory: ${{ env.BUILD_DIR }}
+        run: ./Benchmarks/Benchmarks --benchmark_format=json > benchmark_report.json
+
+      - name: Upload Benchmark Report
+        if: matrix.build_type == 'Release'
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-report
+          path: benchmark_report.json
+
+  # Separate job for sanitizers (Linux only, Debug only for now)
+  sanitize-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build_type: [ Debug ]
+        sanitizer: [ address, undefined ]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Configure CMake with sanitizer
+        run: |
+          cmake \
+            -S . \
+            -B ${{ env.BUILD_DIR }} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DSANITIZE=${{ matrix.sanitizer }}
+
+      - name: Build with sanitizer
+        run: cmake --build ${{ env.BUILD_DIR }} --config Debug
+
+      - name: Run Unit Tests with sanitizer
+        working-directory: ${{ env.BUILD_DIR }}
+        run: ctest --build-config Debug --output-on-failure -L test

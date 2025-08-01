@@ -32,54 +32,14 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_BLEPOSCILLATOR_H
 #define CASPI_BLEPOSCILLATOR_H
 
-#include "core/caspi_Assert.h"
-#include "core/caspi_Constants.h"
-#include "core/caspi_Base.h"
+#include "base/caspi_Assert.h"
+#include "base/caspi_Constants.h"
+#include "core/caspi_Core.h"
+#include "core/caspi_Phase.h"
 #include <cmath>
 
 namespace CASPI::BlepOscillator
 {
-
-/// Structure for holding phase information conveniently
-template <typename FloatType>
-struct Phase : public Base::SampleRateAware<FloatType>
-{
-    void resetPhase() { phase = 0; }
-
-    void setFrequency (FloatType frequency, FloatType sampleRate)
-    {
-        CASPI_ASSERT ((sampleRate > 0 && frequency >= 0), "Sample Rate and Frequency must be larger than 0.");
-        increment        = frequency / sampleRate;
-        this->setSampleRate (sampleRate);
-    }
-
-    void setHardSyncFrequency (FloatType frequency)
-    {
-        CASPI_ASSERT (frequency >= 0, "Hard Sync Frequency cannot be negative.");
-        hardSyncIncrement = frequency / this->getSampleRate();
-        hardSyncPhase     = 0;
-    }
-
-    FloatType incrementPhase (FloatType wrapLimit)
-    {
-        /// take previous phase value
-        auto phaseInternal = phase;
-        /// update phase counter
-        phase += increment;
-        /// wrap to the limit
-        while (phase >= wrapLimit)
-        {
-            phase -= wrapLimit;
-        }
-
-        return phaseInternal;
-    } /// wrap limit is 2pi for sine, 1 for others
-
-    FloatType phase             = 0;
-    FloatType increment         = 0;
-    FloatType hardSyncPhase     = 0;
-    FloatType hardSyncIncrement = 0;
-};
 
 /// This is the core blep function
 template <typename FloatType>
@@ -103,26 +63,25 @@ static FloatType blep (FloatType phase, FloatType increment)
 
 /// Sine oscillator
 template <typename FloatType>
-struct Sine final : public Base::Producer<FloatType>
+struct Sine final : public Core::Producer<FloatType>
 {
     void resetPhase() { phase.resetPhase(); }
 
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (CASPI::Constants::TWO_PI<float> * frequency, sampleRate); }
 
-    FloatType render() override { return std::sin (phase.incrementPhase (CASPI::Constants::TWO_PI<float>)); }
-
+    FloatType render() override { return std::sin (phase.advanceAndWrap (CASPI::Constants::TWO_PI<float>)); }
 
     Phase<FloatType> phase;
 };
 
 template <typename FloatType>
-struct Saw final : public Base::Producer<FloatType>
+struct Saw final : public Core::Producer<FloatType>
 {
     void resetPhase() { phase.resetPhase(); }
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (frequency, sampleRate); }
     FloatType render() override
     {
-        auto phaseInternal = phase.incrementPhase (1);
+        auto phaseInternal = phase.advanceAndWrap (1);
         return 2 * phaseInternal - 1 - blep<FloatType> (phaseInternal, phase.increment);
     }
     Phase<FloatType> phase;
@@ -130,14 +89,14 @@ struct Saw final : public Base::Producer<FloatType>
 
 /// Square oscillator
 template <typename FloatType>
-struct Square final : public Base::Producer<FloatType>
+struct Square final : public Core::Producer<FloatType>
 {
     void resetPhase() { phase.resetPhase(); }
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (frequency, sampleRate); }
 
     FloatType render() override
     {
-        auto phaseInternal = phase.incrementPhase (1);
+        auto phaseInternal = phase.advanceAndWrap (1);
         auto half          = static_cast<FloatType> (0.5);
         auto one           = static_cast<FloatType> (1);
         /// These static casts are ugly
@@ -151,7 +110,7 @@ struct Square final : public Base::Producer<FloatType>
 
 /// Triangle Oscillator
 template <typename FloatType>
-struct Triangle final : public Base::Producer<FloatType>
+struct Triangle final : public Core::Producer<FloatType>
 {
     void resetPhase()
     {
