@@ -51,7 +51,6 @@ if (CASPI_IS_STANDALONE_BUILD)
 
     # Docs only available if this is the main app
     find_package(Doxygen)
-    find_package(Doxygen REQUIRED)
     if(DOXYGEN_FOUND)
         add_custom_target(doc_doxygen
                 COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
