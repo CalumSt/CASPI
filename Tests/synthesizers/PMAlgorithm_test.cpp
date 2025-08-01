@@ -16,7 +16,7 @@ Algorithm Tests
 
 #include <gtest/gtest.h>
 #include "../test_helpers.h"
-#include "core/caspi_Constants.h"
+#include "base/caspi_Constants.h"
 
 // For testing, set private to public
 #define private public

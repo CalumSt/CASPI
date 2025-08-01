@@ -142,28 +142,42 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 // Detect C++ standard version
 #if defined(__cplusplus)
+    #if __cplusplus >= 201103L
+        #define CASPI_CPP_11
+    #endif
+    #if __cplusplus >= 201402L
+        #define CASPI_CPP_14
+    #endif
+    #if __cplusplus >= 201703L
+        #define CASPI_CPP_17
+    #endif
+    #if __cplusplus >= 202002L
+        #define CASPI_CPP_20
+    #endif
+    #if __cplusplus >= 202302L
+        #define CASPI_CPP_23
+    #endif
     #if __cplusplus >= 202402L
         #define CASPI_CPP_26
+    #endif
+
+    // Set CASPI_CPP_VERSION and CASPI_CPP_STRING to the highest detected version
+    #if __cplusplus >= 202402L
         #define CASPI_CPP_VERSION 202402L
         #define CASPI_CPP_STRING "C++26"
     #elif __cplusplus >= 202302L
-        #define CASPI_CPP_23
         #define CASPI_CPP_VERSION 202302L
         #define CASPI_CPP_STRING "C++23"
     #elif __cplusplus >= 202002L
-        #define CASPI_CPP_20
         #define CASPI_CPP_VERSION 202002L
         #define CASPI_CPP_STRING "C++20"
     #elif __cplusplus >= 201703L
-        #define CASPI_CPP_17
         #define CASPI_CPP_VERSION 201703L
         #define CASPI_CPP_STRING "C++17"
     #elif __cplusplus >= 201402L
-        #define CASPI_CPP_14
         #define CASPI_CPP_VERSION 201402L
         #define CASPI_CPP_STRING "C++14"
     #elif __cplusplus >= 201103L
-        #define CASPI_CPP_11
         #define CASPI_CPP_VERSION 201103L
         #define CASPI_CPP_STRING "C++11"
     #else
@@ -174,5 +188,49 @@ Y88b  d88P 888  888      X88 888 d88P 888
     #define CASPI_CPP_VERSION 0L
     #define CASPI_CPP_STRING "Not C++"
 #endif
+
+// SSE support (x86/x86_64 only)
+#if defined(__SSE__)
+    #define CASPI_HAS_SSE
+    #include <xmmintrin.h>
+#endif
+
+#if defined(__SSE2__) || (defined(_M_X64) || defined(_M_IX86))
+    #define CASPI_HAS_SSE2
+#endif
+
+#if defined(__SSE3__)
+    #define CASPI_HAS_SSE3
+#endif
+
+#if defined(__SSSE3__)
+    #define CASPI_HAS_SSSE3
+#endif
+
+#if defined(__SSE4_1__)
+    #define CASPI_HAS_SSE4_1
+#endif
+
+#if defined(__SSE4_2__)
+    #define CASPI_HAS_SSE4_2
+#endif
+
+#if defined(__AVX__)
+    #include <immintrin.h>
+    #define CASPI_HAS_AVX
+#endif
+
+#if defined(__AVX2__)
+    #define CASPI_HAS_AVX2
+#endif
+
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+    #define CASPI_HAS_NEON
+#endif
+
+#if defined(__FMA__) || defined(__FMA3__)
+    #define CASPI_HAS_FMA
+#endif
+
 
 #endif //CASPI_PLATFORM_H

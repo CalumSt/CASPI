@@ -24,7 +24,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include <complex>
 #include <vector>
 
-#include "core/caspi_Constants.h"
+#include "base/caspi_Constants.h"
 
 namespace CASPI
 {
