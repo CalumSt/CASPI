@@ -58,7 +58,7 @@ jobs:
           cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
 
       - name: Build
-        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }} -j
 
       - name: Run Unit Tests
         working-directory: ${{ env.BUILD_DIR }}

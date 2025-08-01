@@ -36,7 +36,7 @@ namespace CASPI {
     template<typename SampleType = double>
     class CircularBuffer {
     public:
-        explicit CircularBuffer(size_t numSamples) noexcept
+        explicit CircularBuffer(std::size_t numSamples) noexcept
             : buffer(numSamples, static_cast<SampleType>(0)),
               numSamples(numSamples) {
         }
@@ -63,7 +63,7 @@ namespace CASPI {
 
         CircularBuffer(const CircularBuffer &other) noexcept = default;
 
-        CASPI_NO_DISCARD size_t getNumSamples() const { return numSamples; }
+        CASPI_NO_DISCARD std::size_t getNumSamples() const { return numSamples; }
 
         CASPI_NO_DISCARD SampleType read(const int delayInSamples) const {
             int readIndex = writeIndex - delayInSamples;
@@ -89,10 +89,10 @@ namespace CASPI {
             writeIndex = (writeIndex + 1) % numSamples;
         }
 
-        void resize(size_t newSize) {
+        void resize(std::size_t newSize) {
             std::vector<SampleType> newBuffer(newSize, static_cast<SampleType>(0));
-            size_t minSize = std::min(newSize, numSamples);
-            for (size_t i = 0; i < minSize; ++i) {
+            std::size_t minSize = std::min(newSize, numSamples);
+            for (std::size_t i = 0; i < minSize; ++i) {
                 newBuffer[i] = buffer[i];
             }
             buffer = std::move(newBuffer);
@@ -119,8 +119,8 @@ namespace CASPI {
 
     private:
         std::vector<SampleType> buffer;
-        size_t numSamples = 0;
-        size_t writeIndex = 0;
+        std::size_t numSamples = 0;
+        std::size_t writeIndex = 0;
 
         static SampleType linearInterpolation(SampleType y1, SampleType y2, SampleType frac) {
             if (frac >= 1.0)
@@ -137,8 +137,8 @@ namespace CASPI {
     template<typename SampleType, typename PolicyTag>
     class CircularBufferBase {
     public:
-        explicit CircularBufferBase(const size_t initialSize,
-                                    size_t maxSize = Constants::DEFAULT_MAX_BUFFER_SIZE)
+        explicit CircularBufferBase(const std::size_t initialSize,
+                                    std::size_t maxSize = Constants::DEFAULT_MAX_BUFFER_SIZE)
             : buffer_((maxSize == 0 ? initialSize : maxSize), SampleType(0)),
               activeSize_(initialSize),
               maxSize_((maxSize == 0) ? initialSize : maxSize),
@@ -152,7 +152,7 @@ namespace CASPI {
             writeIndex_ = (writeIndex_ + 1) % activeSize_;
         }
 
-        CASPI_NO_DISCARD expected<SampleType, ReadError> read(const size_t delay) const {
+        CASPI_NO_DISCARD expected<SampleType, ReadError> read(const std::size_t delay) const {
             if (delay >= activeSize_)
                 return {unexpect, ReadError::DelayTooLarge}; // Invalid delay
 
@@ -165,11 +165,11 @@ namespace CASPI {
             return expected<SampleType, ReadError>{buffer_[readIndex]};
         }
 
-        CASPI_NO_DISCARD size_t getActiveSize() const { return activeSize_; }
-        CASPI_NO_DISCARD size_t getMaxSize() const { return maxSize_; }
+        CASPI_NO_DISCARD std::size_t getActiveSize() const { return activeSize_; }
+        CASPI_NO_DISCARD std::size_t getMaxSize() const { return maxSize_; }
 
         // Resize active window (within preallocated space) — allowed for both tags
-        CASPI_NO_DISCARD bool resize(const size_t newSize) {
+        CASPI_NO_DISCARD bool resize(const std::size_t newSize) {
             if (newSize > 0 && newSize <= maxSize_) {
                 activeSize_ = newSize;
                 writeIndex_ %= activeSize_;
@@ -181,14 +181,14 @@ namespace CASPI {
         // Resize full buffer — only enabled for non-real-time-safe types
         template<typename T = PolicyTag>
         typename std::enable_if<is_non_real_time_safe<T>::value, void>::type
-        resizeBeyondMax(size_t newMaxSize) {
+        resizeBeyondMax(std::size_t newMaxSize) {
             CASPI_ASSERT(newMaxSize > maxSize_,
                          "New max size must be greater than current max size");
             std::vector<SampleType> newBuffer(newMaxSize, SampleType(0));
 
-            const size_t copySize = std::min(activeSize_, newMaxSize);
-            const size_t start = (writeIndex_ + activeSize_ - copySize) % activeSize_;
-            for (size_t i = 0; i < copySize; ++i)
+            const std::size_t copySize = std::min(activeSize_, newMaxSize);
+            const std::size_t start = (writeIndex_ + activeSize_ - copySize) % activeSize_;
+            for (std::size_t i = 0; i < copySize; ++i)
                 newBuffer[i] = buffer_[(start + i) % activeSize_];
 
             buffer_ = std::move(newBuffer);
@@ -200,7 +200,7 @@ namespace CASPI {
         // Disallow resizing beyond max for real-time safe policy
         template<typename T = PolicyTag>
         typename std::enable_if<is_real_time_safe<T>::value, void>::type
-        resizeBeyondMax(size_t) {
+        resizeBeyondMax(std::size_t) {
             CASPI_STATIC_ASSERT(! is_real_time_safe<T>::value,
                                 "resizeBeyondMax() is disabled for real-time safe buffers.");
         }
@@ -212,9 +212,9 @@ namespace CASPI {
 
     protected:
         std::vector<SampleType> buffer_;
-        size_t activeSize_ = 0;
-        size_t maxSize_ = 0;
-        size_t writeIndex_ = 0;
+        std::size_t activeSize_ = 0;
+        std::size_t maxSize_ = 0;
+        std::size_t writeIndex_ = 0;
     };
 
     //================================================================================
