@@ -67,7 +67,10 @@ jobs:
       - name: Run Benchmarks
         if: matrix.build_type == 'Release'
         working-directory: ${{ env.BUILD_DIR }}
-        run: ./Benchmarks/Benchmarks --benchmark_format=json > benchmark_report.json
+        shell: bash  # Use bash on all platforms
+        run: |
+          chmod +x Benchmarks/Benchmarks || true
+          ./Benchmarks/Benchmarks --benchmark_format=json > benchmark_report.json
 
       - name: Upload Benchmark Report
         if: matrix.build_type == 'Release'
