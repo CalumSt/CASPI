@@ -197,10 +197,12 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #if defined(__SSE2__) || (defined(_M_X64) || defined(_M_IX86))
     #define CASPI_HAS_SSE2
+#include <emmintrin.h>
 #endif
 
 #if defined(__SSE3__)
     #define CASPI_HAS_SSE3
+    #include <pmmintrin.h>
 #endif
 
 #if defined(__SSSE3__)
