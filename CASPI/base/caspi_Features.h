@@ -71,8 +71,14 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #endif
 
+// SSE2 enables FLUSH_ZERO (FZ)
 #if defined(CASPI_HAS_SSE2) && (defined(CASPI_ARCH_X86_64) || defined(CASPI_ARCH_X86_32))
-    #define CASPI_FEATURES_HAS_FLUSH_DENORMALS
+#define CASPI_FEATURES_HAS_FLUSH_ZERO
+#endif
+
+// SSE3 enables DENORMALS_ZERO (DAZ)
+#if defined(CASPI_HAS_SSE2) && defined(CASPI_HAS_SSE3) && (defined(CASPI_ARCH_X86_64) || defined(CASPI_ARCH_X86_32))
+    #define CASPI_FEATURES_HAS_FLUSH_ZERO_DENORMALS
 #endif
 
 #endif //CASPI_FEATURES_H
