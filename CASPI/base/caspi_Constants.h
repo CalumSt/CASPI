@@ -29,6 +29,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_CONSTANTS_H
 #define CASPI_CONSTANTS_H
 #include <cstddef>
+
 namespace CASPI::Constants {
 
 template <typename FloatType>
@@ -58,7 +59,7 @@ template <typename FloatType>
 template <typename FloatType>
     constexpr FloatType MINUS_INF_DBFS = static_cast<FloatType>(-100.0);
 
-    constexpr std::size_t DEFAULT_MAX_BUFFER_SIZE = 4096;
+constexpr std::size_t DEFAULT_MAX_BUFFER_SIZE = 4096;
 };
 
 #endif //CASPI_CONSTANTS_H
