@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload Benchmark Report
         if: matrix.build_type == 'Release'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: benchmark-report
           path: benchmark_report.json
