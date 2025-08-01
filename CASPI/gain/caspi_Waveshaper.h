@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <functional>
 #include <string>
-#include "core/caspi_Constants.h"
+#include "base/caspi_Constants.h"
 #include "maths/caspi_Maths.h"
 
 namespace CASPI::Gain

@@ -13,20 +13,22 @@
 *                              888
 *                              888
 *
-* @file caspi_Base.h Defines common API base classes for algorithms.
+* @file caspi_Core.h Defines common API base classes for algorithms.
 * @author CS Islay
 * @brief Defines common API base classes for algorithms.
 *        Producers, processors, modulators, and SampleRateAware are defined here.
 *        Producers are typically oscillators or other sound sources.
 *        Processors are typically filters or other audio effects.
 *        If C++20 concepts are available, they will be used. Define CASPI_FEATURES_DISABLE_CONCEPTS to disable.
+*        Additionally, Denormal handling is provided by feature/platform detection.
+*        Define CASPI_DISABLE_FLUSH_DENORMALS to disable manual flushing, it may save some CPU cycles by using a global setting.
 ************************************************************************/
 #include <cstddef>
 #include <type_traits>
-#include "caspi_Features.h"
-#include "caspi_Assert.h"
+#include "base/caspi_Features.h"
+#include "base/caspi_Assert.h"
 #include "caspi_CircularBuffer.h"
-#include "caspi_Constants.h"
+#include "base/caspi_Constants.h"
 
 #define CASPI_COMMON_PRODUCER_LOGIC \
 public:                                                        \
@@ -111,7 +113,7 @@ public:                                                        \
         private:                                                                        \
             FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
 
-namespace CASPI::Base
+namespace CASPI::Core
 {
     #if defined(CASPI_FEATURES_HAS_CONCEPTS) && !defined(CASPI_FEATURES_DISABLE_CONCEPTS)
 
@@ -186,6 +188,7 @@ namespace CASPI::Base
         CASPI_COMMON_MODULATOR_LOGIC
         };
 
+
         template<typename FloatType = double>
         class SampleRateAware
         {
@@ -195,7 +198,74 @@ namespace CASPI::Base
         CASPI_COMMON_SAMPLE_RATE_AWARE_LOGIC
         };
 
+        template <typename T>
+        struct is_sample_rate_aware : std::false_type {};
+
     #endif // CASPI_FEATURES_HAS_CONCEPTS
+
+    #if defined(CASPI_FEATURES_HAS_TYPE_TRAITS)
+        template <typename T>
+        struct is_producer : std::is_base_of<Producer<typename T::FloatType>, T> {};
+
+        template <typename T>
+        struct is_processor : std::is_base_of<Processor<typename T::FloatType>, T> {};
+
+        template <typename T>
+        struct is_modulator : std::is_base_of<Modulator<typename T::FloatType>, T> {};
+
+        template <typename T>
+        struct is_sample_rate_aware : std::is_base_of<SampleRateAware<typename T::FloatType>, T> {};
+    #endif // CASPI_FEATURES_HAS_TYPE_TRAITS
+
+    template <typename FloatType>
+    inline FloatType flushToZero (FloatType value, FloatType threshold = FloatType(1e-15))
+    {
+        // Compute mask: 1 if abs(value) >= threshold, else 0
+        // Use std::abs to handle negative values
+        #if !defined(CASPI_DISABLE_FLUSH_DENORMALS)
+            auto mask = static_cast<FloatType>(std::abs(value) >= threshold);
+            return value * mask;
+        #else
+            return value;
+        #endif
+    }
+
+    [[maybe_unused]] inline void configureFlushToZero(bool enable)
+    {
+    #if defined(CASPI_FEATURES_HAS_FLUSH_DENORMALS) || defined(CASPI_DISABLE_FLUSH_DENORMALS)
+        if (enable)
+        {
+            _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+            _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+        }
+        else
+        {
+            _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
+            _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_OFF);
+        }
+    #else
+        // Do nothing or fallback
+        (void)enable;
+    #endif
+    }
+
+    class ScopedFlushDenormals
+    {
+    public:
+        ScopedFlushDenormals()
+        {
+            #if !defined(CASPI_DISABLE_FLUSH_DENORMALS)
+            configureFlushToZero(true);
+            #endif
+        }
+
+        ~ScopedFlushDenormals()
+        {
+            #if !defined(CASPI_DISABLE_FLUSH_DENORMALS)
+            configureFlushToZero(false);
+            #endif
+        }
+    };
 }
 
 #endif //CASPI_BASE_H

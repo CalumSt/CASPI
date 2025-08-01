@@ -18,11 +18,17 @@
 ************************************************************************/
 
 #include "envelopes/caspi_Envelope.h"
-#include "core/caspi_Assert.h"
-#include "core/caspi_Constants.h"
+#include "base/caspi_Assert.h"
+#include "base/caspi_Constants.h"
 #include <cmath>
 namespace CASPI::PM
 {
+
+enum class ModulationMode
+{
+    Phase,
+    Frequency
+};
 /**
 * @class Operator
 * @brief A class implementing a basic phase modulation operator.
@@ -55,10 +61,7 @@ public:
     void setFrequency (const FloatType _frequency, const FloatType _sampleRate)
     {
         CASPI_ASSERT (_frequency > 0 && _sampleRate > 0, "Frequency and Sample Rate must be larger than 0.");
-        if (_frequency <= 0 || _sampleRate <= 0)
-        {
-            std::cout << "Uh oh!" << "\n";
-        }
+
         frequency      = _frequency;
 
         sampleRate     = _sampleRate;
@@ -232,6 +235,22 @@ public:
             selfMod = modFeedback * output;
         }
 
+
+        switch (modulationMode)
+        {
+            case ModulationMode::Phase:
+                phaseIncrement = CASPI::Constants::TWO_PI<FloatType> * modFrequency / sampleRate;
+                break;
+
+            case ModulationMode::Frequency:
+                phaseIncrement = CASPI::Constants::TWO_PI<FloatType> * (frequency + modulationSignal) / sampleRate;
+                break;
+
+            default:
+                CASPI_ASSERT (false, "Unknown modulation mode.");
+                break;
+        }
+
         auto sineSignal = modDepth * std::sin (currentPhase + modulationSignal + selfMod);
 
         output = envAmount * sineSignal;
@@ -269,6 +288,8 @@ public:
         currentPhase     = CASPI::Constants::zero<FloatType>;
         output           = CASPI::Constants::zero<FloatType>;
     }
+
+    ModulationMode modulationMode = ModulationMode::Phase;
 
 private:
     bool isSelfModulating    = false;
