@@ -97,8 +97,7 @@ constexpr int newNumChannels = 3;
 using RTBuffer = CASPI::CircularBufferBase<int, CASPI::RealTimeSafeTag>;
 using NonRTBuffer = CASPI::CircularBufferBase<int, CASPI::NonRealTimeSafeTag>;
 
-TEST(CircularBufferBaseTest, RealTimeSafe_WriteReadBasic)
-{
+TEST(CircularBufferBaseTest, RealTimeSafe_WriteReadBasic) {
     RTBuffer buffer(4);
 
     buffer.write(10);
@@ -118,8 +117,7 @@ TEST(CircularBufferBaseTest, RealTimeSafe_WriteReadBasic)
     EXPECT_EQ(r2.value(), 10);
 }
 
-TEST(CircularBufferBaseTest, RealTimeSafe_SetActiveSizeWithinMax)
-{
+TEST(CircularBufferBaseTest, RealTimeSafe_SetActiveSizeWithinMax) {
     RTBuffer buffer(4, 8);
     buffer.write(1);
     buffer.write(2);
@@ -129,14 +127,12 @@ TEST(CircularBufferBaseTest, RealTimeSafe_SetActiveSizeWithinMax)
     EXPECT_EQ(buffer.getActiveSize(), 2);
 }
 
-TEST(CircularBufferBaseTest, RealTimeSafe_ResizeBeyondMaxDisallowed)
-{
+TEST(CircularBufferBaseTest, RealTimeSafe_ResizeBeyondMaxDisallowed) {
     RTBuffer buffer(4);
     SUCCEED(); // Compile-time test, no runtime validation
 }
 
-TEST(CircularBufferBaseTest, NonRealTimeSafe_WriteReadResizeBeyondMax)
-{
+TEST(CircularBufferBaseTest, NonRealTimeSafe_WriteReadResizeBeyondMax) {
     NonRTBuffer buffer(3, 3);
     buffer.write(1);
     buffer.write(2);
@@ -175,8 +171,7 @@ TEST(CircularBufferBaseTest, NonRealTimeSafe_WriteReadResizeBeyondMax)
     EXPECT_EQ(r5.value(), 4);
 }
 
-TEST(CircularBufferBaseTest, NonRealTimeSafe_SetActiveSizeAndWrite)
-{
+TEST(CircularBufferBaseTest, NonRealTimeSafe_SetActiveSizeAndWrite) {
     NonRTBuffer buffer(3, 5);
     buffer.resize(5);
 
@@ -196,8 +191,7 @@ TEST(CircularBufferBaseTest, NonRealTimeSafe_SetActiveSizeAndWrite)
     EXPECT_EQ(r4.value(), 1);
 }
 
-TEST(CircularBufferBaseTest, ClearBuffer)
-{
+TEST(CircularBufferBaseTest, ClearBuffer) {
     NonRTBuffer buffer(3);
     buffer.write(7);
     buffer.write(8);
@@ -211,7 +205,6 @@ TEST(CircularBufferBaseTest, ClearBuffer)
     ASSERT_TRUE(r.has_value());
     EXPECT_EQ(r.value(), 5);
 }
-
 
 
 template <typename T>
