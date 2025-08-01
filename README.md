@@ -1,3 +1,5 @@
+[![CI](https://github.com/CalumSt/CASPI/actions/workflows/ci.yaml/badge.svg)](https://github.com/CalumSt/CASPI/actions/workflows/ci.yaml)
+
 CASPI (C++ Audio Synthesis and Processing Interface) aims to provide modular building blocks for constructing Synthesisers, allowing for a drag-and-drop architecture.
 This project is purely for personal use, and heavily based on The Computer Music Tutorial and Will Pirkle's books, but thought it would be valuable to try to make a library. It's a collection of useful audio processing classes from a variety of sources.
 
