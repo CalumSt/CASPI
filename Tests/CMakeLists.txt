@@ -30,7 +30,10 @@ include(GoogleTest)
 # --------------------------------------------------------------------------
 # ADD TEST FILES HERE
 set(SOURCES
+        base/Phase_test.cpp
+        base/Expected_test.cpp
         base/CircularBuffer_test.cpp
+        base/Expected_test.cpp
         sources/Oscillator_test.cpp
         base/Utilities_test.cpp
         processors/Filter_test.cpp
@@ -53,3 +56,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 gtest_discover_tests(${PROJECT_NAME})
+
+add_test(NAME MyUnitTests COMMAND ${PROJECT_NAME})
+set_tests_properties(MyUnitTests PROPERTIES LABELS "test")
