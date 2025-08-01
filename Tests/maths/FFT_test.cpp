@@ -2,7 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <gtest/gtest.h>
-#include "Oscillators/caspi_BlepOscillator.h"
+#include "oscillators/caspi_BlepOscillator.h"
 #include "../test_helpers.h"
 #define private public
 #include "maths/caspi_FFT_new.h"
