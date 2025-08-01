@@ -4,11 +4,6 @@
 #include <limits>
 #include "core/caspi_Core.h"
 
-#if defined(CASPI_FEATURES_HAS_FLUSH_DENORMALS)
-#include <xmmintrin.h>  // for SSE flush-zero intrinsics
-#else
-    #pragma message("CASPI_FEATURES_HAS_FLUSH_DENORMALS is not defined — hardware flush-to-zero will not be benchmarked.")
-#endif
 
 constexpr int kSize = 1024 * 8;
 
@@ -50,11 +45,10 @@ static void BM_DenormalProcessing_ManualFlush(benchmark::State &state) {
 BENCHMARK(BM_DenormalProcessing_ManualFlush);
 
 /// Benchmark: Hardware flush-to-zero (SSE2+)
-#if defined(CASPI_FEATURES_HAS_FLUSH_DENORMALS)
+#if defined(CASPI_FEATURES_HAS_FLUSH_DENORMALS) || defined(CASPI_FEATURES_HAS_FLUSH_ZERO)
 static void BM_Denormal_HWFlush(benchmark::State &state) {
     // Enable FTZ mode
-    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+    CASPI::Core::ScopedFlushDenormals flush;
 
     auto data = generateDenormals<float>();
     volatile float sum = 0.0f;
@@ -64,10 +58,6 @@ static void BM_Denormal_HWFlush(benchmark::State &state) {
     }
 
     benchmark::DoNotOptimize(sum);
-
-    // Restore modes (optional, polite for tests)
-    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
-    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_OFF);
 }
 
 BENCHMARK(BM_Denormal_HWFlush);
