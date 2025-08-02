@@ -387,7 +387,7 @@ namespace CASPI
                 using U = decltype (f(std::move(_val)));
                 if (_has_value)
                     return expected<U, E>(f(std::move(_val)));
-                return expected<U, E>(unexpect, std::move (_err));
+                return expected<U, E>(unexpect, std::move(_err));
             }
 
             /**
@@ -463,10 +463,12 @@ namespace CASPI
     class noexcept_expected {
         CASPI_STATIC_ASSERT(std::is_nothrow_destructible<T>::value,
                             "T must be noexcept destructible");
-            CASPI_STATIC_ASSERT (std::is_nothrow_destructible<E>::value, "E must be noexcept destructible");
+        CASPI_STATIC_ASSERT(std::is_nothrow_destructible<E>::value,
+                            "E must be noexcept destructible");
 
-            CASPI_STATIC_ASSERT (std::is_nothrow_move_constructible<T>::value, "T must be noexcept move constructible");
-            CASPI_STATIC_ASSERT (std::is_nothrow_move_constructible<E>::value, "E must be noexcept move constructible");
+        CASPI_STATIC_ASSERT(std::is_nothrow_move_constructible<T>::value,
+                            "T must be noexcept move constructible");
+        CASPI_STATIC_ASSERT (std::is_nothrow_move_constructible<E>::value, "E must be noexcept move constructible");
 
             CASPI_STATIC_ASSERT (std::is_nothrow_move_assignable<T>::value, "T must be noexcept move assignable");
             CASPI_STATIC_ASSERT (std::is_nothrow_move_assignable<E>::value, "E must be noexcept move assignable");
