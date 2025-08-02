@@ -53,9 +53,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+
       - name: Configure CMake
+        shell: bash
         run: |
-          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -G Ninja
+          CONFIGURE_OPTS=""
+          if [[ "$RUNNER_OS" != "Windows" ]]; then
+            CONFIGURE_OPTS="-DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}"
+          fi
+          cmake -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $CONFIGURE_OPTS -G Ninja
 
       - name: Build
         run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }} -j
