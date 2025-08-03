@@ -52,6 +52,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1  # Ensures cl.exe is in PATH on Windows
 
 
       - name: Configure CMake
