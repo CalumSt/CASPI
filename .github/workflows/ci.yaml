@@ -84,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-report
-          path: benchmark_report.json
+          path: ./Benchmarks/benchmark_report.json
 
   # Separate job for sanitizers (Linux only, Debug only for now)
   sanitize-test:
@@ -106,4 +106,4 @@ jobs:
 
       - name: Run Unit Tests with sanitizer
         working-directory: ${{ env.BUILD_DIR }}
-        run: ctest --build-config Debug --output-on-failure -L test
+        run: ctest --build-config Debug --output-on-failure --test-dir ${{ env.TEST_DIR }}
