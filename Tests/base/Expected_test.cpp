@@ -409,3 +409,38 @@ TEST(NoexceptExpectedTest, NoexceptProperties)
     CASPI::noexcept_expected<int, int> b(CASPI::unexpect, 2);
     static_assert(noexcept(swap(a, b)), "Swap should be noexcept");
 }
+
+
+
+enum class ResizeError { InvalidChannels, InvalidFrames, OutOfMemory };
+
+TEST(ExpectedVoidTest, SuccessCase) {
+    CASPI::expected<void, ResizeError> res; // default ctor => success
+    EXPECT_TRUE(res.has_value());
+}
+
+TEST(ExpectedVoidTest, ErrorCaseConstruction) {
+    CASPI::expected<void, ResizeError> res(CASPI::unexpect, ResizeError::InvalidChannels);
+    EXPECT_FALSE(res.has_value());
+    EXPECT_EQ(res.error(), ResizeError::InvalidChannels);
+}
+
+TEST(ExpectedVoidTest, FactoryHelperErrorCase) {
+    auto res = CASPI::make_unexpected<void, ResizeError>(ResizeError::InvalidFrames);
+    EXPECT_FALSE(res.has_value());
+    EXPECT_EQ(res.error(), ResizeError::InvalidFrames);
+}
+
+TEST(ExpectedVoidTest, MoveSemanticsNonRealTimeSafe) {
+    CASPI::expected<void, ResizeError, CASPI::NonRealTimeSafe> e1(CASPI::unexpect, ResizeError::OutOfMemory);
+    auto e2 = std::move(e1);
+    EXPECT_FALSE(e2.has_value());
+    EXPECT_EQ(e2.error(), ResizeError::OutOfMemory);
+}
+
+TEST(ExpectedVoidTest, MoveSemanticsRealTimeSafe) {
+    CASPI::expected<void, ResizeError, CASPI::RealTimeSafe> e1(CASPI::unexpect, ResizeError::OutOfMemory);
+    auto e2 = std::move(e1);
+    EXPECT_FALSE(e2.has_value());
+    EXPECT_EQ(e2.error(), ResizeError::OutOfMemory);
+}
