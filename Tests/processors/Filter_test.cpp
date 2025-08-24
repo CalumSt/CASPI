@@ -25,7 +25,7 @@ TEST(SvfFilterTests, Filter_test)
     osc.setFrequency(1000.0f, 44100.0f);
     int numberOfSamples = 44100; // 1 second of samples
     for (int i = 0; i < numberOfSamples; i++) {
-        const float oscSample = osc.render();
+        const float oscSample = osc.renderSample();
         const float nextValue = filter.render(oscSample);
         EXPECT_GE(nextValue, -1.0f);
         EXPECT_LE(nextValue, 1.0f);
