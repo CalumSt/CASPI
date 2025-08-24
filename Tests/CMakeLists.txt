@@ -32,7 +32,8 @@ include(GoogleTest)
 set(SOURCES
         base/Phase_test.cpp
         base/Expected_test.cpp
-        base/CircularBuffer_test.cpp
+        base/AudioBuffer_test.cpp
+        base/DelayLine_test.cpp
         base/Expected_test.cpp
         sources/Oscillator_test.cpp
         base/Utilities_test.cpp
