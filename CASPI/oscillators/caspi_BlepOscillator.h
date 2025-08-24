@@ -63,23 +63,23 @@ static FloatType blep (FloatType phase, FloatType increment)
 
 /// Sine oscillator
 template <typename FloatType>
-struct Sine final : public Core::Producer<FloatType>
+struct Sine final : public Core::Producer<FloatType, Core::Traversal::PerFrame>
 {
     void resetPhase() { phase.resetPhase(); }
 
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (CASPI::Constants::TWO_PI<float> * frequency, sampleRate); }
 
-    FloatType render() override { return std::sin (phase.advanceAndWrap (CASPI::Constants::TWO_PI<float>)); }
+    FloatType renderSample() override { return std::sin (phase.advanceAndWrap (CASPI::Constants::TWO_PI<float>)); }
 
     Phase<FloatType> phase;
 };
 
 template <typename FloatType>
-struct Saw final : public Core::Producer<FloatType>
+struct Saw final : public Core::Producer<FloatType, Core::Traversal::PerFrame>
 {
     void resetPhase() { phase.resetPhase(); }
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (frequency, sampleRate); }
-    FloatType render() override
+    FloatType renderSample() override
     {
         auto phaseInternal = phase.advanceAndWrap (1);
         return 2 * phaseInternal - 1 - blep<FloatType> (phaseInternal, phase.increment);
@@ -89,12 +89,12 @@ struct Saw final : public Core::Producer<FloatType>
 
 /// Square oscillator
 template <typename FloatType>
-struct Square final : public Core::Producer<FloatType>
+struct Square final : public Core::Producer<FloatType, Core::Traversal::PerFrame>
 {
     void resetPhase() { phase.resetPhase(); }
     void setFrequency (FloatType frequency, FloatType sampleRate) { phase.setFrequency (frequency, sampleRate); }
 
-    FloatType render() override
+    FloatType renderSample() override
     {
         auto phaseInternal = phase.advanceAndWrap (1);
         auto half          = static_cast<FloatType> (0.5);
@@ -110,7 +110,7 @@ struct Square final : public Core::Producer<FloatType>
 
 /// Triangle Oscillator
 template <typename FloatType>
-struct Triangle final : public Core::Producer<FloatType>
+struct Triangle final : public Core::Producer<FloatType, Core::Traversal::PerFrame>
 {
     void resetPhase()
     {
@@ -122,9 +122,9 @@ struct Triangle final : public Core::Producer<FloatType>
         square.setFrequency (frequency, sampleRate);
     }
 
-    FloatType render() override
+    FloatType renderSample() override
     {
-        sum += 4 * square.phase.increment * square.render();
+        sum += 4 * square.phase.increment * square.renderSample();
         constexpr auto offset = static_cast<FloatType>(0.05);
         return sum - offset;
     }
@@ -143,7 +143,7 @@ std::vector<FloatType> renderBlock (FloatType frequency, FloatType sampleRate, c
     for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++)
     {
         // get sample from (mono) oscillator
-        auto sample             = osc.render();
+        auto sample             = osc.renderSample();
         output.at (sampleIndex) = sample;
     }
     return output;
@@ -158,7 +158,7 @@ void renderBlock (BufferType &buffer, FloatType frequency, FloatType sampleRate,
     for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++)
     {
         // get sample from (mono) oscillator
-        auto sample             = osc.render();
+        auto sample             = osc.renderSample();
        buffer[sampleIndex] = sample;
     }
 }
