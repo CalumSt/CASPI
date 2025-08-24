@@ -101,7 +101,7 @@ namespace CASPI::BlepOscillator
 
         FloatType renderSample() override {
             auto phaseInternal = phase.advanceAndWrap(1);
-            auto half          = static_cast<FloatType>(0.5);
+            auto half = static_cast<FloatType>(0.5);
             auto one = static_cast<FloatType>(1);
             /// These static casts are ugly
             return ((phaseInternal < half) ? -one : one)
@@ -116,22 +116,22 @@ namespace CASPI::BlepOscillator
     template<typename FloatType>
     struct Triangle final : public Core::Producer<FloatType, Core::Traversal::PerFrame>
     {
-            void resetPhase() {
-                square.resetPhase();
-                sum = 1;
+        void resetPhase() {
+            square.resetPhase();
+            sum = 1;
             }
 
             void setFrequency(FloatType frequency, FloatType sampleRate) {
-                square.setFrequency(frequency, sampleRate);
-            }
+            square.setFrequency(frequency, sampleRate);
+        }
 
-            FloatType renderSample() override {
-                sum += 4 * square.phase.increment * square.renderSample();
-                constexpr auto offset = static_cast<FloatType>(0.05);
-                return sum - offset;
-            }
+        FloatType renderSample() override {
+            sum += 4 * square.phase.increment * square.renderSample();
+            constexpr auto offset = static_cast<FloatType>(0.05);
+            return sum - offset;
+        }
 
-        private:
+    private:
             Square<FloatType> square;
             FloatType sum = 1;
     };

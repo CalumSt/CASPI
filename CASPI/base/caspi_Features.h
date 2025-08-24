@@ -35,9 +35,14 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
         #if defined(__cpp_concepts) && (__cpp_concepts >= 201907L)
             #define CASPI_FEATURES_HAS_CONCEPTS
+            #include <concepts>
         #endif
         #if defined(__cpp_lib_ranges) && (__cpp_lib_ranges >= 201911L)
             #define CASPI_FEATURES_HAS_RANGES
+        #endif
+        #if defined(__cpp_lib_span) && (__cpp_lib_span >= 202002L)
+            #define CASPI_FEATURES_HAS_SPAN
+            #include <span>
         #endif
 
         #define CASPI_CPP20_CONSTEXPR constexpr
@@ -52,6 +57,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
         #define CASPI_NO_DISCARD [[nodiscard]]
         #define CASPI_CPP17_IF_CONSTEXPR if constexpr
+        #define CASPI_FEATURES_HAS_NOTHROW_SWAPPABLE
+        #define CASPI_FEATURES_HAS_TRAIT_VARIABLE_TEMPLATES
 
     #else
 
@@ -69,6 +76,50 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
     #endif
 
+#endif
+
+// Non-blocking
+#if defined(__has_cpp_attribute)
+#  if __has_cpp_attribute(clang::nonblocking)
+#    define CASPI_NON_BLOCKING [[clang::nonblocking]]
+#  else
+#    define CASPI_NON_BLOCKING
+#  endif
+#else
+#  define CASPI_NON_BLOCKING
+#endif
+
+// blocking
+#if defined(__has_cpp_attribute)
+#  if __has_cpp_attribute(clang::blocking)
+#    define CASPI_BLOCKING [[clang::blocking]]
+#  else
+#    define CASPI_BLOCKING
+#  endif
+#else
+#  define CASPI_BLOCKING
+#endif
+
+// Non-allocating
+#if defined(__has_cpp_attribute)
+#  if __has_cpp_attribute(clang::nonallocating)
+#    define CASPI_NON_ALLOCATING [[clang::nonallocating]]
+#  else
+#    define CASPI_NON_ALLOCATING
+#  endif
+#else
+#  define CASPI_NON_ALLOCATING
+#endif
+
+// allocating
+#if defined(__has_cpp_attribute)
+#  if __has_cpp_attribute(clang::allocating)
+#    define CASPI_ALLOCATING [[clang::allocating]]
+#  else
+#    define CASPI_ALLOCATING
+#  endif
+#else
+#  define CASPI_ALLOCATING
 #endif
 
 // SSE2 enables FLUSH_ZERO (FZ)

@@ -27,4 +27,9 @@ Y88b  d88P 888  888      X88 888 d88P 888
     void operator delete (void*) = delete;
 #endif
 
+#if defined(CASPI_DEFAULT_NOEXCEPT_DTOR)
+    #define CASPI_DEFAULT_NOEXCEPT_DTOR(CLASS) \
+    virtual ~CLASS() noexcept = default;
+#endif
+
 #endif //CASPI_MACROS_H
