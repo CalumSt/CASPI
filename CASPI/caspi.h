@@ -9,7 +9,7 @@
 #include "base/caspi_Traits.h"
 
 // Core
-#include "core/caspi_CircularBuffer.h"
+#include "core/caspi_AudioBuffer.h"
 #include "core/caspi_Core.h"
 #include "core/caspi_Expected.h"
 #include "core/caspi_Phase.h"
