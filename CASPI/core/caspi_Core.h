@@ -30,39 +30,55 @@
 #include <cstddef>
 #include <type_traits>
 
-namespace CASPI::Core {
-    namespace Traversal {
+namespace CASPI::Core
+{
+    namespace Traversal
+    {
         // Per-sample: update state every sample
-        struct PerSample {
+        struct PerSample
+        {
             template<typename Buf, typename F>
-            CASPI_NON_BLOCKING static void for_each(Buf &buf, F &&fn) noexcept {
+            CASPI_NON_BLOCKING static void for_each(Buf &buf, F &&fn) noexcept
+            {
                 const std::size_t C = buf.numChannels();
                 const std::size_t Fm = buf.numFrames();
                 for (std::size_t f = 0; f < Fm; ++f)
+                {
                     for (std::size_t ch = 0; ch < C; ++ch)
+                    {
                         fn(ch, f);
+                    }
+                }
             }
         };
 
         // Per-frame: update state once per frame, replicate across channels
-        struct PerFrame {
+        struct PerFrame
+        {
             template<typename Buf, typename F>
-            CASPI_NON_BLOCKING static void for_each(Buf &buf, F &&fn) noexcept {
+            CASPI_NON_BLOCKING static void for_each(Buf &buf, F &&fn) noexcept
+            {
                 const std::size_t C = buf.numChannels();
                 const std::size_t Fm = buf.numFrames();
                 for (std::size_t f = 0; f < Fm; ++f)
+                {
                     fn(f, C); // “once per frame” callback
+                }
             }
         };
 
         // Per-channel: update state once per channel, operate over all frames
-        struct PerChannel {
+        struct PerChannel
+        {
             template<typename Buf, typename F>
-            CASPI_NON_BLOCKING static void for_each(Buf &buf, F &&fn) noexcept {
+            CASPI_NON_BLOCKING static void for_each(Buf &buf, F &&fn) noexcept
+            {
                 const std::size_t C = buf.numChannels();
                 const std::size_t Fm = buf.numFrames();
                 for (std::size_t ch = 0; ch < C; ++ch)
+                {
                     fn(ch, Fm); // “once per channel” callback
+                }
             }
         };
     } // namespace Traversal

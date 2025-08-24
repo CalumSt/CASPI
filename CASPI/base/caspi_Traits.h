@@ -4,8 +4,7 @@
 #include <type_traits> // For std::is_nothrow_swappable, integral_constant
 #include <utility>     // For std::declval
 
-namespace CASPI
-{
+namespace CASPI {
 // clang-format off
     // === Tag types ===
     struct RealTimeSafe {};
