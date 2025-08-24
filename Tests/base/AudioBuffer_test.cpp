@@ -70,8 +70,8 @@ TEST(ChannelMajorLayoutTest, ChannelDataMemoryLayout) {
         for (size_t f = 0; f < 4; ++f)
             buf.setSample(c, f, static_cast<int>(c * 10 + f));
 
-    int* ch0 = buf.channelData(0);
-    int* ch1 = buf.channelData(1);
+    int *ch0 = buf.channelData(0);
+    int *ch1 = buf.channelData(1);
 
     // ch0 should be contiguous for frames 0..3
     for (size_t f = 0; f < 4; ++f)
@@ -82,7 +82,7 @@ TEST(ChannelMajorLayoutTest, ChannelDataMemoryLayout) {
         EXPECT_EQ(ch1[f], 1 * 10 + f);
 
     // Also check raw data memory grouping
-    const int* raw = buf.data();
+    const int *raw = buf.data();
     EXPECT_EQ(raw[0], 0); // ch0, frame0
     EXPECT_EQ(raw[3], 3); // ch0, frame3
     EXPECT_EQ(raw[4], 10); // ch1, frame0
@@ -122,18 +122,18 @@ TEST(InterleavedLayoutTest, ChannelDataMemoryLayout) {
         for (size_t f = 0; f < 4; ++f)
             buf.setSample(c, f, static_cast<int>(c * 10 + f));
 
-    int* ch0 = buf.channelData(0);
-    int* ch1 = buf.channelData(1);
+    int *ch0 = buf.channelData(0);
+    int *ch1 = buf.channelData(1);
 
     // To access channel samples for interleaved layout, step by the channel stride (numChannels).
     size_t stride = buf.numChannels();
 
-    EXPECT_EQ(ch0[0], 0);                 // frame0, ch0 (raw[0])
-    EXPECT_EQ(ch0[2 * stride], 2);        // frame2, ch0 (raw[4])
-    EXPECT_EQ(ch1[0], 10);                // frame0, ch1 (raw[1])
+    EXPECT_EQ(ch0[0], 0); // frame0, ch0 (raw[0])
+    EXPECT_EQ(ch0[2 * stride], 2); // frame2, ch0 (raw[4])
+    EXPECT_EQ(ch1[0], 10); // frame0, ch1 (raw[1])
 
     // Raw memory check: [0,10,1,11,2,12,3,13]
-    const int* raw = buf.data();
+    const int *raw = buf.data();
     EXPECT_EQ(raw[0], 0);
     EXPECT_EQ(raw[1], 10);
     EXPECT_EQ(raw[2], 1);
@@ -168,13 +168,12 @@ TEST(AudioBufferTest, ClearResetsToZero) {
             EXPECT_EQ(buffer.sample(ch, fr), 0);
 }
 
-TEST(InterleavedLayoutTest, GrowPreservesUnderlyingPrefix)
-{
+TEST(InterleavedLayoutTest, GrowPreservesUnderlyingPrefix) {
     CASPI::InterleavedLayout<float> buf(2, 2); // size = 4
     ASSERT_EQ(buf.numSamples(), 4u);
 
     // Fill raw memory directly so raw[i] == i
-    float* raw = buf.data();
+    float *raw = buf.data();
     for (size_t i = 0; i < buf.numSamples(); ++i) raw[i] = static_cast<float>(i);
 
     // Grow to 3x3 -> size 9
@@ -182,7 +181,7 @@ TEST(InterleavedLayoutTest, GrowPreservesUnderlyingPrefix)
     ASSERT_EQ(buf.numSamples(), 9u);
 
     // First 4 entries unchanged
-    const float* r = buf.data();
+    const float *r = buf.data();
     EXPECT_FLOAT_EQ(r[0], 0.0f);
     EXPECT_FLOAT_EQ(r[1], 1.0f);
     EXPECT_FLOAT_EQ(r[2], 2.0f);
@@ -193,18 +192,17 @@ TEST(InterleavedLayoutTest, GrowPreservesUnderlyingPrefix)
         EXPECT_FLOAT_EQ(r[i], 0.0f) << "index " << i;
 }
 
-TEST(ChannelMajorLayoutTest, GrowPreservesUnderlyingPrefix)
-{
+TEST(ChannelMajorLayoutTest, GrowPreservesUnderlyingPrefix) {
     CASPI::ChannelMajorLayout<float> buf(2, 2); // size = 4
     ASSERT_EQ(buf.numSamples(), 4u);
 
-    float* raw = buf.data();
+    float *raw = buf.data();
     for (size_t i = 0; i < buf.numSamples(); ++i) raw[i] = static_cast<float>(i);
 
     buf.resize(3, 3); // size = 9
     ASSERT_EQ(buf.numSamples(), 9u);
 
-    const float* r = buf.data();
+    const float *r = buf.data();
     EXPECT_FLOAT_EQ(r[0], 0.0f);
     EXPECT_FLOAT_EQ(r[1], 1.0f);
     EXPECT_FLOAT_EQ(r[2], 2.0f);
@@ -213,8 +211,7 @@ TEST(ChannelMajorLayoutTest, GrowPreservesUnderlyingPrefix)
         EXPECT_FLOAT_EQ(r[i], 0.0f) << "index " << i;
 }
 
-TEST(InterleavedLayoutTest, ResizeDoesNotPreserveSampleCoordinates)
-{
+TEST(InterleavedLayoutTest, ResizeDoesNotPreserveSampleCoordinates) {
     CASPI::InterleavedLayout<float> buf(2, 2);
     // Put a distinctive value at (1,1)
     buf.setSample(1, 1, 42.0f);
@@ -231,8 +228,7 @@ TEST(InterleavedLayoutTest, ResizeDoesNotPreserveSampleCoordinates)
     EXPECT_FLOAT_EQ(buf.data()[oldIdx], 42.0f);
 }
 
-TEST(ChannelMajorLayoutTest, ResizeDoesNotPreserveSampleCoordinates)
-{
+TEST(ChannelMajorLayoutTest, ResizeDoesNotPreserveSampleCoordinates) {
     CASPI::ChannelMajorLayout<float> buf(2, 2);
     buf.setSample(1, 1, 42.0f);
     // For 2x2 channel-major, (1,1) was at linear index oldIdx = 1*2 + 1 = 3
@@ -246,44 +242,41 @@ TEST(ChannelMajorLayoutTest, ResizeDoesNotPreserveSampleCoordinates)
     EXPECT_FLOAT_EQ(buf.data()[oldIdx], 42.0f);
 }
 
-TEST(InterleavedLayoutTest, ShrinkTruncatesUnderlyingMemory)
-{
+TEST(InterleavedLayoutTest, ShrinkTruncatesUnderlyingMemory) {
     CASPI::InterleavedLayout<float> buf(2, 4); // size = 8
-    float* raw = buf.data();
+    float *raw = buf.data();
     for (size_t i = 0; i < buf.numSamples(); ++i) raw[i] = static_cast<float>(i);
 
     buf.resize(2, 2); // size = 4
     ASSERT_EQ(buf.numSamples(), 4u);
-    const float* r = buf.data();
+    const float *r = buf.data();
     for (size_t i = 0; i < 4; ++i)
         EXPECT_FLOAT_EQ(r[i], static_cast<float>(i));
 }
 
-TEST(ChannelMajorLayoutTest, ShrinkTruncatesUnderlyingMemory)
-{
+TEST(ChannelMajorLayoutTest, ShrinkTruncatesUnderlyingMemory) {
     CASPI::ChannelMajorLayout<float> buf(2, 4); // size = 8
-    float* raw = buf.data();
+    float *raw = buf.data();
     for (size_t i = 0; i < buf.numSamples(); ++i) raw[i] = static_cast<float>(i);
 
     buf.resize(2, 2); // size = 4
     ASSERT_EQ(buf.numSamples(), 4u);
-    const float* r = buf.data();
+    const float *r = buf.data();
     for (size_t i = 0; i < 4; ++i)
         EXPECT_FLOAT_EQ(r[i], static_cast<float>(i));
 }
 
-TEST(AudioBufferTest, DefaultInterleaved_GrowPreservesUnderlyingPrefix)
-{
+TEST(AudioBufferTest, DefaultInterleaved_GrowPreservesUnderlyingPrefix) {
     CASPI::AudioBuffer<float> buf(2, 2); // default Layout = InterleavedLayout
     ASSERT_EQ(buf.numSamples(), 4u);
 
-    float* raw = buf.data();
+    float *raw = buf.data();
     for (size_t i = 0; i < buf.numSamples(); ++i) raw[i] = static_cast<float>(i);
 
     buf.resize(3, 3);
     ASSERT_EQ(buf.numSamples(), 9u);
 
-    const float* r = buf.data();
+    const float *r = buf.data();
     EXPECT_FLOAT_EQ(r[0], 0.0f);
     EXPECT_FLOAT_EQ(r[1], 1.0f);
     EXPECT_FLOAT_EQ(r[2], 2.0f);
@@ -292,24 +285,24 @@ TEST(AudioBufferTest, DefaultInterleaved_GrowPreservesUnderlyingPrefix)
         EXPECT_FLOAT_EQ(r[i], 0.0f);
 }
 
-TEST(AudioBufferTest, ResizeToZeroResultsInEmpty)
-{
+TEST(AudioBufferTest, ResizeToZeroResultsInEmpty) {
     CASPI::AudioBuffer<float> buf(2, 2);
     buf.resize(0, 5);
     EXPECT_EQ(buf.numSamples(), 0u);
     buf.resize(3, 0);
     EXPECT_EQ(buf.numSamples(), 0u);
 }
+
 // 2) Copy constructor and assignment
 TEST(AudioBufferTest, CopyConstructorAndAssignment) {
     CASPI::AudioBuffer<int> buf1(2, 2);
     buf1.fill(42);
 
-    CASPI::AudioBuffer<int> buf2 = buf1;  // Copy constructor
+    CASPI::AudioBuffer<int> buf2 = buf1; // Copy constructor
     EXPECT_EQ(buf2.sample(1, 1), 42);
 
     CASPI::AudioBuffer<int> buf3;
-    buf3 = buf1;  // Assignment
+    buf3 = buf1; // Assignment
     EXPECT_EQ(buf3.sample(0, 0), 42);
 }
 
@@ -317,9 +310,9 @@ TEST(AudioBufferTest, CopyConstructorAndAssignment) {
 TEST(AudioBufferTest, ChannelFrameAllSpan) {
     CASPI::AudioBuffer<float> buf(2, 3);
     // fill with increasing numbers for testing
-    for (size_t ch=0; ch<buf.numChannels(); ++ch)
-        for (size_t f=0; f<buf.numFrames(); ++f)
-            buf.setSample(ch, f, static_cast<float>(ch*10+f));
+    for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+        for (size_t f = 0; f < buf.numFrames(); ++f)
+            buf.setSample(ch, f, static_cast<float>(ch * 10 + f));
 
     // channel_span
     auto ch0 = buf.channel_span(0);
@@ -341,7 +334,7 @@ TEST(AudioBufferTest, ChannelFrameAllSpan) {
 
 // ---------------------- StridedSpan test ----------------------
 TEST(StridedSpanTest, IterationAndIndex) {
-    float data[6] = {0,1,2,3,4,5};
+    float data[6] = {0, 1, 2, 3, 4, 5};
     CASPI::StridedSpan<float> span(data, 3, 2); // elements at 0,2,4
 
     // operator[]
@@ -350,44 +343,49 @@ TEST(StridedSpanTest, IterationAndIndex) {
     EXPECT_EQ(span[2], 4);
 
     // iteration
-    int expected[] = {0,2,4};
-    size_t idx=0;
-    for(auto x : span) {
+    int expected[] = {0, 2, 4};
+    size_t idx = 0;
+    for (auto x: span) {
         EXPECT_EQ(x, expected[idx++]);
     }
 }
 
 // ---------------------- Block operations ----------------------
 TEST(BlocksTest, FillScaleCopyApply) {
-    CASPI::AudioBuffer<float> buf(2,3);
+    CASPI::AudioBuffer<float> buf(2, 3);
     auto all = buf.all_span();
 
     // fill
     CASPI::block::fill(all, 1.0f);
-    for(auto x : all) EXPECT_EQ(x, 1.0f);
+    for (auto x: all)
+        EXPECT_EQ(x, 1.0f);
 
     // scale
     CASPI::block::scale(all, 2.0f);
-    for(auto x : all) EXPECT_EQ(x, 2.0f);
+    for (auto x: all)
+        EXPECT_EQ(x, 2.0f);
 
     // copy
     float tmp[6] = {};
-    CASPI::block::copy(CASPI::Span<float>(tmp,6), all);
-    for(size_t i=0;i<6;++i) EXPECT_EQ(tmp[i], 2.0f);
+    CASPI::block::copy(CASPI::Span<float>(tmp, 6), all);
+    for (size_t i = 0; i < 6; ++i)
+        EXPECT_EQ(tmp[i], 2.0f);
 
     // apply unary op
-    CASPI::block::apply(all, [](float x){ return x+1.0f; });
-    for(auto x : all) EXPECT_EQ(x, 3.0f);
+    CASPI::block::apply(all, [](float x) { return x + 1.0f; });
+    for (auto x: all)
+        EXPECT_EQ(x, 3.0f);
 
     // apply2 binary op
-    float src[6] = {1,1,1,1,1,1};
-    CASPI::block::apply2(all, CASPI::Span<float>(src,6), [](float a,float b){ return a-b; });
-    for(auto x : all) EXPECT_EQ(x, 2.0f);
+    float src[6] = {1, 1, 1, 1, 1, 1};
+    CASPI::block::apply2(all, CASPI::Span<float>(src, 6), [](float a, float b) { return a - b; });
+    for (auto x: all)
+        EXPECT_EQ(x, 2.0f);
 }
 
 // ---------------------- Channel / Frame views with block ops ----------------------
 TEST(AudioBufferTest, ChannelFrameBlocks) {
-    CASPI::AudioBuffer<float> buf(2,3);
+    CASPI::AudioBuffer<float> buf(2, 3);
     auto ch0 = buf.channel_span(0);
     auto ch1 = buf.channel_span(1);
 
@@ -408,11 +406,11 @@ TEST(AudioBufferTest, MoveConstructorAndAssignment) {
     CASPI::AudioBuffer<int> buf1(1, 1);
     buf1.setSample(0, 0, 99);
 
-    CASPI::AudioBuffer<int> buf2 = std::move(buf1);  // Move constructor
+    CASPI::AudioBuffer<int> buf2 = std::move(buf1); // Move constructor
     EXPECT_EQ(buf2.sample(0, 0), 99);
 
     CASPI::AudioBuffer<int> buf3;
-    buf3 = std::move(buf2);  // Move assignment
+    buf3 = std::move(buf2); // Move assignment
     EXPECT_EQ(buf3.sample(0, 0), 99);
 }
 
