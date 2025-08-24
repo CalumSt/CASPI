@@ -156,43 +156,35 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
     // ===== Layout Base =====
     template<typename Derived, typename T>
-    class LayoutBase
-    {
+    class LayoutBase {
     public:
         using SampleType = T;
 
-        CASPI_NO_DISCARD std::size_t numChannels() const CASPI_NON_BLOCKING noexcept
-        {
+        CASPI_NO_DISCARD std::size_t numChannels() const CASPI_NON_BLOCKING noexcept {
             return numChannels_;
         }
 
-        CASPI_NO_DISCARD std::size_t numFrames() const CASPI_NON_BLOCKING noexcept
-        {
+        CASPI_NO_DISCARD std::size_t numFrames() const CASPI_NON_BLOCKING noexcept {
             return numFrames_;
         }
 
-        CASPI_NO_DISCARD std::size_t numSamples() const CASPI_NON_BLOCKING noexcept
-        {
+        CASPI_NO_DISCARD std::size_t numSamples() const CASPI_NON_BLOCKING noexcept {
             return numChannels_ * numFrames_;
         }
 
-        CASPI_NO_DISCARD SampleType *data() CASPI_NON_BLOCKING noexcept
-        {
+        CASPI_NO_DISCARD SampleType *data() CASPI_NON_BLOCKING noexcept {
             return data_.data();
         }
 
-        CASPI_NO_DISCARD const SampleType *data() const CASPI_NON_BLOCKING noexcept
-        {
+        CASPI_NO_DISCARD const SampleType *data() const CASPI_NON_BLOCKING noexcept {
             return data_.data();
         }
 
-        void clear() CASPI_NON_BLOCKING noexcept
-        {
+        void clear() CASPI_NON_BLOCKING noexcept {
             std::fill(data_.begin(), data_.end(), SampleType{});
         }
 
-        void fill(SampleType value) CASPI_NON_BLOCKING noexcept
-        {
+        void fill(SampleType value) CASPI_NON_BLOCKING noexcept {
             std::fill(data_.begin(), data_.end(), value);
         }
 
@@ -270,8 +262,7 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
     // ===== Channel Major Layout =====
     template<typename T>
-    class ChannelMajorLayout : public LayoutBase<ChannelMajorLayout<T>, T>
-    {
+    class ChannelMajorLayout : public LayoutBase<ChannelMajorLayout<T>, T> {
     public:
         using Base = LayoutBase<ChannelMajorLayout<T>, T>;
         using typename Base::SampleType;
@@ -365,8 +356,7 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
     // ===== Interleaved Layout =====
     template<typename T>
-    class InterleavedLayout : public LayoutBase<InterleavedLayout<T>, T>
-    {
+    class InterleavedLayout : public LayoutBase<InterleavedLayout<T>, T> {
     public:
         using Base = LayoutBase<InterleavedLayout<T>, T>;
         using typename Base::SampleType;
@@ -511,13 +501,11 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
         SampleType *data() noexcept CASPI_NON_BLOCKING { return layout_.data(); }
         const SampleType *data() const noexcept CASPI_NON_BLOCKING { return layout_.data(); }
 
-        SampleType *channelData(const std::size_t channel) noexcept CASPI_NON_BLOCKING
-        {
+        SampleType *channelData(const std::size_t channel) noexcept CASPI_NON_BLOCKING {
             return layout_.channelData(channel);
         }
 
-        const SampleType *channelData(const std::size_t channel) const noexcept CASPI_NON_BLOCKING
-        {
+        const SampleType *channelData(const std::size_t channel) const noexcept CASPI_NON_BLOCKING {
             return layout_.channelData(channel);
         }
 
