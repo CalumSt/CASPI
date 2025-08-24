@@ -411,7 +411,6 @@ TEST(NoexceptExpectedTest, NoexceptProperties)
 }
 
 
-
 enum class ResizeError { InvalidChannels, InvalidFrames, OutOfMemory };
 
 TEST(ExpectedVoidTest, SuccessCase) {
@@ -432,14 +431,16 @@ TEST(ExpectedVoidTest, FactoryHelperErrorCase) {
 }
 
 TEST(ExpectedVoidTest, MoveSemanticsNonRealTimeSafe) {
-    CASPI::expected<void, ResizeError, CASPI::NonRealTimeSafe> e1(CASPI::unexpect, ResizeError::OutOfMemory);
+    CASPI::expected<void, ResizeError, CASPI::NonRealTimeSafe> e1(
+        CASPI::unexpect, ResizeError::OutOfMemory);
     auto e2 = std::move(e1);
     EXPECT_FALSE(e2.has_value());
     EXPECT_EQ(e2.error(), ResizeError::OutOfMemory);
 }
 
 TEST(ExpectedVoidTest, MoveSemanticsRealTimeSafe) {
-    CASPI::expected<void, ResizeError, CASPI::RealTimeSafe> e1(CASPI::unexpect, ResizeError::OutOfMemory);
+    CASPI::expected<void, ResizeError, CASPI::RealTimeSafe> e1(
+        CASPI::unexpect, ResizeError::OutOfMemory);
     auto e2 = std::move(e1);
     EXPECT_FALSE(e2.has_value());
     EXPECT_EQ(e2.error(), ResizeError::OutOfMemory);

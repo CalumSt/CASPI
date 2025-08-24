@@ -26,97 +26,55 @@
 #include "base/caspi_Assert.h"
 #include "base/caspi_Constants.h"
 #include "base/caspi_Features.h"
-#include "caspi_CircularBuffer.h"
+#include "caspi_AudioBuffer.h"
 #include <cstddef>
 #include <type_traits>
 
-#define CASPI_COMMON_PRODUCER_LOGIC                                             \
-public:                                                                         \
-    virtual FloatType render() = 0;                                             \
-                                                                                \
-    void render (FloatType* buffer, const std::size_t n)                        \
-    {                                                                           \
-        for (std::size_t i = 0; i < n; ++i)                                     \
-        {                                                                       \
-            buffer[i] = render();                                               \
-        }                                                                       \
-    }                                                                           \
-                                                                                \
-    template <typename OutputIt>                                                \
-    void render (OutputIt begin, OutputIt end)                                  \
-    {                                                                           \
-        auto n = std::distance (begin, end);                                    \
-        render (&(*begin), n);                                                  \
-    }                                                                           \
-                                                                                \
-    void render (CASPI::CircularBuffer<FloatType>& buffer, const std::size_t n) \
-    {                                                                           \
-        for (std::size_t i = 0; i < n; ++i)                                     \
-        {                                                                       \
-            buffer.write (render());                                            \
-        }                                                                       \
-    }                                                                           \
-                                                                                \
-    virtual ~Producer() = default;
+namespace CASPI::Core
+{
+    namespace Traversal
+    {
+        // Per-sample: update state every sample
+        struct PerSample
+        {
+                template <typename Buf, typename F>
+                CASPI_NON_BLOCKING static void for_each (Buf& buf, F&& fn) noexcept
+                {
+                    const std::size_t C  = buf.numChannels();
+                    const std::size_t Fm = buf.numFrames();
+                    for (std::size_t f = 0; f < Fm; ++f)
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                            fn (ch, f);
+                }
+        };
 
-#define CASPI_COMMON_PROCESSOR_LOGIC                                                     \
-public:                                                                                  \
-    virtual FloatType process (FloatType input) = 0;                                     \
-                                                                                         \
-    void process (FloatType* buffer, const std::size_t n)                                \
-    {                                                                                    \
-        for (std::size_t i = 0; i < n; ++i)                                              \
-        {                                                                                \
-            buffer[i] = process (buffer[i]);                                             \
-        }                                                                                \
-    }                                                                                    \
-                                                                                         \
-    void process (FloatType* in, FloatType* out, const std::size_t n)                    \
-    {                                                                                    \
-        for (std::size_t i = 0; i < n; ++i)                                              \
-        {                                                                                \
-            out[i] = process (in[i]);                                                    \
-        }                                                                                \
-    }                                                                                    \
-                                                                                         \
-    template <typename OutputIt>                                                         \
-    void process (OutputIt begin, OutputIt end)                                          \
-    {                                                                                    \
-        auto n = std::distance (begin, end);                                             \
-        process (&(*begin), n);                                                          \
-    }                                                                                    \
-                                                                                         \
-    virtual void process (CASPI::CircularBuffer<FloatType>& buffer, const std::size_t n) \
-    {                                                                                    \
-        for (std::size_t i = 0; i < n; ++i)                                              \
-        {                                                                                \
-            buffer.write (process (buffer.read()));                                      \
-        }                                                                                \
-    }                                                                                    \
-    virtual ~Processor() = default;
+        // Per-frame: update state once per frame, replicate across channels
+        struct PerFrame
+        {
+                template <typename Buf, typename F>
+                CASPI_NON_BLOCKING static void for_each (Buf& buf, F&& fn) noexcept
+                {
+                    const std::size_t C  = buf.numChannels();
+                    const std::size_t Fm = buf.numFrames();
+                    for (std::size_t f = 0; f < Fm; ++f)
+                        fn (f, C); // “once per frame” callback
+                }
+        };
 
-#define CASPI_COMMON_MODULATOR_LOGIC                                       \
-public:                                                                    \
-    virtual FloatType modulate()                                      = 0; \
-    virtual void modulate (FloatType* buffer, std::size_t numSamples) = 0; \
-    virtual ~Modulator()                                              = default;
+        // Per-channel: update state once per channel, operate over all frames
+        struct PerChannel
+        {
+                template <typename Buf, typename F>
+                CASPI_NON_BLOCKING static void for_each (Buf& buf, F&& fn) noexcept
+                {
+                    const std::size_t C  = buf.numChannels();
+                    const std::size_t Fm = buf.numFrames();
+                    for (std::size_t ch = 0; ch < C; ++ch)
+                        fn (ch, Fm); // “once per channel” callback
+                }
+        };
+    } // namespace Traversal
 
-#define CASPI_COMMON_SAMPLE_RATE_AWARE_LOGIC                                     \
-public:                                                                          \
-    void setSampleRate (FloatType sampleRate)                                    \
-    {                                                                            \
-        CASPI_ASSERT (sampleRate > 0, "Sample rate must be greater than zero."); \
-        this->sampleRate = sampleRate;                                           \
-    }                                                                            \
-    FloatType getSampleRate() const                                              \
-    {                                                                            \
-        return sampleRate;                                                       \
-    }                                                                            \
-                                                                                 \
-private:                                                                         \
-    FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
-
-namespace CASPI::Core {
 #if defined(CASPI_FEATURES_HAS_CONCEPTS) && ! defined(CASPI_FEATURES_DISABLE_CONCEPTS)
 
     template <typename T>
@@ -129,11 +87,61 @@ namespace CASPI::Core {
         *        They can render a single sample or a buffer of samples.
         *        If C++20 concepts are available, they will be used. Define CASPI_FEATURES_DISABLE_CONCEPTS to disable.
         */
-    template <FloatingPoint FloatType>
+    template <FloatingPoint FloatType, typename Policy = Traversal::PerSample>
+#else
+    template <typename FloatType = double, typename Policy = Traversal::PerSample>
+#endif
     class Producer
     {
+#if ! defined(CASPI_FEATURES_HAS_CONCEPTS) || defined(CASPI_FEATURES_DISABLE_CONCEPTS)
+            CASPI_STATIC_ASSERT (std::is_floating_point<FloatType>::value,
+                                 "Producer base class requires a floating-point type (float, double, long double)");
+#endif
         public:
-            CASPI_COMMON_PRODUCER_LOGIC
+            // ---- Hooks for derived types (override what you need) ----
+            // 1) Per-sample hook
+            virtual FloatType renderSample() { return FloatType (0); }
+
+            // 2) Per-frame hook (called ONCE per frame)
+            //    Default calls renderSample() once, meaning state updates once/frame.
+            virtual FloatType renderFrame() { return renderSample(); }
+
+            // 3) Per-channel hook (called ONCE per channel)
+            //    Default fills via renderSample() across all frames of that channel.
+            virtual void renderChannel (FloatType* chData, std::size_t nFrames)
+            {
+                for (std::size_t f = 0; f < nFrames; ++f)
+                    chData[f] = renderSample();
+            }
+
+            // ---- Generic rendering into AudioBuffer ----
+            template <template <typename> class Layout>
+            CASPI_NON_BLOCKING void render (AudioBuffer<FloatType, Layout>& buf) noexcept
+            {
+                using P = Policy;
+                // Per-sample
+                if (std::is_same<P, Traversal::PerSample>::value)
+                {
+                    P::for_each (buf, [this, &buf] (std::size_t ch, std::size_t f)
+                                 { buf.sample (ch, f) = this->renderSample(); });
+                }
+                // Per-frame
+                else if (std::is_same<P, Traversal::PerFrame>::value)
+                {
+                    P::for_each (buf, [this, &buf] (std::size_t f, std::size_t C)
+                                 {
+                    const FloatType v = this->renderFrame(); // state advances once
+                    for (std::size_t ch = 0; ch < C; ++ch) buf.sample(ch, f) = v; });
+                }
+                // Per-channel
+                else
+                { // PerChannel
+                    P::for_each (buf, [this, &buf] (std::size_t ch, std::size_t nFrames)
+                                 { this->renderChannel (buf.channelData (ch), nFrames); });
+                }
+            }
+
+            virtual ~Producer() noexcept = default;
     };
 
     /**
@@ -143,66 +151,114 @@ namespace CASPI::Core {
         *        They can process a single sample or a buffer of samples.
         *        If C++20 concepts are available, they will be used. Define CASPI_FEATURES_DISABLE_CONCEPTS to disable.
         */
-    template <FloatingPoint FloatType>
+#if defined(CASPI_FEATURES_HAS_CONCEPTS) && ! defined(CASPI_FEATURES_DISABLE_CONCEPTS)
+    template <FloatingPoint FloatType, typename Policy = Traversal::PerSample>
+#else
+    template <typename FloatType = double, typename Policy = Traversal::PerSample>
+#endif
     class Processor
     {
+#if ! defined(CASPI_FEATURES_HAS_CONCEPTS) || defined(CASPI_FEATURES_DISABLE_CONCEPTS)
+            CASPI_STATIC_ASSERT (std::is_floating_point<FloatType>::value,
+                                 "Producer base class requires a floating-point type (float, double, long double)");
+#endif
         public:
-            CASPI_COMMON_PROCESSOR_LOGIC
+            // ---- Hooks for derived types (override what you need) ----
+            virtual FloatType processSample (FloatType x) { return x; }
+
+            // Called once per frame with a contiguous “frame” copy (size = nChannels).
+            // Default: per-sample processing and write-back.
+            virtual void processFrame (FloatType* frame, std::size_t nChannels)
+            {
+                for (std::size_t ch = 0; ch < nChannels; ++ch)
+                    frame[ch] = processSample (frame[ch]);
+            }
+
+            // Called once per channel on the full channel buffer (nFrames).
+            // Default: per-sample processing and write-back.
+            virtual void processChannel (FloatType* channel, std::size_t nFrames)
+            {
+                for (std::size_t f = 0; f < nFrames; ++f)
+                    channel[f] = processSample (channel[f]);
+            }
+
+            // ---- Generic processing over AudioBuffer ----
+            template <template <typename> class Layout>
+            CASPI_NON_BLOCKING void process (AudioBuffer<FloatType, Layout>& buf) noexcept
+            {
+                using P              = Policy;
+                const std::size_t C  = buf.numChannels();
+                const std::size_t Fm = buf.numFrames();
+
+                if (std::is_same<P, Traversal::PerSample>::value)
+                {
+                    // state per sample
+                    for (std::size_t f = 0; f < Fm; ++f)
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                            buf.sample (ch, f) = processSample (buf.sample (ch, f));
+                }
+                else if (std::is_same<P, Traversal::PerFrame>::value)
+                {
+                    // state per frame; gather frame into a small stack array, process once, scatter back
+                    for (std::size_t f = 0; f < Fm; ++f)
+                    {
+                        // small fixed-size scratch: if C is large, use vector (rare in audio)
+                        std::vector<FloatType> frame (C);
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                            frame[ch] = buf.sample (ch, f);
+                        processFrame (frame.data(), C);
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                            buf.sample (ch, f) = frame[ch];
+                    }
+                }
+                else
+                { // PerChannel
+                    for (std::size_t ch = 0; ch < C; ++ch)
+                    {
+                        processChannel (buf.channelData (ch), Fm);
+                    }
+                }
+            }
+
+            virtual ~Processor() noexcept = default;
     };
 
+#if defined(CASPI_FEATURES_HAS_CONCEPTS) && ! defined(CASPI_FEATURES_DISABLE_CONCEPTS)
     template <FloatingPoint FloatType>
+#else
+    template <typename FloatType = double>
+#endif
     class Modulator
     {
         public:
-            CASPI_COMMON_MODULATOR_LOGIC
+            virtual FloatType modulate()                                      = 0;
+            virtual void modulate (FloatType* buffer, std::size_t numSamples) = 0;
+            virtual ~Modulator()                                              = default;
     };
 
+#if defined(CASPI_FEATURES_HAS_CONCEPTS) && ! defined(CASPI_FEATURES_DISABLE_CONCEPTS)
     template <FloatingPoint FloatType>
+#else
+    template <typename FloatType = double>
+#endif
     class SampleRateAware
     {
-            CASPI_COMMON_SAMPLE_RATE_AWARE_LOGIC
+        public:
+            ~SampleRateAware() noexcept = default;
+            SampleRateAware()           = default;
+            void setSampleRate (FloatType sampleRate)
+            {
+                CASPI_ASSERT (sampleRate > 0, "Sample rate must be greater than zero.");
+                this->sampleRate = sampleRate;
+            }
+            FloatType getSampleRate() const
+            {
+                return sampleRate;
+            }
+
+        private:
+            FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
     };
-
-#else
-    template<typename FloatType = double>
-    class Producer {
-        CASPI_STATIC_ASSERT(std::is_floating_point<FloatType>::value,
-                            "Producer base class requires a floating-point type (float, double, long double)")
-        ;
-
-        CASPI_COMMON_PRODUCER_LOGIC
-    };
-
-    template<typename FloatType = double>
-    class Processor {
-        CASPI_STATIC_ASSERT(std::is_floating_point<FloatType>::value,
-                            "Processor base class requires a floating-point type (float, double, long double)")
-        ;
-
-        CASPI_COMMON_PROCESSOR_LOGIC
-    };
-
-    template<typename FloatType = double>
-    class Modulator {
-        CASPI_STATIC_ASSERT(std::is_floating_point<FloatType>::value,
-                            "Modulator requires a floating-point type");
-
-        CASPI_COMMON_MODULATOR_LOGIC
-    };
-
-    template<typename FloatType = double>
-    class SampleRateAware {
-        CASPI_STATIC_ASSERT(std::is_floating_point<FloatType>::value,
-                            "SampleRateAware requires a floating-point type");
-
-        CASPI_COMMON_SAMPLE_RATE_AWARE_LOGIC
-    };
-
-    template<typename T>
-    struct is_sample_rate_aware : std::false_type {
-    };
-
-#endif // CASPI_FEATURES_HAS_CONCEPTS
 
 #if defined(CASPI_FEATURES_HAS_TYPE_TRAITS)
     template <typename T>
@@ -226,19 +282,22 @@ namespace CASPI::Core {
     };
 #endif // CASPI_FEATURES_HAS_TYPE_TRAITS
 
-    template<typename FloatType>
-    inline FloatType flushToZero(FloatType value, FloatType threshold = FloatType(1e-15)) {
+    template <typename FloatType>
+    inline FloatType flushToZero (FloatType value, FloatType threshold = FloatType (1e-15))
+    {
         // Compute mask: 1 if abs(value) >= threshold, else 0
         // Use std::abs to handle negative values
 #if ! defined(CASPI_DISABLE_FLUSH_DENORMALS)
-        auto mask = static_cast<FloatType>(std::abs(value) >= threshold);
+        auto mask = static_cast<FloatType> (std::abs (value) >= threshold);
         return value * mask;
 #else
         return value;
 #endif
     }
 
-    [[maybe_unused]] inline void configureFlushToZero(bool enable) {
+    [[maybe_unused]]
+    inline void configureFlushToZero (bool enable)
+    {
 #if defined(CASPI_FEATURES_HAS_FLUSH_ZERO_DENORMALS)
         if (enable)
         {
@@ -253,9 +312,9 @@ namespace CASPI::Core {
 
 #elif defined(CASPI_FEATURES_HAS_FLUSH_ZERO)
         if (enable)
-            _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+            _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON);
         else
-            _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
+            _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_OFF);
 
 #else
         // Fallback for unsupported platforms
@@ -263,19 +322,22 @@ namespace CASPI::Core {
 #endif
     }
 
-    class ScopedFlushDenormals {
-    public:
-        ScopedFlushDenormals() {
+    class ScopedFlushDenormals
+    {
+        public:
+            ScopedFlushDenormals()
+            {
 #if ! defined(CASPI_DISABLE_FLUSH_DENORMALS)
-            configureFlushToZero(true);
+                configureFlushToZero (true);
 #endif
-        }
+            }
 
-        ~ScopedFlushDenormals() {
+            ~ScopedFlushDenormals()
+            {
 #if ! defined(CASPI_DISABLE_FLUSH_DENORMALS)
-            configureFlushToZero(false);
+                configureFlushToZero (false);
 #endif
-        }
+            }
     };
 } // namespace CASPI::Core
 
