@@ -21,6 +21,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_MACROS_H
 #define CASPI_MACROS_H
 
+#include "caspi_Features.h"
+
+#define CASPI_REQUIRE_SEMICOLON(x) do { x } while(0)
+
 #if defined(CASPI_DISABLE_HEAP) && !defined(CASPI_FORCE_ENABLE_HEAP)
 #define CASPI_DISABLE_HEAP(Class) \
     void* operator new (std::size_t) = delete; \

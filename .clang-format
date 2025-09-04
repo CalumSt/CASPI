@@ -45,7 +45,6 @@ Language: Cpp
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
 PointerAlignment: Left
-ReflowComments: Always
 SortIncludes: "CaseInsensitive"
 SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: true
