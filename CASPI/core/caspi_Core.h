@@ -115,17 +115,17 @@ namespace CASPI::Core {
 
     public:
         // ---- Hooks for derived types (override what you need) ---
-        virtual CASPI_NO_DISCARD FloatType renderSample() {
+        CASPI_NO_DISCARD virtual FloatType renderSample() {
             return FloatType(0);
         }
 
-        virtual CASPI_NO_DISCARD FloatType renderSample(const std::size_t channel) {
+        CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel) {
             (void) channel;
             return renderSample();
         }
 
-        virtual CASPI_NO_DISCARD FloatType renderSample(const std::size_t channel,
-                                                        const std::size_t frame) CASPI_NO_DISCARD
+        CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel,
+                                                        const std::size_t frame)
         {
             (void) frame;
             return renderSample(channel);
@@ -202,16 +202,16 @@ namespace CASPI::Core {
     public:
         // ---- Hooks for derived types (override what you need) ----
 
-        virtual CASPI_NO_DISCARD FloatType processSample(FloatType in) {
+        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in) {
             return in;
         }
 
-        virtual CASPI_NO_DISCARD FloatType processSample(FloatType in, const std::size_t channel) {
+        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in, const std::size_t channel) {
             (void) channel;
             return processSample(in);
         }
 
-        virtual CASPI_NO_DISCARD FloatType processSample(FloatType in, const std::size_t channel,
+        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in, const std::size_t channel,
                                                          const std::size_t frame) {
             (void) frame;
             return processSample(in, channel);
