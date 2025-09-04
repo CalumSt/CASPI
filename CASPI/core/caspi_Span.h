@@ -49,20 +49,30 @@ using Span = std::span<T>;
         using iterator = T *;
         using const_iterator = const T *;
 
-        CASPI_NON_BLOCKING Span() noexcept : ptr_(nullptr), sz_(0) {
+        Span() noexcept : ptr_(nullptr), sz_(0) {
         }
 
-        CASPI_NON_BLOCKING Span(T *ptr, size_type count) noexcept : ptr_(ptr), sz_(count) {
+        Span(T *ptr, size_type count) noexcept : ptr_(ptr), sz_(count) {
         }
 
-        CASPI_NO_DISCARD std::size_t size() const noexcept CASPI_NON_BLOCKING { return sz_; }
-        CASPI_NO_DISCARD bool empty() const noexcept CASPI_NON_BLOCKING { return sz_ == 0; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        std::size_t size() const noexcept { return sz_; }
 
-        CASPI_NO_DISCARD pointer data() const noexcept CASPI_NON_BLOCKING { return ptr_; }
-        CASPI_NO_DISCARD iterator begin() const noexcept CASPI_NON_BLOCKING { return ptr_; }
-        CASPI_NO_DISCARD iterator end() const noexcept CASPI_NON_BLOCKING { return ptr_ + sz_; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        bool empty() const noexcept { return sz_ == 0; }
 
-        CASPI_NO_DISCARD reference operator[](size_type i) const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        pointer data() const noexcept { return ptr_; }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        iterator begin() const noexcept { return ptr_; }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        iterator end() const noexcept { return ptr_ + sz_; }
+
+        CASPI_NO_DISCARD
+
+        reference operator[](size_type i) const noexcept {
             return ptr_[i];
         }
 
@@ -94,28 +104,32 @@ using Span = std::span<T>;
             using pointer = T *;
             using iterator_category = std::forward_iterator_tag;
 
-            CASPI_NON_BLOCKING
-
             iterator(pointer p, std::size_t stride) noexcept : p_(p), s_(stride) {
             }
 
-            CASPI_NO_DISCARD reference operator*() const noexcept CASPI_NON_BLOCKING { return *p_; }
-            CASPI_NON_BLOCKING iterator &operator++() noexcept {
+            CASPI_NO_DISCARD
+            reference operator*() const noexcept { return *p_; }
+
+            iterator &operator++() noexcept {
                 p_ += s_;
                 return *this;
             }
 
-            CASPI_NON_BLOCKING iterator operator++(int) noexcept {
+            iterator operator++(int) noexcept {
                 auto tmp = *this;
                 ++(*this);
                 return tmp;
             }
 
-            CASPI_NO_DISCARD bool operator==(const iterator &o) const noexcept CASPI_NON_BLOCKING {
+            CASPI_NO_DISCARD
+
+            bool operator==(const iterator &o) const noexcept {
                 return p_ == o.p_;
             }
 
-            CASPI_NO_DISCARD bool operator!=(const iterator &o) const noexcept CASPI_NON_BLOCKING {
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+            bool operator!=(const iterator &o) const noexcept {
                 return p_ != o.p_;
             }
 
@@ -124,25 +138,36 @@ using Span = std::span<T>;
             std::size_t s_;
         };
 
-        CASPI_NON_BLOCKING StridedSpan(T *base, std::size_t count, std::size_t stride) noexcept
+        StridedSpan(T *base, std::size_t count, std::size_t stride) noexcept
             : base_(base), count_(count), stride_(stride) {
         }
 
-        CASPI_NO_DISCARD iterator begin() const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        iterator begin() const noexcept {
             return iterator(base_, stride_);
         }
 
-        CASPI_NO_DISCARD iterator end() const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        iterator end() const noexcept {
             return iterator(base_ + count_ * stride_, stride_);
         }
 
-        CASPI_NO_DISCARD std::size_t size() const noexcept CASPI_NON_BLOCKING { return count_; }
-        CASPI_NO_DISCARD T &operator[](std::size_t i) const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        std::size_t size() const noexcept { return count_; }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        T &operator[](std::size_t i) const noexcept {
             return *(base_ + i * stride_);
         }
 
-        CASPI_NO_DISCARD T *data() const noexcept CASPI_NON_BLOCKING { return base_; }
-        CASPI_NO_DISCARD std::size_t stride() const noexcept CASPI_NON_BLOCKING { return stride_; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        T *data() const noexcept { return base_; }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        std::size_t stride() const noexcept { return stride_; }
 
     private:
         T *base_;
@@ -163,29 +188,39 @@ using Span = std::span<T>;
         enum class Type { Contiguous, Strided };
 
         // Contiguous constructor
-        CASPI_NON_BLOCKING SpanView(T *ptr, std::size_t count) noexcept
+        SpanView(T *ptr, std::size_t count) noexcept
             : type_(Type::Contiguous), contig_(ptr, count), stride_(1) {
         }
 
         // Strided constructor
-        CASPI_NON_BLOCKING SpanView(T *ptr, std::size_t count, std::size_t stride) noexcept
+        SpanView(T *ptr, std::size_t count, std::size_t stride) noexcept
             : type_(Type::Strided), strided_(ptr, count, stride), stride_(stride) {
         }
 
-        CASPI_NO_DISCARD Type type() const noexcept CASPI_NON_BLOCKING { return type_; }
-        CASPI_NO_DISCARD std::size_t size() const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        Type type() const noexcept { return type_; }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        std::size_t size() const noexcept {
             return type_ == Type::Contiguous ? contig_.size() : strided_.size();
         }
 
-        CASPI_NO_DISCARD T &operator[](std::size_t i) const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        T &operator[](std::size_t i) const noexcept {
             return type_ == Type::Contiguous ? contig_[i] : strided_[i];
         }
 
-        CASPI_NO_DISCARD auto begin() const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        auto begin() const noexcept {
             return type_ == Type::Contiguous ? contig_.begin() : strided_.begin();
         }
 
-        CASPI_NO_DISCARD auto end() const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        auto end() const noexcept {
             return type_ == Type::Contiguous ? contig_.end() : strided_.end();
         }
 
