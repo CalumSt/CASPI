@@ -26,7 +26,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 * The following features are defined based on the platform:
 *    CASPI_FEATURES_HAS_CONCEPTS
 *    CASPI_FEATURES_HAS_RANGES
-*    CASPI_FEATURES_HAS_TYPE_TRAITS (it is very likely that this will always be defined)
 */
 
 #if defined(CASPI_CPP_VERSION)
@@ -74,8 +73,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #endif
 #if defined(CASPI_CPP_11)
-
-        #define CASPI_FEATURES_HAS_TYPE_TRAITS
 
     #endif
 
