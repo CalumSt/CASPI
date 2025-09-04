@@ -82,40 +82,52 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
     public:
         using SampleType = T;
 
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
         std::size_t numChannels()
-        const noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD {
+        const noexcept {
             return numChannels_;
         }
 
-        std::size_t numFrames()
-        const noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        std::size_t numFrames() const noexcept {
             return numFrames_;
         }
 
-        CASPI_NO_DISCARD std::size_t numSamples() const noexcept CASPI_NON_BLOCKING
-        CASPI_NO_DISCARD {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        std::size_t numSamples() const noexcept {
             return numChannels_ * numFrames_;
         }
 
-        SampleType *data() noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        SampleType *data() noexcept {
             return data_.data();
         }
 
-        const SampleType *data()
-        const noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        const SampleType *data() const noexcept {
             return data_.data();
         }
 
-        void clear() noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING
+
+        void clear() noexcept {
             std::fill(data_.begin(), data_.end(), SampleType{});
         }
 
-        void fill(SampleType value) noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING
+
+        void fill(SampleType value) noexcept {
             std::fill(data_.begin(), data_.end(), value);
         }
 
-        expected<void, ResizeError> resize(const std::size_t channels, const std::size_t frames)
         CASPI_BLOCKING CASPI_NO_DISCARD
+
+        expected<void, ResizeError> resize(const std::size_t channels, const std::size_t frames)
         {
             // Zero-sized is allowed and means "empty buffer"
             if (channels == 0 || frames == 0) {
@@ -141,10 +153,10 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
             return {};
         }
 
-        expected<void, ResizeError> resizeAndClear(
-            const std::size_t channels,
-            const std::size_t frames) CASPI_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_BLOCKING CASPI_NO_DISCARD
+
+        expected<void, ResizeError> resizeAndClear(const std::size_t channels,
+                                                   const std::size_t frames) {
             auto res = resize(channels, frames);
             if (!res) {
                 return res;
@@ -153,28 +165,38 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
             return res;
         }
 
-        void setSample(const std::size_t channel, const std::size_t frame, SampleType value)
-            noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING
+
+        void setSample(const std::size_t channel, const std::size_t frame,
+                       SampleType value) noexcept {
             derived().sample(channel, frame) = value;
         }
 
         // --- raw iterators over the underlying contiguous storage ---
-        SampleType *begin() noexcept CASPI_NON_BLOCKING { return data_.data(); }
-        SampleType *end() noexcept CASPI_NON_BLOCKING { return data_.data() + data_.size(); }
-        const SampleType *begin() const noexcept CASPI_NON_BLOCKING { return data_.data(); }
+        CASPI_NON_BLOCKING
+        SampleType *begin() noexcept { return data_.data(); }
 
-        const SampleType *end()
-        const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING
+        SampleType *end() noexcept { return data_.data() + data_.size(); }
+
+        CASPI_NON_BLOCKING
+        const SampleType *begin() const noexcept { return data_.data(); }
+
+        CASPI_NON_BLOCKING
+
+        const SampleType *end() const noexcept {
             return data_.data() + data_.size();
         }
 
-        const SampleType *cbegin()
-        const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING
+
+        const SampleType *cbegin() const noexcept {
             return data_.data();
         }
 
-        const SampleType *cend()
-        const noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING
+
+        const SampleType *cend() const noexcept {
             return data_.data() + data_.size();
         }
 
@@ -202,88 +224,92 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
             : Base(channels, frames) {
         }
 
+        CASPI_NON_BLOCKING
+
         SampleType &sample(const std::size_t channel, const std::size_t frame)
-            noexcept CASPI_NON_BLOCKING
-        {
+            noexcept {
             CASPI_ASSERT(channel < this->numChannels_, "Number of channels is out of range");
             CASPI_ASSERT(frame < this->numFrames_, "Number of frames is out of range");
             return this->data_[channel * this->numFrames_ + frame];
         }
+
+        CASPI_NON_BLOCKING
 
         const SampleType &sample(const std::size_t channel, const std::size_t frame)
-        const noexcept CASPI_NON_BLOCKING
-        {
+        const noexcept {
             CASPI_ASSERT(channel < this->numChannels_, "Number of channels is out of range");
             CASPI_ASSERT(frame < this->numFrames_, "Number of frames is out of range");
             return this->data_[channel * this->numFrames_ + frame];
         }
 
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
         expected<SampleType &, ReadError> sample_bounds_checked(
-            const std::size_t channel, const std::size_t frame)
-            noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+            const std::size_t channel, const std::size_t frame) noexcept {
             if (channel >= this->numChannels_ || frame >= this->numFrames_)
                 return make_unexpected(ReadError::OutOfRange);
 
             return this->data_[channel * this->numFrames_ + frame];
         }
 
-        SampleType *channelData(const std::size_t channel)
-            noexcept CASPI_NON_BLOCKING
-        {
+        CASPI_NON_BLOCKING
+
+        SampleType *channelData(const std::size_t channel) noexcept {
             CASPI_ASSERT(channel < this->numChannels_, "Number of channels is out of range");
             return &this->data_[channel * this->numFrames_];
         }
 
-        const SampleType *channelData(const std::size_t channel)
-        const noexcept CASPI_NON_BLOCKING
-        {
+        CASPI_NON_BLOCKING
+
+        const SampleType *channelData(const std::size_t channel) const noexcept {
             CASPI_ASSERT(channel < this->numChannels_, "Number of channels is out of range");
             return &this->data_[channel * this->numFrames_];
         }
 
         // In ChannelMajorLayout<T> public section:
-        CASPI::Core::Span<SampleType> channel_span(std::size_t c)
-            noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::Span<SampleType> channel_span(std::size_t c) noexcept {
             CASPI_ASSERT(c < this->numChannels_, "channel out of range");
             return CASPI::Core::Span<SampleType>(this->data_.data() + c * this->numFrames_,
                                                  this->numFrames_);
         }
 
-        CASPI::Core::StridedSpan<SampleType> frame_span(std::size_t f)
-            noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::StridedSpan<SampleType> frame_span(std::size_t f) noexcept {
             CASPI_ASSERT(f < this->numFrames_, "frame out of range");
             // one sample from each channel, stride = numFrames_
             return CASPI::Core::StridedSpan<SampleType>(this->data_.data() + f, this->numChannels_,
                                                         this->numFrames_);
         }
 
-        CASPI::Core::Span<SampleType> all_span()
-            noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::Span<SampleType> all_span() noexcept {
             return CASPI::Core::Span<SampleType>(this->data_.data(), this->data_.size());
         }
 
         // const overloads
-        CASPI::Core::Span<const SampleType> channel_span(std::size_t c)
-        const noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::Span<const SampleType> channel_span(std::size_t c) const noexcept {
             CASPI_ASSERT(c < this->numChannels_, "channel out of range");
             return CASPI::Core::Span<const SampleType>(this->data_.data() + c * this->numFrames_,
                                                        this->numFrames_);
         }
 
-        CASPI::Core::StridedSpan<const SampleType> frame_span(std::size_t f)
-        const noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::StridedSpan<const SampleType> frame_span(std::size_t f) const noexcept {
             CASPI_ASSERT(f < this->numFrames_, "frame out of range");
             return CASPI::Core::StridedSpan<const SampleType>(
                 this->data_.data() + f, this->numChannels_, this->numFrames_);
         }
 
-        CASPI::Core::Span<const SampleType> all_span()
-        const noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::Span<const SampleType> all_span() const noexcept {
             return CASPI::Core::Span<const SampleType>(this->data_.data(), this->data_.size());
         }
     };
@@ -299,89 +325,91 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
             : Base(channels, frames) {
         }
 
-        SampleType &sample(size_t channel, size_t frame)
-            noexcept CASPI_NON_BLOCKING
-        {
+        CASPI_NON_BLOCKING
+
+        SampleType &sample(size_t channel, size_t frame) noexcept {
             CASPI_ASSERT(channel < this->numChannels_, "Number of channels is out of range");
             CASPI_ASSERT(frame < this->numFrames_, "Number of frames is out of range");
             return this->data_[frame * this->numChannels_ + channel];
         }
 
-        const SampleType &sample(size_t channel, size_t frame)
-        const noexcept CASPI_NON_BLOCKING
-        {
+        CASPI_NON_BLOCKING
+
+        const SampleType &sample(size_t channel, size_t frame) const noexcept {
             CASPI_ASSERT(channel < this->numChannels_, "Number of channels is out of range");
             CASPI_ASSERT(frame < this->numFrames_, "Number of frames is out of range");
             return this->data_[frame * this->numChannels_ + channel];
         }
 
-        expected<SampleType &, ReadError> sample_bounds_checked(size_t channel, size_t frame)
-        noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        expected<SampleType &, ReadError> sample_bounds_checked(size_t channel,
+                                                                size_t frame) noexcept {
             if (channel >= this->numChannels_ || frame >= this->numFrames_)
                 return make_unexpected(ReadError::OutOfRange);
 
             return this->data_[frame * this->numChannels_ + channel];
         }
 
-        SampleType *channelData(size_t channel)
-            noexcept CASPI_NON_BLOCKING
-        {
+        CASPI_NON_BLOCKING
+
+        SampleType *channelData(size_t channel) noexcept {
             CASPI_ASSERT(channel < this->numChannels_, "Number of channels is out of range");
             return &this->data_[channel];
         }
 
-        const SampleType *channelData(size_t channel)
-        const noexcept CASPI_NON_BLOCKING
-        {
+        CASPI_NON_BLOCKING
+
+        const SampleType *channelData(size_t channel) const noexcept {
             CASPI_ASSERT(channel < this->numChannels_, "Number of channels is out of range");
             return &this->data_[channel];
         }
 
         // In InterleavedLayout<T> public section:
-        CASPI::Core::StridedSpan<SampleType> channel_span(std::size_t c)
-            noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::StridedSpan<SampleType> channel_span(std::size_t c) noexcept {
             CASPI_ASSERT(c < this->numChannels_, "channel out of range");
             // samples of channel c at positions c, c+numChannels, ...
             return CASPI::Core::StridedSpan<SampleType>(this->data_.data() + c, this->numFrames_,
                                                         this->numChannels_);
         }
 
-        CASPI::Core::Span<SampleType> frame_span(std::size_t f)
-            noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::Span<SampleType> frame_span(std::size_t f) noexcept {
             CASPI_ASSERT(f < this->numFrames_, "frame out of range");
             // one contiguous block of all channels for this frame
             return CASPI::Core::Span<SampleType>(this->data_.data() + f * this->numChannels_,
                                                  this->numChannels_);
         }
 
-        CASPI::Core::Span<SampleType> all_span()
-            noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::Span<SampleType> all_span() noexcept {
             return CASPI::Core::Span<SampleType>(this->data_.data(), this->data_.size());
         }
 
         // const overloads
-        CASPI::Core::StridedSpan<const SampleType> channel_span(std::size_t c)
-        const noexcept CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::StridedSpan<const SampleType> channel_span(std::size_t c) const noexcept {
             CASPI_ASSERT(c < this->numChannels_, "channel out of range");
             return CASPI::Core::StridedSpan<const SampleType>(
                 this->data_.data() + c, this->numFrames_, this->numChannels_);
         }
 
-        CASPI_NO_DISCARD CASPI::Core::Span<const SampleType> frame_span(
-            std::size_t f) const noexcept
         CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        {
+
+        CASPI::Core::Span<const SampleType> frame_span(std::size_t f) const noexcept {
             CASPI_ASSERT(f < this->numFrames_, "frame out of range");
             return CASPI::Core::Span<const SampleType>(this->data_.data() + f * this->numChannels_,
                                                        this->numChannels_);
         }
 
-        CASPI::Core::Span<const SampleType> all_span() const noexcept
-        CASPI_NON_BLOCKING CASPI_NO_DISCARD {
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        CASPI::Core::Span<const SampleType> all_span() const noexcept {
             return CASPI::Core::Span<const SampleType>(this->data_.data(), this->data_.size());
         }
     };
@@ -454,13 +482,21 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
             layout_.setSample(channel, frame, value);
         }
 
-        void clear() noexcept CASPI_NON_BLOCKING { layout_.clear(); }
-        void fill(SampleType value) noexcept CASPI_NON_BLOCKING { layout_.fill(value); }
+        CASPI_NON_BLOCKING
+        void clear() noexcept { layout_.clear(); }
 
-        SampleType *data() noexcept CASPI_NON_BLOCKING { return layout_.data(); }
-        const SampleType *data() const noexcept CASPI_NON_BLOCKING { return layout_.data(); }
+        CASPI_NON_BLOCKING
+        void fill(SampleType value) noexcept { layout_.fill(value); }
 
-        SampleType *channelData(const std::size_t channel) noexcept CASPI_NON_BLOCKING {
+        CASPI_NON_BLOCKING
+        SampleType *data() noexcept { return layout_.data(); }
+
+        CASPI_NON_BLOCKING
+        const SampleType *data() const noexcept { return layout_.data(); }
+
+        CASPI_NON_BLOCKING
+
+        SampleType *channelData(const std::size_t channel) noexcept {
             return layout_.channelData(channel);
         }
 
@@ -472,37 +508,30 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
         // In AudioBuffer<SampleType, Layout> public section:
         CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
         auto channel_span(std::size_t c) noexcept {
             return layout_.channel_span(c);
         }
 
         CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
         auto frame_span(std::size_t f) noexcept {
             return layout_.frame_span(f);
         }
 
         CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
         auto all_span() noexcept {
             return layout_.all_span();
         }
 
         CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
         auto channel_span(std::size_t c) const noexcept {
             return layout_.channel_span(c);
         }
 
         CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
         auto frame_span(std::size_t f) const noexcept {
             return layout_.frame_span(f);
         }
-
         CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
         auto all_span() const noexcept {
             return layout_.all_span();
         }
