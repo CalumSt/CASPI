@@ -80,7 +80,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 // Non-blocking
 #if defined(__has_cpp_attribute)
-#  if __has_cpp_attribute(clang::nonblocking)
+#  if __has_cpp_attribute(clang::nonblocking) && defined(CASPI_COMPILER_CLANG)
 #    define CASPI_NON_BLOCKING [[clang::nonblocking]]
 #  else
 #    define CASPI_NON_BLOCKING
@@ -91,7 +91,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 // blocking
 #if defined(__has_cpp_attribute)
-#  if __has_cpp_attribute(clang::blocking)
+#  if __has_cpp_attribute(clang::blocking) && defined(CASPI_COMPILER_CLANG)
 #    define CASPI_BLOCKING [[clang::blocking]]
 #  else
 #    define CASPI_BLOCKING
@@ -102,7 +102,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 // Non-allocating
 #if defined(__has_cpp_attribute)
-#  if __has_cpp_attribute(clang::nonallocating)
+#  if __has_cpp_attribute(clang::nonallocating)  && defined(CASPI_COMPILER_CLANG)
 #    define CASPI_NON_ALLOCATING [[clang::nonallocating]]
 #  else
 #    define CASPI_NON_ALLOCATING
@@ -113,7 +113,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 // allocating
 #if defined(__has_cpp_attribute)
-#  if __has_cpp_attribute(clang::allocating)
+#  if __has_cpp_attribute(clang::allocating)  && defined(CASPI_COMPILER_CLANG)
 #    define CASPI_ALLOCATING [[clang::allocating]]
 #  else
 #    define CASPI_ALLOCATING
