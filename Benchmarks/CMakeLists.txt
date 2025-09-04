@@ -26,6 +26,7 @@ FetchContent_MakeAvailable(google_benchmark)
 # --------------------------------------------------------------------------
 # ADD TEST FILES HERE
 set(SOURCES
+        base/Buffer_bm.cpp
         base/Phase_bm.cpp
         base/Denormals_bm.cpp
         base/Expected_bm.cpp
