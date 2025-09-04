@@ -56,6 +56,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
     #if defined(CASPI_CPP_17)
 
         #define CASPI_NO_DISCARD [[nodiscard]]
+        #define CASPI_MAYBE_UNUSED [[maybe_unused]]
+        #define CASPI_FEATURES_HAS_IF_CONSTEXPR
         #define CASPI_CPP17_IF_CONSTEXPR if constexpr
         #define CASPI_FEATURES_HAS_NOTHROW_SWAPPABLE
         #define CASPI_FEATURES_HAS_TRAIT_VARIABLE_TEMPLATES
@@ -63,6 +65,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
     #else
 
         #define CASPI_NO_DISCARD
+        #define CASPI_MAYBE_UNUSED
         #define CASPI_CPP17_IF_CONSTEXPR if
 
     #endif
