@@ -34,6 +34,7 @@ Unit Tests Plan
 #include <cstddef>
 
 #include "core/caspi_AudioBuffer.h"
+#include "core/caspi_Core.h"
 
 TEST(ChannelMajorLayoutTest, ConstructionAndResize) {
     CASPI::ChannelMajorLayout<float> buf;
@@ -335,7 +336,7 @@ TEST(AudioBufferTest, ChannelFrameAllSpan) {
 // ---------------------- StridedSpan test ----------------------
 TEST(StridedSpanTest, IterationAndIndex) {
     float data[6] = {0, 1, 2, 3, 4, 5};
-    CASPI::StridedSpan<float> span(data, 3, 2); // elements at 0,2,4
+    CASPI::Core::StridedSpan<float> span(data, 3, 2); // elements at 0,2,4
 
     // operator[]
     EXPECT_EQ(span[0], 0);
@@ -367,7 +368,7 @@ TEST(BlocksTest, FillScaleCopyApply) {
 
     // copy
     float tmp[6] = {};
-    CASPI::block::copy(CASPI::Span<float>(tmp, 6), all);
+    CASPI::block::copy(CASPI::Core::Span<float>(tmp, 6), all);
     for (size_t i = 0; i < 6; ++i)
         EXPECT_EQ(tmp[i], 2.0f);
 
@@ -378,7 +379,8 @@ TEST(BlocksTest, FillScaleCopyApply) {
 
     // apply2 binary op
     float src[6] = {1, 1, 1, 1, 1, 1};
-    CASPI::block::apply2(all, CASPI::Span<float>(src, 6), [](float a, float b) { return a - b; });
+    CASPI::block::apply2(all, CASPI::Core::Span<float>(src, 6),
+                         [](float a, float b) { return a - b; });
     for (auto x: all)
         EXPECT_EQ(x, 2.0f);
 }
