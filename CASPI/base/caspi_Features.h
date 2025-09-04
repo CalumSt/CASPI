@@ -65,15 +65,15 @@ Y88b  d88P 888  888      X88 888 d88P 888
     #else
 
         #define CASPI_NO_DISCARD
-        #define CASPI_MAYBE_UNUSED
-        #define CASPI_CPP17_IF_CONSTEXPR if
+#define CASPI_MAYBE_UNUSED
+#define CASPI_CPP17_IF_CONSTEXPR if
 
-    #endif
+#endif
 
-    #if defined(CASPI_CPP_14)
+#if defined(CASPI_CPP_14)
 
-    #endif
-    #if defined(CASPI_CPP_11)
+#endif
+#if defined(CASPI_CPP_11)
 
         #define CASPI_FEATURES_HAS_TYPE_TRAITS
 

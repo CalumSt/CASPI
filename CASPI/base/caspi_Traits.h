@@ -33,7 +33,12 @@ namespace CASPI {
     template<>
     struct is_sample_rate_aware<SampleRateAwareTag> : std::true_type {};
 
-    // === is_nothrow_swappable ===
+    template <typename Layout>
+    struct is_interleaved : std::false_type {};
+
+    template <typename Layout>
+    struct is_channel_major : std::false_type {};
+
 
 #if defined(CASPI_FEATURES_HAS_NOTHROW_SWAPPABLE)
 
@@ -83,6 +88,15 @@ namespace CASPI {
 
     template <typename T>
     constexpr bool is_sample_rate_aware_v = is_sample_rate_aware<T>::value;
+
+    template <typename T>
+    constexpr bool is_producer_v = is_producer<T>::value;
+
+    template <typename T>
+    constexpr bool is_processor_v = is_processor<T>::value;
+
+    template <typename T>
+    constexpr bool is_modulator_v = is_modulator<T>::value;
 
 #endif // CASPI_CPP_17
 //clang-format on
