@@ -28,6 +28,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 *    CASPI_FEATURES_HAS_RANGES
 */
 
+// clang-format off
 #if defined(CASPI_CPP_VERSION)
 
     #if defined(CASPI_CPP_20)
@@ -131,5 +132,5 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #if defined(CASPI_HAS_SSE2) && defined(CASPI_HAS_SSE3) && (defined(CASPI_ARCH_X86_64) || defined(CASPI_ARCH_X86_32))
     #define CASPI_FEATURES_HAS_FLUSH_ZERO_DENORMALS
 #endif
-
+// clang-format on
 #endif //CASPI_FEATURES_H
