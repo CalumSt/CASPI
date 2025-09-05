@@ -1,5 +1,5 @@
 ---
-AccessModifierOffset: -4
+AccessModifierOffset: 0
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments:
   Enabled: true
@@ -20,6 +20,7 @@ AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: false
 BinPackParameters: false
+BreakAfterAttributes: Always
 BreakAfterJavaFieldAnnotations: false
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Allman
@@ -38,12 +39,12 @@ ForEachMacros: [ 'forEachXmlChildElement' ]
 IndentCaseLabels: true
 IndentWidth: 4
 IndentWrappedFunctionNames: true
+IndentAccessModifiers: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 Language: Cpp
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: Inner
+NamespaceIndentation: All
 PointerAlignment: Left
-ReflowComments: false
 SortIncludes: "CaseInsensitive"
 SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: true
