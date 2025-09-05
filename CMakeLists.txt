@@ -1,42 +1,47 @@
 cmake_minimum_required(VERSION 3.29)
 
 set(PROJECT_NAME "CASPI")
-
 message(STATUS "Configuring CASPI")
+# Detect if standalone build (top-level project)
+set(CASPI_IS_STANDALONE_BUILD OFF)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(CASPI_IS_STANDALONE_BUILD ON)
+endif ()
+
+# Optionally allow SANITIZE to be empty or not set
+if (NOT DEFINED SANITIZE)
+    set(SANITIZE "")
+endif ()
+
+# Define options with default depending on standalone or not,
+# but only if the user hasn't set them already:
+if (NOT DEFINED CASPI_BUILD_TESTING)
+    set(CASPI_BUILD_TESTING ${CASPI_IS_STANDALONE_BUILD} CACHE BOOL "Build CASPI tests")
+endif ()
+
+if (NOT DEFINED CASPI_BUILD_BENCHMARKS)
+    set(CASPI_BUILD_BENCHMARKS ${CASPI_IS_STANDALONE_BUILD} CACHE BOOL "Build CASPI benchmarks")
+endif ()
+
+message(STATUS "Standalone build: ${CASPI_IS_STANDALONE_BUILD}")
+message(STATUS "Build testing: ${CASPI_BUILD_TESTING}")
+message(STATUS "Build benchmarks: ${CASPI_BUILD_BENCHMARKS}")
 
 project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 
-include(GNUInstallDirs)
+add_library(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h)
 
-# Optional: Specify the headers that are part of the library
-set(header_files
-        caspi.h
-        Source/Oscillators/caspi_BlepOscillator.h
-        Source/Oscillators/caspi_PMOperator.h
-        Source/Synthesizers/caspi_PMAlgorithm.h
-        Source/Filters/caspi_SvfFilter.h
-        Source/Envelopes/caspi_Envelope.h
-        Source/Utilities/caspi_Constants.h
-        Source/Gain/caspi_Gain.h
-        Source/Gain/caspi_Waveshaper.h
-        Source/Utilities/caspi_Maths.h
-        Source/Utilities/caspi_Assert.h
-        Source/AudioUtilities/caspi_FFT.h
-        Source/Utilities/caspi_FFT_new.h
-        Source/Utilities/caspi_CircularBuffer.h
-        # ...
+target_include_directories(${PROJECT_NAME} INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/CASPI>
+        $<INSTALL_INTERFACE:include>
+)
+# explicitly list the unified header for IDEs (has no build effect)
+target_sources(CASPI INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h
 )
 
-add_library(${PROJECT_NAME} INTERFACE ${header_files})
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source)
-
-target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
-
-target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Source ${CMAKE_CURRENT_SOURCE_DIR})
-
 # Only do these if this is the main project, and not if it is included through add_subdirectory
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+if (CASPI_IS_STANDALONE_BUILD)
 
     # Let's ensure -std=c++xx instead of -std=g++xx
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -46,24 +51,50 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
     # Docs only available if this is the main app
     find_package(Doxygen)
-    if(Doxygen_FOUND)
-        add_subdirectory(docs)
+    if(DOXYGEN_FOUND)
+        add_custom_target(doc_doxygen
+                COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                COMMENT "Generating documentation with Doxygen"
+                VERBATIM
+        )
     else()
         message(STATUS "Doxygen not found, not building docs")
     endif()
+
+    if (SANITIZE STREQUAL "address")
+        message(STATUS "Enabling AddressSanitizer")
+        # Add AddressSanitizer flags for GCC/Clang
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+        set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
+    elseif (SANITIZE STREQUAL "undefined")
+        message(STATUS "Enabling UndefinedBehaviorSanitizer")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
+        set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=undefined")
+    elseif (SANITIZE STREQUAL "")
+        # No sanitizer: do nothing
+    else ()
+        message(FATAL_ERROR "Unknown sanitizer type: ${SANITIZE}")
+    endif ()
 endif()
 
-
 # Testing only available if this is the main app
-# Emergency override MODERN_CMAKE_BUILD_TESTING provided as well
-if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
-        AND BUILD_TESTING)
+if(CASPI_BUILD_TESTING)
     add_subdirectory(Tests)
 endif()
 
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION include COMPONENT ${PROJECT_NAME})
+if (CASPI_BUILD_BENCHMARKS)
+    add_subdirectory(Benchmarks)
+endif ()
 
+install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}Targets)
 
+install(DIRECTORY Library/
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h")
 
 
 
