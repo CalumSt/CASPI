@@ -24,11 +24,12 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include "base/caspi_Assert.h"
 #include <string>
 #include <cmath>
-namespace CASPI::Envelope {
+namespace CASPI {
+    namespace Envelope {
 
         /// ADSR parameter interface
-    template <typename FloatType>
-        struct Parameters {
+        template <typename FloatType>
+            struct Parameters {
             // Constants
             const FloatType silence = static_cast<FloatType>(0.0001f);
             const FloatType zero    = static_cast<FloatType>(0.0f);
@@ -91,8 +92,8 @@ namespace CASPI::Envelope {
         // Struct to hold state and related functionality
         enum class State { idle, attack, decay, slope, sustain, release, noteOn, noteOff };
 
-    template <typename FloatType>
-        struct EnvelopeBase {
+        template <typename FloatType>
+            struct EnvelopeBase {
             virtual ~EnvelopeBase() = default;
 
             State state = State::idle;
@@ -168,7 +169,7 @@ namespace CASPI::Envelope {
         /// ADSR Envelope - most common envelope to use
         template <typename FloatType>
         struct ADSR final : EnvelopeBase<FloatType> {
-        /// TODO: make this better
+            /// TODO: make this better
             using EnvelopeBase<FloatType>::level;
             using EnvelopeBase<FloatType>::coefficient;
             using EnvelopeBase<FloatType>::offset;
@@ -218,5 +219,6 @@ namespace CASPI::Envelope {
         };
 
     };
+}
 
 #endif // CASPI_ENVELOPEGENERATOR_H

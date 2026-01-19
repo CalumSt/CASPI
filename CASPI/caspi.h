@@ -24,7 +24,6 @@
 #include "oscillators/caspi_PMOperator.h"
 
 // Filters
-#include "filters/caspi_LadderFilter.h"
 #include "filters/caspi_OnePoleFilter.h"
 #include "filters/caspi_SvfFilter.h"
 
