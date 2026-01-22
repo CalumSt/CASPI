@@ -166,8 +166,8 @@ TEST(TwoOperatorAlgsTests,BasicCascadeRender_test)
         std::vector<double> results (renderTime * fs, 0);
         std::vector<double> times = results;
 
-        using Sine = CASPI::BlepOscillator::Sine<double>;
-        auto sine = CASPI::BlepOscillator::renderBlock<Sine, double> (frequency, fs, renderTime * fs);
+        using Sine = CASPI::Oscillators::BLEP::Sine<double>;
+        auto sine = CASPI::Oscillators::BLEP::renderBlock<Sine, double> (frequency, fs, renderTime * fs);
 
         alg.noteOn();
         for (int i = 0; i < renderTime * fs; i++)
