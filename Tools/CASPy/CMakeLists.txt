@@ -39,6 +39,7 @@ pybind11_add_module(caspy
         Source/Bindings/bind_core.cpp
         Source/Bindings/bind_oscillators.cpp
         Source/Bindings/bind_adsr.cpp
+        Source/Bindings/bind_pm.cpp
 )
 
 target_link_libraries(caspy PRIVATE CASPI)
