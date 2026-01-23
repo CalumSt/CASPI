@@ -40,7 +40,7 @@ set(SOURCES
         base/Utilities_test.cpp
         processors/Filter_test.cpp
         processors/Envelope_test.cpp
-        sources/PMOperator_test.cpp
+        sources/Operator_test.cpp
         synthesizers/PMAlgorithm_test.cpp
         processors/Gain_test.cpp
         maths/FFT_test.cpp
