@@ -1,5 +1,5 @@
 #include "oscillators/caspi_Operator.h"
-#include "maths/caspi_FFT_new.h"
+#include "maths/caspi_FFT.h"
 #include <gtest/gtest.h>
 #include <cmath>
 #include <numeric>
