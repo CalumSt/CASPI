@@ -27,7 +27,7 @@
  Can queue multiple FFT configs
  Can assign priority to FFT configs
  Can complete higher priority FFTs first
- */
+
 
 std::vector<double> constructExpectedFrequencyBins(int fft_size, double sampleRate)
 {
@@ -80,4 +80,4 @@ TEST(FFTtests, generateTwiddleTable_test)
 
 }
 
-#undef private
+#undef private */
