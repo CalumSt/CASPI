@@ -287,18 +287,26 @@ namespace CASPI::Core {
 #endif
     class SampleRateAware {
     public:
-        ~SampleRateAware() noexcept = default;
+        virtual ~SampleRateAware() noexcept = default;
 
         SampleRateAware() = default;
 
-        void setSampleRate(FloatType newSampleRate) {
+        virtual void setSampleRate(FloatType newSampleRate)
+        {
             CASPI_ASSERT(newSampleRate > 0, "Sample rate must be greater than zero.");
             this->sampleRate = newSampleRate;
         }
 
-        FloatType getSampleRate() const {
+        virtual FloatType getSampleRate() const
+        {
             return sampleRate;
         }
+
+    /**
+     * @brief Hook for derived classes to respond to sample rate changes
+     * @param rate New sample rate in Hz
+     */
+        virtual void onSampleRateChanged(FloatType rate) {}
 
     private:
         FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
