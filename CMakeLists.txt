@@ -31,6 +31,11 @@ project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 
 add_library(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h)
 
+target_compile_features(CASPI
+        INTERFACE
+        cxx_std_11
+)
+
 target_include_directories(${PROJECT_NAME} INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/CASPI>
         $<INSTALL_INTERFACE:include>
@@ -73,10 +78,8 @@ if (CASPI_IS_STANDALONE_BUILD)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
         set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=undefined")
-    elseif (SANITIZE STREQUAL "")
-        # No sanitizer: do nothing
     else ()
-        message(FATAL_ERROR "Unknown sanitizer type: ${SANITIZE}")
+        message(STATUS "No sanitizers enabled")
     endif ()
 endif()
 

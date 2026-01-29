@@ -1,0 +1,35 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        build_type: [Debug, Release]
+        std: [17, 20, 23]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_CXX_STANDARD=${{ matrix.std }} \
+          -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+          -DCASPI_BUILD_BENCHMARKS=OFF \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.build_type }}
+
+      - name: Test
+        run: ctest --test-dir build/Tests --output-on-failure

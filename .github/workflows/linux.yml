@@ -1,0 +1,77 @@
+name: Linux CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: [g++, clang++]
+        build_type: [Debug, Release]
+        std: [14, 17, 20, 23]
+        sanitize: [none, address, undefined]
+        exclude:
+          # g++ cannot use sanitizers
+          - cxx: g++
+            sanitize: address
+          - cxx: g++
+            sanitize: undefined
+
+          # Release builds generally don’t run sanitizers
+          - build_type: Release
+            sanitize: address
+          - build_type: Release
+            sanitize: undefined
+
+          # Only run sanitizers for C++17
+          - std: 11
+            sanitize: address
+          - std: 11
+            sanitize: undefined
+          - std: 14
+            sanitize: address
+          - std: 14
+            sanitize: undefined
+          - std: 20
+            sanitize: address
+          - std: 20
+            sanitize: undefined
+          - std: 23
+            sanitize: address
+          - std: 23
+            sanitize: undefined
+
+        include:
+          # --- C++11 compatibility (headers only) ---
+          - cxx: g++
+            std: 11
+            build_type: Debug
+            tests: OFF
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -DCMAKE_CXX_STANDARD=${{ matrix.std }} \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+            -DCMAKE_CXX_EXTENSIONS=OFF \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCASPI_BUILD_TESTING=${{ matrix.tests != 'OFF' }} \
+            -DCASPI_BUILD_BENCHMARKS=OFF \
+            -DSANITIZE=${{ matrix.sanitize }}
+
+      - name: Build ${{ matrix.job_name }}
+        run: cmake --build build -j
+
+      - name: Test
+        if: matrix.tests != 'OFF'
+        run: ctest --test-dir build/Tests --output-on-failure
