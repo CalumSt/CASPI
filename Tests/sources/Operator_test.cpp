@@ -4,6 +4,7 @@
 #include <cmath>
 #include <numeric>
 #include <vector>
+#include <algorithm>
 
 using CASPI::ModulationMode;
 using CASPI::Operator;
