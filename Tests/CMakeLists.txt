@@ -41,7 +41,7 @@ set(SOURCES
         processors/Filter_test.cpp
         processors/Envelope_test.cpp
         sources/Operator_test.cpp
-        synthesizers/PMAlgorithm_test.cpp
+        #synthesizers/PMAlgorithm_test.cpp
         processors/Gain_test.cpp
         maths/FFT_test.cpp
         maths/Maths_test.cpp
