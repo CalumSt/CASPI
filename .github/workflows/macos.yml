@@ -1,0 +1,42 @@
+name: macOS CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        build_type: [Debug, Release]
+        std: [14, 17, 20, 23]
+
+        include:
+          # C++11 headers-only check
+          - std: 11
+            build_type: Debug
+            tests: OFF
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_CXX_STANDARD=${{ matrix.std }} \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCASPI_BUILD_TESTING=${{ matrix.tests != 'OFF' }} \
+            -DCASPI_BUILD_BENCHMARKS=OFF
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Test
+        if: matrix.tests != 'OFF'
+        run: ctest --test-dir build/Tests --output-on-failure

@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.29)
-set(CMAKE_CXX_STANDARD 20)
+cmake_minimum_required(VERSION 3.16)
+
 # Set up the testing project
 project(UnitTests)
 # allow testing from this directory
@@ -51,13 +51,12 @@ set(SOURCES
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 # --------------------------------------------------------------------------
-    
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
         gtest_main
         CASPI
 )
 
-gtest_discover_tests(${PROJECT_NAME})
+message(STATUS "UnitTests CXX_STANDARD = ${CMAKE_CXX_STANDARD}")
 
-add_test(NAME MyUnitTests COMMAND ${PROJECT_NAME})
-set_tests_properties(MyUnitTests PROPERTIES LABELS "test")
+gtest_discover_tests(${PROJECT_NAME})
