@@ -3,8 +3,8 @@
 #include <cmath>
 #include <gtest/gtest.h>
 #include "oscillators/caspi_BlepOscillator.h"
-#include "../test_helpers.h"
 #define private public
+#include "../test_helpers.h"
 #include "maths/caspi_FFT.h"
 
 /*
