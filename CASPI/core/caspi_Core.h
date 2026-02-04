@@ -31,16 +31,22 @@
 #include <cstddef>
 #include <type_traits>
 
-namespace CASPI::Core {
-    namespace Traversal {
+namespace CASPI::Core
+{
+    namespace Traversal
+    {
         // Per-sample: update state every sample
-        struct PerSample {
+        struct PerSample
+        {
             template<typename Buf, typename F>
-            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept {
+            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept
+            {
                 const std::size_t C = buf.numChannels();
                 const std::size_t Fm = buf.numFrames();
-                for (std::size_t f = 0; f < Fm; ++f) {
-                    for (std::size_t ch = 0; ch < C; ++ch) {
+                for (std::size_t f = 0; f < Fm; ++f)
+                {
+                    for (std::size_t ch = 0; ch < C; ++ch)
+                    {
                         fn(ch, f);
                     }
                 }
@@ -48,24 +54,30 @@ namespace CASPI::Core {
         };
 
         // Per-frame: update state once per frame, replicate across channels
-        struct PerFrame {
+        struct PerFrame
+        {
             template<typename Buf, typename F>
-            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept {
+            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept
+            {
                 const std::size_t C = buf.numChannels();
                 const std::size_t Fm = buf.numFrames();
-                for (std::size_t f = 0; f < Fm; ++f) {
+                for (std::size_t f = 0; f < Fm; ++f)
+                {
                     fn(f, C); // “once per frame” callback
                 }
             }
         };
 
         // Per-channel: update state once per channel, operate over all frames
-        struct PerChannel {
+        struct PerChannel
+        {
             template<typename Buf, typename F>
-            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept {
+            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept
+            {
                 const std::size_t C = buf.numChannels();
                 const std::size_t Fm = buf.numFrames();
-                for (std::size_t ch = 0; ch < C; ++ch) {
+                for (std::size_t ch = 0; ch < C; ++ch)
+                {
                     fn(ch, Fm); // “once per channel” callback
                 }
             }
@@ -73,20 +85,16 @@ namespace CASPI::Core {
     } // namespace Traversal
 
     template<typename Policy>
-    struct is_traversal_policy : std::false_type {
-    };
+    struct is_traversal_policy : std::false_type {};
 
     template<>
-    struct is_traversal_policy<Core::Traversal::PerSample> : std::true_type {
-    };
+    struct is_traversal_policy<Core::Traversal::PerSample> : std::true_type {};
 
     template<>
-    struct is_traversal_policy<Core::Traversal::PerFrame> : std::true_type {
-    };
+    struct is_traversal_policy<Core::Traversal::PerFrame> : std::true_type {};
 
     template<>
-    struct is_traversal_policy<Core::Traversal::PerChannel> : std::true_type {
-    };
+    struct is_traversal_policy<Core::Traversal::PerChannel> : std::true_type {};
 
 #if defined(CASPI_FEATURES_HAS_CONCEPTS) && ! defined(CASPI_FEATURES_DISABLE_CONCEPTS)
 
@@ -115,11 +123,13 @@ namespace CASPI::Core {
 
     public:
         // ---- Hooks for derived types (override what you need) ---
-        CASPI_NO_DISCARD virtual FloatType renderSample() {
+        CASPI_NO_DISCARD virtual FloatType renderSample()
+        {
             return FloatType(0);
         }
 
-        CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel) {
+        CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel)
+        {
             (void) channel;
             return renderSample();
         }
@@ -131,50 +141,75 @@ namespace CASPI::Core {
             return renderSample(channel);
         }
 
-        virtual void prepareBlock(const std::size_t nFrames, const std::size_t nChannels) {
+        virtual void prepareBlock(const std::size_t nFrames, const std::size_t nChannels)
+        {
             // Default: do nothing.
         }
 
         template<typename Span>
-        void renderSpan(Span span, const std::size_t channel, const std::size_t frameOffset = 0) {
-            std::size_t frame = frameOffset;
-            for (auto &s: span) {
-                s = renderSample(channel, frame);
-                ++frame;
+        void renderSpan(Span span, const std::size_t channel, const std::size_t frameOffset = 0)
+        {
+            CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<Policy, Traversal::PerFrame>)
+            {
+                // PerFrame: render ONCE, replicate to all channels
+                FloatType sample = renderSample(channel, frameOffset);
+                for (auto &s: span)
+                {
+                    s = sample;
+                }
+            }
+            else
+            {
+                // PerSample/PerChannel: iterate normally
+                std::size_t frame = frameOffset;
+                for (auto &s: span)
+                {
+                    s = renderSample(channel, frame);
+                    ++frame;
+                }
             }
         }
 
         // ---- Generic processing over AudioBuffer ----
         template<template <typename> class Layout>
         CASPI_NON_BLOCKING
-        void render(AudioBuffer<FloatType, Layout> &buf) noexcept {
+        void render(AudioBuffer<FloatType, Layout> &buf) noexcept
+        {
             using P = Policy;
             const std::size_t C = buf.numChannels();
             const std::size_t Fm = buf.numFrames();
 
             prepareBlock(Fm, C);
 
-            CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<P, Traversal::PerSample>) {
+            CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<P, Traversal::PerSample>)
+            {
                 // Per-sample still uses renderSample directly (per-sample granularity)
-                for (std::size_t f = 0; f < Fm; ++f) {
-                    for (std::size_t ch = 0; ch < C; ++ch) {
+                for (std::size_t f = 0; f < Fm; ++f)
+                {
+                    for (std::size_t ch = 0; ch < C; ++ch)
+                    {
                         buf.sample(ch, f) = renderSample(ch, f);
                     }
                 }
-            } else
-                CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<P, Traversal::PerFrame>) {
-                    // Use renderSpan per frame; frame_span may be contiguous or strided
-                    for (std::size_t f = 0; f < Fm; ++f) {
-                        auto frame = buf.frame_span(f);
-                        renderSpan(frame, 0, f); // channel = 0 for frame; frameOffset = f
-                    }
-                } else {
-                    // PerChannel
-                    for (std::size_t ch = 0; ch < C; ++ch) {
-                        auto chan = buf.channel_span(ch);
-                        renderSpan(chan, ch, 0); // channel = ch; frameOffset = 0
-                    }
+            }
+            else CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<P, Traversal::PerFrame>)
+            {
+                // Use renderSpan per frame; frame_span may be contiguous or strided
+                for (std::size_t f = 0; f < Fm; ++f)
+                {
+                    auto frame = buf.frame_span(f);
+                    renderSpan(frame, 0, f); // channel = 0 for frame; frameOffset = f
                 }
+            }
+            else
+            {
+                // PerChannel
+                for (std::size_t ch = 0; ch < C; ++ch)
+                {
+                    auto chan = buf.channel_span(ch);
+                    renderSpan(chan, ch, 0); // channel = ch; frameOffset = 0
+                }
+            }
         }
 
         virtual ~Producer() noexcept = default;
@@ -202,29 +237,35 @@ namespace CASPI::Core {
     public:
         // ---- Hooks for derived types (override what you need) ----
 
-        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in) {
+        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in)
+        {
             return in;
         }
 
-        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in, const std::size_t channel) {
+        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in, const std::size_t channel)
+        {
             (void) channel;
             return processSample(in);
         }
 
         CASPI_NO_DISCARD virtual FloatType processSample(FloatType in, const std::size_t channel,
-                                                         const std::size_t frame) {
+                                                         const std::size_t frame)
+        {
             (void) frame;
             return processSample(in, channel);
         }
 
-        virtual void prepareBlock(const std::size_t nFrames, const std::size_t nChannels) {
+        virtual void prepareBlock(const std::size_t nFrames, const std::size_t nChannels)
+        {
             // Default: do nothing.
         }
 
         template<typename Span>
-        void processSpan(Span span, std::size_t channel, std::size_t frameOffset = 0) {
+        void processSpan(Span span, std::size_t channel, std::size_t frameOffset = 0)
+        {
             std::size_t frame = frameOffset;
-            for (auto &s: span) {
+            for (auto &s: span)
+            {
                 s = processSample(s, channel, frame);
                 ++frame;
             }
@@ -233,34 +274,43 @@ namespace CASPI::Core {
         // ---- Generic processing over AudioBuffer ----
         template<template <typename> class Layout>
         CASPI_NON_BLOCKING
-        void process(AudioBuffer<FloatType, Layout> &buf) noexcept {
+        void process(AudioBuffer<FloatType, Layout> &buf) noexcept
+        {
             using P = Policy;
             const std::size_t C = buf.numChannels();
             const std::size_t Fm = buf.numFrames();
 
             prepareBlock(Fm, C);
 
-            CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<P, Traversal::PerSample>) {
+            CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<P, Traversal::PerSample>)
+            {
                 // Per-sample: call processSample directly
-                for (std::size_t f = 0; f < Fm; ++f) {
-                    for (std::size_t ch = 0; ch < C; ++ch) {
+                for (std::size_t f = 0; f < Fm; ++f)
+                {
+                    for (std::size_t ch = 0; ch < C; ++ch)
+                    {
                         buf.sample(ch, f) = processSample(buf.sample(ch, f), ch, f);
                     }
                 }
-            } else
-                CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<P, Traversal::PerFrame>) {
-                    // Per-frame: call processSpan on each frame
-                    for (std::size_t f = 0; f < Fm; ++f) {
-                        auto frame = buf.frame_span(f);
-                        processSpan(frame, 0, f); // channel = 0 for frame; frameOffset = f
-                    }
-                } else {
-                    // PerChannel
-                    for (std::size_t ch = 0; ch < C; ++ch) {
-                        auto chan = buf.channel_span(ch);
-                        processSpan(chan, ch, 0); // channel = ch; frameOffset = 0
-                    }
+            }
+            else CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<P, Traversal::PerFrame>)
+            {
+                // Per-frame: call processSpan on each frame
+                for (std::size_t f = 0; f < Fm; ++f)
+                {
+                    auto frame = buf.frame_span(f);
+                    processSpan(frame, 0, f); // channel = 0 for frame; frameOffset = f
                 }
+            }
+            else
+            {
+                // PerChannel
+                for (std::size_t ch = 0; ch < C; ++ch)
+                {
+                    auto chan = buf.channel_span(ch);
+                    processSpan(chan, ch, 0); // channel = ch; frameOffset = 0
+                }
+            }
         }
 
         virtual ~Processor() noexcept = default;
@@ -271,7 +321,8 @@ namespace CASPI::Core {
 #else
     template<typename FloatType = double>
 #endif
-    class Modulator {
+    class Modulator
+    {
     public:
         virtual FloatType modulate() = 0;
 
@@ -285,7 +336,8 @@ namespace CASPI::Core {
 #else
     template<typename FloatType = double>
 #endif
-    class SampleRateAware {
+    class SampleRateAware
+    {
     public:
         virtual ~SampleRateAware() noexcept = default;
 
