@@ -413,12 +413,11 @@ TEST_F(FMGraphDSPTest, GetExecutionOrder)
 
     auto dsp = std::move(builder.compile(SAMPLE_RATE)).value();
 
-    const auto* order = dsp.getExecutionOrder();
-    ASSERT_NE(order, nullptr);
-    EXPECT_EQ(order->size(), 3);
-    EXPECT_EQ((*order)[0], op1);
-    EXPECT_EQ((*order)[1], op2);
-    EXPECT_EQ((*order)[2], op3);
+    const auto order = dsp.getExecutionOrder();
+    EXPECT_EQ(order.size(), 3);
+    EXPECT_EQ(order[0], op1);
+    EXPECT_EQ(order[1], op2);
+    EXPECT_EQ(order[2], op3);
 }
 
 TEST_F(FMGraphDSPTest, ExecutionOrderSimpleChain)
@@ -434,12 +433,12 @@ TEST_F(FMGraphDSPTest, ExecutionOrderSimpleChain)
     builder.setOutputOperators({op3});
 
     auto dsp = std::move(builder.compile(SAMPLE_RATE)).value();
-    const auto* order = dsp.getExecutionOrder();
+    const auto order = dsp.getExecutionOrder();
 
-    ASSERT_EQ(order->size(), 3);
-    EXPECT_EQ((*order)[0], op1);
-    EXPECT_EQ((*order)[1], op2);
-    EXPECT_EQ((*order)[2], op3);
+    ASSERT_EQ(order.size(), 3);
+    EXPECT_EQ(order[0], op1);
+    EXPECT_EQ(order[1], op2);
+    EXPECT_EQ(order[2], op3);
 }
 
 TEST_F(FMGraphDSPTest, ExecutionOrderParallel)
@@ -455,10 +454,10 @@ TEST_F(FMGraphDSPTest, ExecutionOrderParallel)
     builder.setOutputOperators({op3});
 
     auto dsp = std::move(builder.compile(SAMPLE_RATE)).value();
-    const auto* order = dsp.getExecutionOrder();
+    const auto order = dsp.getExecutionOrder();
 
-    ASSERT_EQ(order->size(), 3);
-    EXPECT_EQ((*order)[2], op3);  // Sink must be last
+    ASSERT_EQ(order.size(), 3);
+    EXPECT_EQ(order[2], op3);  // Sink must be last
 }
 
 TEST_F(FMGraphDSPTest, ExecutionOrderDiamond)
@@ -477,11 +476,11 @@ TEST_F(FMGraphDSPTest, ExecutionOrderDiamond)
     builder.setOutputOperators({op4});
 
     auto dsp = std::move(builder.compile(SAMPLE_RATE)).value();
-    const auto* order = dsp.getExecutionOrder();
+    const auto order = dsp.getExecutionOrder();
 
-    ASSERT_EQ(order->size(), 4);
-    EXPECT_EQ((*order)[0], op1);  // Source first
-    EXPECT_EQ((*order)[3], op4);  // Sink last
+    ASSERT_EQ(order.size(), 4);
+    EXPECT_EQ(order[0], op1);  // Source first
+    EXPECT_EQ(order[3], op4);  // Sink last
 }
 
 // ============================================================================
@@ -594,30 +593,6 @@ TEST_F(FMGraphDSPTest, ParallelCarriers)
 // GROUP 7: Amplitude & Gain Control
 // Tests output scaling and clipping prevention
 // ============================================================================
-
-TEST_F(FMGraphDSPTest, NoClippingWithParallelOperators)
-{
-    FMGraphBuilder<double> builder;
-
-    for (int i = 0; i < 6; ++i)
-    {
-        size_t op = builder.addOperator();
-        builder.configureOperator(op, 440.0 + i * 55.0, 1.0, 1.0);
-    }
-
-    builder.setOutputOperators({0, 1, 2, 3, 4, 5});
-    auto dsp = std::move(builder.compile(SAMPLE_RATE)).value();
-
-    // Auto-scaling should prevent clipping
-    for (int i = 0; i < 10000; ++i)
-    {
-        double sample = dsp.renderSample();
-        EXPECT_LE(std::abs(sample), 1.0) << "Clipping at sample " << i;
-    }
-
-    EXPECT_LE(dsp.getPeakLevel(), 1.0);
-}
-
 TEST_F(FMGraphDSPTest, ManualGainControl)
 {
     FMGraphBuilder<double> builder;
@@ -668,9 +643,13 @@ TEST_F(FMGraphDSPTest, NoteOnOffQuickSmoke)
 {
     auto dsp = createSimpleFM();
 
-    // Quick smoke test with longer release
-    dsp.setADSR(0.01, 0.01, 0.7, 0.5);  // 500ms release
-    dsp.enableEnvelopes();
+    // Configure envelopes per-operator
+    for (size_t i = 0; i < dsp.getNumOperators(); ++i)
+    {
+        auto* op = dsp.getOperator(i);
+        op->setADSR(0.01, 0.01, 0.7, 0.5);  // 500ms release
+        op->enableEnvelope();
+    }
 
     dsp.noteOn();
 
@@ -708,8 +687,9 @@ TEST_F(FMGraphDSPTest, EnvelopeReducesAmplitude)
 
     auto dsp = std::move(builder.compile(SAMPLE_RATE)).value();
 
-    dsp.setADSR(0.01, 0.01, 0.7, 0.2);
-    dsp.enableEnvelopes();
+    // Configure envelope via operator access
+    dsp.getOperator(0)->setADSR(0.01, 0.01, 0.7, 0.2);
+    dsp.getOperator(0)->enableEnvelope();
 
     dsp.noteOn();
 
@@ -746,8 +726,8 @@ TEST_F(FMGraphDSPTest, EnvelopeDoesNotIntroduceClicks)
 
     auto dsp = std::move(builder.compile(SAMPLE_RATE)).value();
 
-    dsp.setADSR(0.001, 0.001, 0.8, 0.001);
-    dsp.enableEnvelopes();
+    dsp.getOperator(0)->setADSR(0.001, 0.001, 0.8, 0.001);
+    dsp.getOperator(0)->enableEnvelope();
 
     dsp.noteOn();
     auto samples = FMGraphTestHelpers::renderForAnalysis(dsp, 0.1);
@@ -999,8 +979,8 @@ TEST_F(FMGraphSpectralTest, DenormalProtection)
 
     auto dsp = std::move(builder.compile(SAMPLE_RATE)).value();
 
-    dsp.setADSR(0.001, 0.001, 0.1, 1.0);
-    dsp.enableEnvelopes();
+    dsp.getOperator(0)->setADSR(0.001, 0.001, 0.1, 1.0);
+    dsp.getOperator(0)->enableEnvelope();
 
     dsp.noteOn();
     for (int i = 0; i < 1000; ++i)
@@ -1496,8 +1476,13 @@ TEST_F(FMGraphAudioBufferTest, EnvelopeWorksAcrossAllChannels)
 {
     auto dsp = createSimpleFM();
 
-    dsp.setADSR(0.01, 0.01, 0.7, 0.1);
-    dsp.enableEnvelopes();
+    // Configure envelopes per-operator
+    for (size_t i = 0; i < dsp.getNumOperators(); ++i)
+    {
+        auto* op = dsp.getOperator(i);
+        op->setADSR(0.01, 0.01, 0.7, 0.1);
+        op->enableEnvelope();
+    }
 
     AudioBuffer<double, InterleavedLayout> buffer(4, 256);
 

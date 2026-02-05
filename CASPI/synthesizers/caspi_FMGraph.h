@@ -30,9 +30,8 @@
  *  3. Make real-time assumptions explicit and auditable
  ************************************************************************/
 
-#include "base/caspi_Assert.h"
+
 #include "base/caspi_Compatibility.h"
-#include "base/caspi_Constants.h"
 #include "core/caspi_Core.h"
 #include "core/caspi_Expected.h"
 #include "oscillators/caspi_Operator.h"
@@ -548,8 +547,7 @@ namespace CASPI
                   outputOperators_ (outputOperators),
                   baseFrequency_ (FloatType (440)),
                   outputGain_ (FloatType (1)),
-                  autoScaleOutputs_ (true),
-                  peakLevel_ (FloatType (0))
+                  autoScaleOutputs_ (true)
             {
                 const size_t n = operatorConfigs.size();
 
@@ -574,6 +572,7 @@ namespace CASPI
 
                 computeExecutionOrder();
                 buildAdjacencyList();
+                updateEffectiveGain();
 
                 this->setSampleRate (sampleRate);
             }
@@ -604,7 +603,8 @@ namespace CASPI
              * @param index Operator index.
              * @return Const pointer to operator, or nullptr if index is invalid.
              */
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD const Operator<FloatType>* getOperator (const size_t index) const
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+            const Operator<FloatType>* getOperator (const size_t index) const
             {
                 return (index < operators_.size()) ? operators_[index].get() : nullptr;
             }
@@ -644,12 +644,62 @@ namespace CASPI
             CASPI_NON_BLOCKING
             void setConnectionDepth (const size_t connectionIndex, const FloatType depth)
             {
-                if (connectionIndex < connections_.size())
+                if (connectionIndex >= connections_.size())
                 {
-                    connections_[connectionIndex].modulationDepth =
-                        static_cast<float> (depth);
+                    return;
+                }
+
+                const float depthFloat = static_cast<float> (depth);
+
+                connections_[connectionIndex].modulationDepth = depthFloat;
+                outgoingDepths_[connectionIndexToFlatIndex_[connectionIndex]] = depthFloat;
+            }
+
+        /**
+ * @brief Updates the modulation depth between two operators.
+ *
+ * Alternative interface for updating depth by operator indices.
+ * Requires O(n) search where n is the number of outgoing connections
+ * from the source operator.
+ *
+ * @param sourceOperator Source operator index.
+ * @param targetOperator Target operator index.
+ * @param depth New modulation depth value.
+ */
+        CASPI_NON_BLOCKING
+        void setModulationDepth (const size_t sourceOperator,
+                                 const size_t targetOperator,
+                                 const FloatType depth)
+            {
+                if (sourceOperator >= operators_.size())
+                {
+                    return;
+                }
+
+                const size_t start = outgoingOffsets_[sourceOperator];
+                const size_t end = outgoingOffsets_[sourceOperator + 1];
+
+                for (size_t i = start; i < end; ++i)
+                {
+                    if (outgoingTargets_[i] == targetOperator)
+                    {
+                        outgoingDepths_[i] = static_cast<float> (depth);
+
+                        // Also update connections_ array for consistency
+                        for (auto& conn : connections_)
+                        {
+                            if (conn.sourceOperator == sourceOperator
+                                && conn.targetOperator == targetOperator)
+                            {
+                                conn.modulationDepth = static_cast<float> (depth);
+                                break;
+                            }
+                        }
+                        return;
+                    }
                 }
             }
+
 
             /**
              * @brief Triggers note-on for all operators.
@@ -675,49 +725,6 @@ namespace CASPI
                 }
             }
 
-            /**
-             * @brief Sets ADSR envelope parameters for all operators.
-             *
-             * @param attack Attack time.
-             * @param decay Decay time.
-             * @param sustain Sustain level.
-             * @param release Release time.
-             */
-            CASPI_NON_BLOCKING
-            void setADSR (const FloatType attack,
-                          const FloatType decay,
-                          const FloatType sustain,
-                          const FloatType release)
-            {
-                for (auto& op : operators_)
-                {
-                    op->setADSR (attack, decay, sustain, release);
-                }
-            }
-
-            /**
-             * @brief Enables envelope processing on all operators.
-             */
-            CASPI_NON_BLOCKING
-            void enableEnvelopes()
-            {
-                for (auto& op : operators_)
-                {
-                    op->enableEnvelope();
-                }
-            }
-
-            /**
-             * @brief Disables envelope processing on all operators.
-             */
-            CASPI_NON_BLOCKING
-            void disableEnvelopes()
-            {
-                for (auto& op : operators_)
-                {
-                    op->disableEnvelope();
-                }
-            }
 
             /**
              * @brief Sets the final output gain.
@@ -728,6 +735,7 @@ namespace CASPI
             void setOutputGain (const FloatType gain)
             {
                 outputGain_ = gain;
+                updateEffectiveGain();
             }
 
             /**
@@ -751,6 +759,7 @@ namespace CASPI
             void setAutoScaleOutputs (const bool enable)
             {
                 autoScaleOutputs_ = enable;
+                updateEffectiveGain();
             }
 
             /**
@@ -758,29 +767,10 @@ namespace CASPI
              *
              * @return True if enabled.
              */
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD bool getAutoScaleOutputs() const
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        bool getAutoScaleOutputs() const
             {
                 return autoScaleOutputs_;
-            }
-
-            /**
-             * @brief Returns the peak output level since last reset.
-             *
-             * @return Peak absolute output value.
-             */
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            FloatType getPeakLevel() const
-            {
-                return peakLevel_;
-            }
-
-            /**
-             * @brief Resets the peak level meter.
-             */
-            CASPI_NON_BLOCKING
-            void resetPeakLevel()
-            {
-                peakLevel_ = FloatType (0);
             }
 
             /**
@@ -797,6 +787,10 @@ namespace CASPI
                 std::fill (modulationSignals_.begin(),
                            modulationSignals_.end(),
                            FloatType (0));
+
+                std::fill (operatorOutputs_.begin(),
+                           operatorOutputs_.end(),
+                           FloatType (0));
             }
 
             /**
@@ -810,6 +804,8 @@ namespace CASPI
             CASPI_NON_BLOCKING CASPI_NO_DISCARD
             FloatType renderSample() override
             {
+                Core::ScopedFlushDenormals flush{};
+
                 std::fill (modulationSignals_.begin(),
                            modulationSignals_.end(),
                            FloatType (0));
@@ -818,18 +814,16 @@ namespace CASPI
                 {
                     operators_[opIndex]->setModulationInput (modulationSignals_[opIndex]);
 
-                    operatorOutputs_[opIndex] = Core::flushToZero (operators_[opIndex]->renderSample());
+                    operatorOutputs_[opIndex] = operators_[opIndex]->renderSample();
 
-                    // Instead of hardcoded structured bindings:
-#if defined(CASPI_FEATURES_HAS_STRUCTURED_BINDINGS)
-                    for (auto [target, connIdx] : adjacencyList_[opIndex])
-#else
-                    for (const auto& connPair : adjacencyList_[opIndex])
+                    // Propagate output to all connected operators
+                    const size_t start = outgoingOffsets_[opIndex];
+                    const size_t end = outgoingOffsets_[opIndex + 1];
+
+                    for (size_t i = start; i < end; ++i)
                     {
-                        size_t target = connPair.first;
-                        size_t connIdx = connPair.second;
-#endif
-                        modulationSignals_[target] += operatorOutputs_[opIndex] * connections_[connIdx].modulationDepth;
+                        modulationSignals_[outgoingTargets_[i]] +=
+                            operatorOutputs_[opIndex] * static_cast<FloatType> (outgoingDepths_[i]);
                     }
                 }
 
@@ -838,26 +832,17 @@ namespace CASPI
                     return FloatType (0);
                 }
 
-                FloatType output = FloatType (0);
+                // Mix output operators
+                FloatType finalOutput = FloatType (0);
                 for (size_t outIdx : outputOperators_)
                 {
-                    output += operatorOutputs_[outIdx];
+                    finalOutput += operatorOutputs_[outIdx];
                 }
 
-                if (autoScaleOutputs_ && outputOperators_.size() > 1)
-                {
-                    output /= static_cast<FloatType> (outputOperators_.size());
-                }
+                // Apply pre-computed effective gain
+                finalOutput *= effectiveGain_;
 
-                output *= outputGain_;
-
-                const FloatType absOut = std::abs (output);
-                if (absOut > peakLevel_)
-                {
-                    peakLevel_ = absOut;
-                }
-
-                return Core::flushToZero (output);
+                return finalOutput;
             }
 
             /**
@@ -904,21 +889,82 @@ namespace CASPI
             }
 
             /**
+            * @brief Returns the output operator indices.
+            *
+            * @return Reference to output operators vector.
+            */
+            CASPI_NON_ALLOCATING CASPI_NO_DISCARD
+            const std::vector<size_t>& getOutputOperators() const
+            {
+                return outputOperators_;
+            }
+
+
+            /**
              * @brief Returns the execution order used for rendering.
              *
              * @return Pointer to execution order vector.
              */
             CASPI_NON_ALLOCATING CASPI_NO_DISCARD
-            const std::vector<size_t>* getExecutionOrder() const
+            const std::vector<size_t>& getExecutionOrder() const
             {
-                return &executionOrder_;
+                return executionOrder_;
             }
 
         private:
             /**
              * @brief Computes a topological execution order for the modulation graph.
              */
-            void computeExecutionOrder()
+        void computeExecutionOrder()
+        {
+            const size_t n = operators_.size();
+            if (n == 0)
+            {
+                return;
+            }
+
+            std::vector<int> inDegree (n, 0);
+            std::vector<std::vector<size_t>> adjacencyList (n);
+
+            for (const auto& conn : connections_)
+            {
+                adjacencyList[conn.sourceOperator].push_back (
+                    conn.targetOperator);
+                ++inDegree[conn.targetOperator];
+            }
+
+            std::queue<size_t> queue;
+            for (size_t i = 0; i < n; ++i)
+            {
+                if (inDegree[i] == 0)
+                {
+                    queue.push (i);
+                }
+            }
+
+            executionOrder_.clear();
+            executionOrder_.reserve (n);
+
+            while (! queue.empty())
+            {
+                const size_t current = queue.front();
+                queue.pop();
+                executionOrder_.push_back (current);
+
+                for (size_t neighbor : adjacencyList[current])
+                {
+                    if (--inDegree[neighbor] == 0)
+                    {
+                        queue.push (neighbor);
+                    }
+                }
+            }
+        }
+
+            /**
+             * @brief Builds an adjacency list for fast modulation routing during rendering.
+             */
+            void buildAdjacencyList()
             {
                 const size_t n = operators_.size();
                 if (n == 0)
@@ -926,70 +972,85 @@ namespace CASPI
                     return;
                 }
 
-                std::vector<int> inDegree (n, 0);
-                std::vector<std::vector<size_t>> adjacencyList (n);
-
+                // Count outgoing connections per operator
+                std::vector<size_t> counts (n, 0);
                 for (const auto& conn : connections_)
                 {
-                    adjacencyList[conn.sourceOperator].push_back (
-                        conn.targetOperator);
-                    ++inDegree[conn.targetOperator];
+                    ++counts[conn.sourceOperator];
                 }
 
-                std::queue<size_t> queue;
+                // Build offset array (prefix sum)
+                outgoingOffsets_.resize (n + 1);
+                outgoingOffsets_[0] = 0;
                 for (size_t i = 0; i < n; ++i)
                 {
-                    if (inDegree[i] == 0)
-                    {
-                        queue.push (i);
-                    }
+                    outgoingOffsets_[i + 1] = outgoingOffsets_[i] + counts[i];
                 }
 
-                executionOrder_.clear();
-                executionOrder_.reserve (n);
+                // Allocate flat arrays
+                const size_t totalConnections = connections_.size();
+                outgoingTargets_.resize (totalConnections);
+                outgoingDepths_.resize (totalConnections);
+                connectionIndexToFlatIndex_.resize (totalConnections);
 
-                while (! queue.empty())
+                // Fill flat arrays
+                std::vector<size_t> positions = outgoingOffsets_; // Working copy for insertion
+                for (size_t connIdx = 0; connIdx < connections_.size(); ++connIdx)
                 {
-                    const size_t current = queue.front();
-                    queue.pop();
-                    executionOrder_.push_back (current);
+                    const auto& conn = connections_[connIdx];
+                    const size_t flatIdx = positions[conn.sourceOperator]++;
 
-                    for (size_t neighbor : adjacencyList[current])
-                    {
-                        if (--inDegree[neighbor] == 0)
-                        {
-                            queue.push (neighbor);
-                        }
-                    }
+                    outgoingTargets_[flatIdx] = conn.targetOperator;
+                    outgoingDepths_[flatIdx] = conn.modulationDepth;
+                    connectionIndexToFlatIndex_[connIdx] = flatIdx;
                 }
             }
 
-            /**
-             * @brief Builds an adjacency list for fast modulation routing during rendering.
-             */
-            void buildAdjacencyList()
+        /**
+ * @brief Recomputes the effective gain based on output gain and auto-scaling.
+ */
+        CASPI_NON_BLOCKING
+        void updateEffectiveGain()
             {
-                adjacencyList_.resize (operators_.size());
+                FloatType scale = FloatType (1);
 
-                for (size_t i = 0; i < connections_.size(); ++i)
+                if (autoScaleOutputs_ && outputOperators_.size() > 1)
                 {
-                    const auto& conn = connections_[i];
-                    adjacencyList_[conn.sourceOperator].emplace_back (
-                        conn.targetOperator, i);
+                    scale = FloatType (1) / static_cast<FloatType> (outputOperators_.size());
                 }
+
+                effectiveGain_ = outputGain_ * scale;
             }
 
-            std::vector<std::unique_ptr<Operator<FloatType>>> operators_;
-            std::vector<ModulationConnection> connections_;
-            std::vector<size_t> outputOperators_;
-            std::vector<size_t> executionOrder_;
-            std::vector<std::vector<std::pair<size_t, size_t>>> adjacencyList_;
-            std::vector<FloatType> modulationSignals_;
-            std::vector<FloatType> operatorOutputs_;
-            FloatType baseFrequency_;
-            FloatType outputGain_;
-            bool autoScaleOutputs_;
-            FloatType peakLevel_;
+        // ====================================================================
+        // Member Variables
+        // ====================================================================
+
+        // Operators
+        std::vector<std::unique_ptr<Operator<FloatType>>> operators_;
+
+        // Flat adjacency structure (render-optimized)
+        std::vector<size_t> outgoingTargets_;           // All target operators, concatenated
+        std::vector<float> outgoingDepths_;             // Corresponding modulation depths
+        std::vector<size_t> outgoingOffsets_;           // Start index per operator (size = n+1)
+        std::vector<size_t> connectionIndexToFlatIndex_; // Reverse index for O(1) depth updates
+
+        // Topology metadata (for mutation/debugging)
+        std::vector<ModulationConnection> connections_;
+        std::vector<size_t> outputOperators_;
+
+        // Execution
+        std::vector<size_t> executionOrder_;
+
+        // Render state
+        std::vector<FloatType> modulationSignals_;
+        std::vector<FloatType> operatorOutputs_;
+
+        // Parameters
+        FloatType baseFrequency_;
+        FloatType outputGain_;
+        FloatType effectiveGain_;
+        bool autoScaleOutputs_;
     };
 
 } // namespace CASPI
