@@ -402,19 +402,7 @@ namespace CASPI::Core
 
 #endif // CASPI_CPP_17
 
-    template<typename FloatType>
-    inline FloatType flushToZero(FloatType value, FloatType threshold = FloatType(1e-15)) {
-        // Compute mask: 1 if abs(value) >= threshold, else 0
-        // Use std::abs to handle negative values
-#if ! defined(CASPI_DISABLE_FLUSH_DENORMALS)
-        auto mask = static_cast<FloatType>(std::abs(value) >= threshold);
-        return value * mask;
-#else
-        return value;
-#endif
-    }
-
-    inline void configureFlushToZero(bool enable) {
+inline void configureFlushToZero(bool enable) {
 #if defined(CASPI_FEATURES_HAS_FLUSH_ZERO_DENORMALS)
         if (enable)
             _mm_setcsr(_mm_getcsr() | (1u << 15) | (1u << 6));

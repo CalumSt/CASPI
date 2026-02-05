@@ -9,6 +9,7 @@
 #include <complex>
 #include <cmath>
 #include <numeric>
+#include <algorithm>
 
 #include "base/caspi_Constants.h"
 #include "maths/caspi_FFT.h"

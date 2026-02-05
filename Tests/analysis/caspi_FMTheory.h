@@ -22,85 +22,12 @@
 #include <cmath>
 #include <algorithm>
 
+#include "maths/caspi_Maths.h"
+
 namespace CASPI
 {
 namespace FMTheory
 {
-
-/**
- * @brief Compute Bessel function of the first kind, J_n(x)
- * @param n Order of the Bessel function
- * @param x Argument (modulation index β for FM synthesis)
- * @return Value of J_n(x)
- * 
- * Uses series expansion for accuracy:
- * J_n(x) = Σ(k=0 to ∞) [(-1)^k / (k!(n+k)!)] * (x/2)^(n+2k)
- * 
- * For FM synthesis:
- * - β = 0: J_0(0) = 1, all other J_n = 0 (pure carrier)
- * - β = 2.4: J_0(2.4) ≈ 0 (carrier null, first zero)
- * - β = 5.5: J_0(5.5) ≈ 0 (carrier null, second zero)
- * 
- * Reference: Abramowitz & Stegun (1964), Chapter 9
- */
-inline double besselJ(int n, double x)
-{
-#if defined (CASPI_CPP_17)
-    return std::cyl_bessel_j(n, x);
-#else
-    // Handle negative orders: J_{-n}(x) = (-1)^n * J_n(x)
-    if (n < 0)
-    {
-        n = -n;
-        return (n % 2 == 0) ? besselJ(n, x) : -besselJ(n, x);
-    }
-    
-    // Special case: x = 0
-    if (std::abs(x) < 1e-10)
-    {
-        return (n == 0) ? 1.0 : 0.0;
-    }
-    
-    // For small x, use series expansion
-    // J_n(x) = (x/2)^n * Σ [(-1)^k / (k!(n+k)!)] * (x/2)^(2k)
-    if (std::abs(x) < 8.0)
-    {
-        double result = 0.0;
-        double term = std::pow(x / 2.0, n);
-        
-        // Compute n!
-        for (int i = 1; i <= n; ++i)
-        {
-            term /= i;
-        }
-        
-        double xsq = x * x / 4.0;
-        
-        // Sum series terms until convergence
-        for (int k = 0; k < 100; ++k)
-        {
-            result += term;
-            
-            // Check convergence
-            if (std::abs(term) < 1e-15 * std::abs(result))
-            {
-                break;
-            }
-            
-            // Next term: multiply by -x²/4(k+1)(n+k+1)
-            term *= -xsq / ((k + 1) * (n + k + 1));
-        }
-        
-        return result;
-    }
-    
-    // For large x, use asymptotic expansion
-    // J_n(x) ≈ √(2/πx) * cos(x - nπ/2 - π/4)
-    // This is less accurate but faster for large arguments
-    double phase = x - n * Constants::PI<double> / 2.0 - Constants::PI<double> / 4.0;
-    return std::sqrt(2.0 / (Constants::PI<double> * x)) * std::cos(phase);
-#endif()
-}
 
 /**
  * @brief Predict FM sideband amplitudes using Bessel functions
@@ -130,12 +57,12 @@ inline std::vector<double> predictSidebandAmplitudes(const double beta, const in
     amplitudes.reserve(numSidebands + 1);
     
     // J_0(β) = carrier amplitude
-    amplitudes.push_back(besselJ(0, beta));
+    amplitudes.push_back(Maths::besselJ(0, beta));
     
     // J_n(β) = n-th sideband amplitude
     for (int n = 1; n <= numSidebands; ++n)
     {
-        amplitudes.push_back(besselJ(n, beta));
+        amplitudes.push_back(Maths::besselJ(n, beta));
     }
     
     return amplitudes;
@@ -303,7 +230,7 @@ inline int predictSignificantSidebands(double beta, double threshold = 0.01)
     // Check Bessel functions until they fall below threshold
     for (int n = 1; n <= 50; ++n)
     {
-        double amplitude = std::abs(besselJ(n, beta));
+        double amplitude = std::abs(Maths::besselJ(n, beta));
         
         if (amplitude < threshold)
             break;

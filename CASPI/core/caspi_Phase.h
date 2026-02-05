@@ -23,16 +23,14 @@ namespace CASPI
             /// Returns the phase value before advancement
             FloatType advanceAndWrap (const FloatType wrapLimit)
             {
+                Core::ScopedFlushDenormals flush{};
                 CASPI_ASSERT (wrapLimit > FloatType (0), "Wrap limit must be larger than 0.");
                 /// take previous phase value
                 auto phaseInternal = phase;
                 /// update phase counter
                 phase += increment;
                 /// wrap to the limit
-                phase = CASPI::Core::flushToZero (std::fmod (phase, wrapLimit));
-
-                // Final flush for phase to avoid denormals
-                phase = CASPI::Core::flushToZero (phase);
+                phase = std::fmod (phase, wrapLimit);
 
                 return phaseInternal;
             } /// wrap limit is 2pi for sine, 1 for others
