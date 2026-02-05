@@ -1,28 +1,42 @@
-#ifndef CASPI_FMGRAPH_SEPARATED_H
-#define CASPI_FMGRAPH_SEPARATED_H
+#ifndef CASPI_FMGRAPH_H
+#define CASPI_FMGRAPH_H
 /*************************************************************************
  * @file caspi_FMGraph.h
- * @brief Clean separation: FMGraphBuilder (config) → FMGraphDSP (runtime)
+ * @brief FM synthesis graph with builder/runtime separation
  *
- * ARCHITECTURE:
+ * ARCHITECTURE OVERVIEW:
  *
- * FMGraphBuilder (Mutable, Non-RT)    →  FMGraphDSP (Immutable, RT-Safe)
- * - Add/remove operators                  - renderSample()
- * - Connect/disconnect                    - noteOn/Off()
- * - Validate topology                     - Parameter updates
- * - Compile to DSP object                 - No allocations
+ *   FMGraphBuilder (Mutable, Non-RT, Single-threaded)
+ *        |
+ *        v
+ *   FMGraphDSP (Immutable topology, RT-safe rendering)
  *
- * Builder pattern ensures:
- * 1. Configuration errors caught before real-time
- * 2. DSP object is immutable and RT-safe
- * 3. Clear ownership and lifetime semantics
+ * FMGraphBuilder:
+ *  - Intended for configuration and validation only
+ *  - May allocate, resize, and throw
+ *  - Not real-time safe
+ *  - Not thread-safe
+ *
+ * FMGraphDSP:
+ *  - Graph topology is immutable after construction
+ *  - Rendering is real-time safe (no allocation, no locks)
+ *  - Runtime parameters may be updated, but:
+ *      * The class is NOT thread-safe
+ *      * All mutation is assumed to occur on the audio thread
+ *
+ * DESIGN GOALS:
+ *  1. Catch configuration errors before real-time use
+ *  2. Guarantee bounded execution in render paths
+ *  3. Make real-time assumptions explicit and auditable
  ************************************************************************/
 
 #include "base/caspi_Assert.h"
+#include "base/caspi_Compatibility.h"
 #include "base/caspi_Constants.h"
 #include "core/caspi_Core.h"
 #include "core/caspi_Expected.h"
 #include "oscillators/caspi_Operator.h"
+
 #include <algorithm>
 #include <memory>
 #include <queue>
@@ -35,6 +49,13 @@ namespace CASPI
     // Error Types
     // ============================================================================
 
+    /**
+     * @brief Errors reported during graph construction and compilation
+     *
+     * NOTE:
+     * This is a CASPI-specific error domain and is used with the
+     * CASPI expected<> type (not std::expected).
+     */
     enum class FMGraphError
     {
         Success = 0,
@@ -73,6 +94,14 @@ namespace CASPI
     // Connection Representation
     // ============================================================================
 
+    /**
+     * @brief Directed modulation connection between two operators
+     *
+     * sourceOperator → targetOperator
+     *
+     * modulationDepth is applied at render time and may be updated
+     * at runtime. No atomicity or cross-thread safety is guaranteed.
+     */
     struct ModulationConnection
     {
             size_t sourceOperator;
@@ -81,14 +110,18 @@ namespace CASPI
 
             bool operator== (const ModulationConnection& other) const
             {
-                return sourceOperator == other.sourceOperator && targetOperator == other.targetOperator;
+                return sourceOperator == other.sourceOperator
+                       && targetOperator == other.targetOperator;
             }
     };
 
-    template <typename FloatType>
     /**
-     * @brief Operator configuration (builder-side representation)
+     * @brief Builder-side operator configuration
+     *
+     * This struct exists only during graph construction and is copied
+     * into the DSP object during compilation.
      */
+    template <typename FloatType>
     struct OperatorConfig
     {
             FloatType frequency;
@@ -106,34 +139,20 @@ namespace CASPI
     class FMGraphDSP;
 
     // ============================================================================
-    // FMGraphBuilder: Mutable graph construction and validation
+    // FMGraphBuilder
     // ============================================================================
 
     /**
      * @class FMGraphBuilder
-     * @brief Mutable graph builder for FM synthesis topology
+     * @brief Mutable graph builder for FM synthesis topologies
      *
-     * NOT REAL-TIME SAFE: This class is for configuration only
-     * Use compile() to create a real-time safe FMGraphDSP object
+     * THREADING / RT NOTES:
+     *  - Not real-time safe
+     *  - Not thread-safe
+     *  - Intended for offline or control-thread use only
      *
-     * @example
-     * @code
-     * FMGraphBuilder<float> builder;
-     *
-     * // Configure topology
-     * size_t mod = builder.addOperator();
-     * size_t car = builder.addOperator();
-     * builder.connect(mod, car, 3.0f);
-     * builder.setOutputOperators({car});
-     *
-     * // Compile to RT-safe object
-     * auto result = builder.compile(48000.0f);
-     * if (result.has_value())
-     * {
-     *     FMGraphDSP<float> dsp = std::move(result.value());
-     *     // Use dsp in real-time thread
-     * }
-     * @endcode
+     * The builder validates graph structure and produces an
+     * FMGraphDSP instance with an immutable topology.
      */
     template <typename FloatType>
     class FMGraphBuilder
@@ -141,12 +160,10 @@ namespace CASPI
         public:
             using Error  = FMGraphError;
             using Result = expected<void, Error, NonRealTimeSafe>;
+
             template <typename T>
             using ResultValue = expected<T, Error, NonRealTimeSafe>;
 
-            /**
-             * @brief Construct empty graph builder
-             */
             FMGraphBuilder() = default;
 
             // ====================================================================
@@ -154,8 +171,8 @@ namespace CASPI
             // ====================================================================
 
             /**
-             * @brief Add a new operator to the graph
-             * @return Index of newly added operator
+             * @brief Add a new operator with default parameters
+             * @return Index of the newly added operator
              */
             size_t addOperator()
             {
@@ -171,95 +188,118 @@ namespace CASPI
             }
 
             /**
-             * @brief Remove an operator
+             * @brief Remove an operator and all associated connections
              */
-            Result removeOperator (size_t operatorIndex)
+            Result removeOperator (const size_t operatorIndex)
             {
                 if (operatorIndex >= operators_.size())
                 {
-                    return make_unexpected<Error, NonRealTimeSafe> (Error::InvalidOperatorIndex);
+                    return make_unexpected<Error, NonRealTimeSafe> (
+                        Error::InvalidOperatorIndex);
                 }
 
                 operators_.erase (operators_.begin() + operatorIndex);
 
-                // Remove connections involving this operator
                 connections_.erase (
-                    std::remove_if (connections_.begin(), connections_.end(), [operatorIndex] (const ModulationConnection& conn)
-                                    { return conn.sourceOperator == operatorIndex || conn.targetOperator == operatorIndex; }),
+                    std::remove_if (connections_.begin(),
+                                    connections_.end(),
+                                    [operatorIndex] (const ModulationConnection& conn)
+                                    {
+                                        return conn.sourceOperator == operatorIndex
+                                               || conn.targetOperator == operatorIndex;
+                                    }),
                     connections_.end());
 
-                // Adjust indices
                 for (auto& conn : connections_)
                 {
                     if (conn.sourceOperator > operatorIndex)
                     {
-                        conn.sourceOperator--;
+                        --conn.sourceOperator;
                     }
                     if (conn.targetOperator > operatorIndex)
                     {
-                        conn.targetOperator--;
+                        --conn.targetOperator;
                     }
                 }
 
                 outputOperators_.erase (
-                    std::remove (outputOperators_.begin(), outputOperators_.end(), operatorIndex),
+                    std::remove (outputOperators_.begin(),
+                                 outputOperators_.end(),
+                                 operatorIndex),
                     outputOperators_.end());
 
                 for (auto& outIdx : outputOperators_)
                 {
                     if (outIdx > operatorIndex)
                     {
-                        outIdx--;
+                        --outIdx;
                     }
                 }
 
-                return Result();
+                return {};
             }
 
             /**
-             * @brief Connect two operators
+             * @brief Connect source operator to target operator
+             *
+             * Self-modulation is explicitly disallowed.
              */
-            Result connect (size_t source, size_t target, FloatType modulationDepth)
+            Result connect (const size_t source,
+                            const size_t target,
+                            FloatType modulationDepth)
             {
                 if (source >= operators_.size() || target >= operators_.size())
                 {
-                    return make_unexpected<Error, NonRealTimeSafe> (Error::InvalidOperatorIndex);
+                    return make_unexpected<Error, NonRealTimeSafe> (
+                        Error::InvalidOperatorIndex);
                 }
 
                 if (source == target)
                 {
-                    return make_unexpected<Error, NonRealTimeSafe> (Error::InvalidConnection);
+                    return make_unexpected<Error, NonRealTimeSafe> (
+                        Error::InvalidConnection);
                 }
 
-                ModulationConnection conn { source, target, static_cast<float> (modulationDepth) };
+                const ModulationConnection conn {
+                    source,
+                    target,
+                    static_cast<float> (modulationDepth)
+                };
 
-                auto it = std::find (connections_.begin(), connections_.end(), conn);
+                auto it = std::find (connections_.begin(),
+                                     connections_.end(),
+                                     conn);
+
                 if (it != connections_.end())
                 {
-                    it->modulationDepth = static_cast<float> (modulationDepth);
+                    it->modulationDepth = conn.modulationDepth;
                 }
                 else
                 {
                     connections_.push_back (conn);
                 }
 
-                return Result();
+                return {};
             }
 
             /**
-             * @brief Disconnect two operators
+             * @brief Remove a connection between two operators
              */
-            Result disconnect (size_t source, size_t target)
+            Result disconnect (const size_t source, const size_t target)
             {
-                ModulationConnection conn { source, target, 0.0f };
+                const ModulationConnection conn { source, target, 0.0f };
+
                 connections_.erase (
-                    std::remove (connections_.begin(), connections_.end(), conn),
+                    std::remove (connections_.begin(),
+                                 connections_.end(),
+                                 conn),
                     connections_.end());
-                return Result();
+
+                return {};
             }
 
             /**
-             * @brief Set output operators
+             * @brief Define which operators contribute to final output
              */
             Result setOutputOperators (const std::vector<size_t>& indices)
             {
@@ -267,20 +307,19 @@ namespace CASPI
                 {
                     if (idx >= operators_.size())
                     {
-                        return make_unexpected<Error, NonRealTimeSafe> (Error::InvalidOperatorIndex);
+                        return make_unexpected<Error, NonRealTimeSafe> (
+                            Error::InvalidOperatorIndex);
                     }
                 }
+
                 outputOperators_ = indices;
-                return Result();
+                return {};
             }
 
             // ====================================================================
             // Operator Configuration
             // ====================================================================
 
-            /**
-             * @brief Configure operator parameters
-             */
             Result configureOperator (size_t index,
                                       FloatType frequency,
                                       FloatType modulationIndex,
@@ -288,28 +327,27 @@ namespace CASPI
             {
                 if (index >= operators_.size())
                 {
-                    return make_unexpected<Error, NonRealTimeSafe> (Error::InvalidOperatorIndex);
+                    return make_unexpected<Error, NonRealTimeSafe> (
+                        Error::InvalidOperatorIndex);
                 }
 
                 operators_[index].frequency       = frequency;
                 operators_[index].modulationIndex = modulationIndex;
                 operators_[index].modulationDepth = modulationDepth;
 
-                return Result();
+                return {};
             }
 
-            /**
-             * @brief Set operator modulation mode
-             */
             Result setOperatorMode (size_t index, ModulationMode mode)
             {
                 if (index >= operators_.size())
                 {
-                    return make_unexpected<Error, NonRealTimeSafe> (Error::InvalidOperatorIndex);
+                    return make_unexpected<Error, NonRealTimeSafe> (
+                        Error::InvalidOperatorIndex);
                 }
 
                 operators_[index].modulationMode = mode;
-                return Result();
+                return {};
             }
 
             // ====================================================================
@@ -317,31 +355,36 @@ namespace CASPI
             // ====================================================================
 
             /**
-             * @brief Validate graph topology (check for cycles)
-             * @return Success or error describing problem
+             * @brief Validate graph topology
+             *
+             * Checks:
+             *  - At least one output operator
+             *  - No cycles (DAG requirement)
              */
+            CASPI_NO_DISCARD
             Result validate() const
             {
                 const size_t n = operators_.size();
 
                 if (n == 0)
                 {
-                    return Result();
-                } // Empty graph is valid
+                    return {};
+                }
 
                 if (outputOperators_.empty())
                 {
-                    return make_unexpected<Error, NonRealTimeSafe> (Error::NoOutputOperators);
+                    return make_unexpected<Error, NonRealTimeSafe> (
+                        Error::NoOutputOperators);
                 }
 
-                // Check for cycles using topological sort
                 std::vector<int> inDegree (n, 0);
                 std::vector<std::vector<size_t>> adjacencyList (n);
 
                 for (const auto& conn : connections_)
                 {
-                    adjacencyList[conn.sourceOperator].push_back (conn.targetOperator);
-                    inDegree[conn.targetOperator]++;
+                    adjacencyList[conn.sourceOperator].push_back (
+                        conn.targetOperator);
+                    ++inDegree[conn.targetOperator];
                 }
 
                 std::queue<size_t> queue;
@@ -356,14 +399,13 @@ namespace CASPI
                 size_t processed = 0;
                 while (! queue.empty())
                 {
-                    size_t current = queue.front();
+                    const size_t current = queue.front();
                     queue.pop();
-                    processed++;
+                    ++processed;
 
                     for (size_t neighbor : adjacencyList[current])
                     {
-                        inDegree[neighbor]--;
-                        if (inDegree[neighbor] == 0)
+                        if (--inDegree[neighbor] == 0)
                         {
                             queue.push (neighbor);
                         }
@@ -371,9 +413,12 @@ namespace CASPI
                 }
 
                 if (processed != n)
-                    return make_unexpected<Error, NonRealTimeSafe> (Error::CycleDetected);
+                {
+                    return make_unexpected<Error, NonRealTimeSafe> (
+                        Error::CycleDetected);
+                }
 
-                return Result();
+                return {};
             }
 
             // ====================================================================
@@ -381,23 +426,19 @@ namespace CASPI
             // ====================================================================
 
             /**
-             * @brief Compile graph into real-time safe DSP object
-             * @param sampleRate Sample rate for the DSP object
-             * @return FMGraphDSP object or error
+             * @brief Compile into an immutable FMGraphDSP instance
              *
-             * This method:
-             * 1. Validates the graph topology
-             * 2. Computes topological execution order
-             * 3. Creates and initializes operators
-             * 4. Returns immutable, RT-safe DSP object
+             * Allocates memory and must not be called on a real-time thread.
              */
-            ResultValue<FMGraphDSP<FloatType>> compile (FloatType sampleRate) const
+            ResultValue<FMGraphDSP<FloatType>>
+                compile (const FloatType sampleRate) const
             {
-                // Validate first
                 auto validationResult = validate();
                 if (! validationResult.has_value())
                 {
-                    return make_unexpected<FMGraphDSP<FloatType>, Error, NonRealTimeSafe> (
+                    return make_unexpected<FMGraphDSP<FloatType>,
+                                           Error,
+                                           NonRealTimeSafe> (
                         validationResult.error());
                 }
 
@@ -412,7 +453,9 @@ namespace CASPI
                 }
                 catch (...)
                 {
-                    return make_unexpected<FMGraphDSP<FloatType>, Error, NonRealTimeSafe> (
+                    return make_unexpected<FMGraphDSP<FloatType>,
+                                           Error,
+                                           NonRealTimeSafe> (
                         Error::AllocationFailure);
                 }
             }
@@ -420,14 +463,15 @@ namespace CASPI
             // ====================================================================
             // Inspection
             // ====================================================================
-            CASPI_NO_DISCARD CASPI_NON_BLOCKING
+
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
             size_t getNumOperators() const { return operators_.size(); }
 
-            CASPI_NO_DISCARD CASPI_NON_BLOCKING
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
             const std::vector<ModulationConnection>& getConnections() const { return connections_; }
 
-            CASPI_NO_DISCARD CASPI_NON_BLOCKING
-            const std::vector<size_t>& getOutputOperators() const { return outputOperators_; }
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD const std::vector<size_t>&
+                getOutputOperators() const { return outputOperators_; }
 
         private:
             std::vector<OperatorConfig<FloatType>> operators_;
@@ -435,100 +479,143 @@ namespace CASPI
             std::vector<size_t> outputOperators_;
     };
 
-    // ============================================================================
-    // FMGraphDSP: Immutable, real-time safe DSP object
-    // ============================================================================
-
     /**
      * @class FMGraphDSP
-     * @brief Immutable, real-time safe FM synthesis engine
+     * @brief Immutable-topology FM synthesis engine
      *
-     * REAL-TIME SAFE: All rendering methods are non-blocking and non-allocating
+     * OVERVIEW:
+     *  FMGraphDSP is the real-time rendering object produced by FMGraphBuilder.
+     *  It owns all operator DSP instances and executes them in a precomputed,
+     *  acyclic order derived from the modulation graph.
      *
-     * This class is created by FMGraphBuilder::compile() and represents
-     * a validated, optimized FM synthesis graph ready for real-time use.
+     * IMMUTABILITY MODEL:
+     *  - Graph topology (operators, connections, execution order) is immutable
+     *    after construction.
+     *  - Operator DSP state (phase, envelopes, feedback, etc.) is mutable.
+     *  - Runtime parameters (frequency, modulation depth, index, feedback)
+     *    may be updated after construction.
      *
-     * The graph structure is IMMUTABLE after construction.
-     * Only runtime parameters (frequency, envelopes, etc.) can be changed.
+     * REAL-TIME SAFETY:
+     *  - renderSample() and renderBlock():
+     *      * perform no dynamic allocation
+     *      * perform no locking
+     *      * perform no system calls
+     *      * execute in bounded time proportional to operator count
+     *  - Suitable for hard real-time audio threads
+     *
+     * THREAD SAFETY (IMPORTANT):
+     *  - This class is NOT thread-safe
+     *  - No internal synchronization is provided
+     *  - All mutation (parameter updates, resets, rendering) is assumed
+     *    to occur on the same audio thread
+     *  - Concurrent access from control and audio threads is undefined behavior
+     *
+     * NUMERICAL NOTES:
+     *  - FloatType is assumed to be float or double
+     *  - No atomic operations are used on floating-point values
+     *  - Denormal handling is the responsibility of the caller or platform
+     *
+     * SIMD / OPTIMIZATION NOTES:
+     *  - Current implementation is scalar
+     *  - Internal layout is intentionally contiguous to allow future SIMD
+     *    or block-based vectorization without changing public API
+     *
+     * ERROR HANDLING:
+     *  - Construction is expected to be validated by FMGraphBuilder
+     *  - Runtime rendering functions do not report errors
      */
     template <typename FloatType>
-    class FMGraphDSP : public Core::Producer<FloatType>,
+    class FMGraphDSP : public Core::Producer<FloatType, Core::Traversal::PerFrame>,
                        public Core::SampleRateAware<FloatType>
     {
         public:
             /**
-             * @brief Construct DSP object from validated graph
+             * @brief Constructs an FMGraphDSP from a validated modulation graph.
              *
-             * NOT REAL-TIME SAFE: Constructor allocates memory
-             * Called by FMGraphBuilder::compile()
+             * Allocates and initializes operator DSP instances, precomputes execution
+             * order, and prepares all internal buffers required for real-time rendering.
+             *
+             * @param operatorConfigs Operator definitions and initial parameters.
+             * @param connections Modulation connections between operators.
+             * @param outputOperators Indices of operators whose outputs are mixed to final output.
+             * @param sampleRate Initial sample rate in Hz.
              */
             FMGraphDSP (const std::vector<OperatorConfig<FloatType>>& operatorConfigs,
                         const std::vector<ModulationConnection>& connections,
                         const std::vector<size_t>& outputOperators,
                         FloatType sampleRate)
-                : connections_ (connections), outputOperators_ (outputOperators), baseFrequency_ (FloatType (440))
+                : connections_ (connections),
+                  outputOperators_ (outputOperators),
+                  baseFrequency_ (FloatType (440)),
+                  outputGain_ (FloatType (1)),
+                  autoScaleOutputs_ (true),
+                  peakLevel_ (FloatType (0))
             {
                 const size_t n = operatorConfigs.size();
 
-                // Create operators
                 operators_.reserve (n);
                 for (const auto& config : operatorConfigs)
                 {
-                    auto op = std::make_unique<Operator<FloatType>>();
-                    op->setSampleRate (sampleRate);
-                    op->setFrequency (config.frequency);
-                    op->setModulationIndex (config.modulationIndex);
-                    op->setModulationDepth (config.modulationDepth);
-                    op->setModulationFeedback (config.modulationFeedback);
-                    op->setModulationMode (config.modulationMode);
+
+                    auto op = CASPI::make_unique<Operator<FloatType>>(
+                        sampleRate,
+                        config.frequency,
+                        config.modulationIndex,
+                        config.modulationDepth,
+                        config.modulationFeedback,
+                        config.modulationMode
+                    );
+
                     operators_.push_back (std::move (op));
                 }
 
-                // Pre-allocate working buffers
                 modulationSignals_.resize (n, FloatType (0));
                 operatorOutputs_.resize (n, FloatType (0));
 
-                // Compute execution order
                 computeExecutionOrder();
-
-                // Build adjacency list for O(V+E) rendering
                 buildAdjacencyList();
 
                 this->setSampleRate (sampleRate);
             }
 
-            // Move-only (no copy - expensive and unnecessary)
             FMGraphDSP (const FMGraphDSP&)            = delete;
             FMGraphDSP& operator= (const FMGraphDSP&) = delete;
             FMGraphDSP (FMGraphDSP&&)                 = default;
             FMGraphDSP& operator= (FMGraphDSP&&)      = default;
 
-            // ====================================================================
-            // Real-Time Parameter Control
-            // ====================================================================
-
             /**
-             * @brief Get operator for parameter control
-             * REAL-TIME SAFE: Returns pointer (no allocation)
+             * @brief Returns a mutable pointer to an operator by index.
+             *
+             * Used for real-time parameter control of individual operators.
+             *
+             * @param index Operator index.
+             * @return Pointer to operator, or nullptr if index is invalid.
              */
-            CASPI_NON_ALLOCATING
-            Operator<FloatType>* getOperator (size_t index)
-            {
-                return (index < operators_.size()) ? operators_[index].get() : nullptr;
-            }
-
-            CASPI_NON_ALLOCATING
-            const Operator<FloatType>* getOperator (size_t index) const
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+                Operator<FloatType>*
+                getOperator (const size_t index)
             {
                 return (index < operators_.size()) ? operators_[index].get() : nullptr;
             }
 
             /**
-             * @brief Set base frequency for all operators
-             * REAL-TIME SAFE: No allocations
+             * @brief Returns a const pointer to an operator by index.
+             *
+             * @param index Operator index.
+             * @return Const pointer to operator, or nullptr if index is invalid.
              */
-            CASPI_NON_ALLOCATING
-            void setFrequency (FloatType frequency)
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD const Operator<FloatType>* getOperator (const size_t index) const
+            {
+                return (index < operators_.size()) ? operators_[index].get() : nullptr;
+            }
+
+            /**
+             * @brief Sets the base frequency applied to all operators.
+             *
+             * @param frequency Base frequency in Hz.
+             */
+            CASPI_NON_BLOCKING
+            void setFrequency (const FloatType frequency)
             {
                 baseFrequency_ = frequency;
                 for (auto& op : operators_)
@@ -537,27 +624,37 @@ namespace CASPI
                 }
             }
 
-            CASPI_NON_ALLOCATING
-            FloatType getFrequency() const { return baseFrequency_; }
+            /**
+             * @brief Returns the current base frequency.
+             *
+             * @return Base frequency in Hz.
+             */
+            CASPI_NON_BLOCKING
+            FloatType getFrequency() const
+            {
+                return baseFrequency_;
+            }
 
             /**
-             * @brief Update connection modulation depth at runtime
-             * REAL-TIME SAFE: Atomic write (floats are atomic on most platforms)
+             * @brief Updates the modulation depth of a connection.
+             *
+             * @param connectionIndex Index of the modulation connection.
+             * @param depth New modulation depth value.
              */
-            CASPI_NON_ALLOCATING
-            void setConnectionDepth (size_t connectionIndex, FloatType depth)
+            CASPI_NON_BLOCKING
+            void setConnectionDepth (const size_t connectionIndex, const FloatType depth)
             {
                 if (connectionIndex < connections_.size())
                 {
-                    connections_[connectionIndex].modulationDepth = static_cast<float> (depth);
+                    connections_[connectionIndex].modulationDepth =
+                        static_cast<float> (depth);
                 }
             }
 
-            // ====================================================================
-            // Envelope Control
-            // ====================================================================
-
-            CASPI_NON_ALLOCATING
+            /**
+             * @brief Triggers note-on for all operators.
+             */
+            CASPI_NON_BLOCKING
             void noteOn()
             {
                 for (auto& op : operators_)
@@ -566,7 +663,10 @@ namespace CASPI
                 }
             }
 
-            CASPI_NON_ALLOCATING
+            /**
+             * @brief Triggers note-off for all operators.
+             */
+            CASPI_NON_BLOCKING
             void noteOff()
             {
                 for (auto& op : operators_)
@@ -575,8 +675,19 @@ namespace CASPI
                 }
             }
 
-            CASPI_NON_ALLOCATING
-            void setADSR (FloatType attack, FloatType decay, FloatType sustain, FloatType release)
+            /**
+             * @brief Sets ADSR envelope parameters for all operators.
+             *
+             * @param attack Attack time.
+             * @param decay Decay time.
+             * @param sustain Sustain level.
+             * @param release Release time.
+             */
+            CASPI_NON_BLOCKING
+            void setADSR (const FloatType attack,
+                          const FloatType decay,
+                          const FloatType sustain,
+                          const FloatType release)
             {
                 for (auto& op : operators_)
                 {
@@ -584,7 +695,10 @@ namespace CASPI
                 }
             }
 
-            CASPI_NON_ALLOCATING
+            /**
+             * @brief Enables envelope processing on all operators.
+             */
+            CASPI_NON_BLOCKING
             void enableEnvelopes()
             {
                 for (auto& op : operators_)
@@ -593,7 +707,10 @@ namespace CASPI
                 }
             }
 
-            CASPI_NON_ALLOCATING
+            /**
+             * @brief Disables envelope processing on all operators.
+             */
+            CASPI_NON_BLOCKING
             void disableEnvelopes()
             {
                 for (auto& op : operators_)
@@ -602,7 +719,74 @@ namespace CASPI
                 }
             }
 
-            CASPI_NON_ALLOCATING
+            /**
+             * @brief Sets the final output gain.
+             *
+             * @param gain Linear gain multiplier.
+             */
+            CASPI_NON_BLOCKING
+            void setOutputGain (const FloatType gain)
+            {
+                outputGain_ = gain;
+            }
+
+            /**
+             * @brief Returns the current output gain.
+             *
+             * @return Output gain value.
+             */
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+                FloatType
+                getOutputGain() const
+            {
+                return outputGain_;
+            }
+
+            /**
+             * @brief Enables or disables automatic output scaling.
+             *
+             * @param enable True to enable scaling, false to disable.
+             */
+            CASPI_NON_BLOCKING
+            void setAutoScaleOutputs (const bool enable)
+            {
+                autoScaleOutputs_ = enable;
+            }
+
+            /**
+             * @brief Returns whether automatic output scaling is enabled.
+             *
+             * @return True if enabled.
+             */
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD bool getAutoScaleOutputs() const
+            {
+                return autoScaleOutputs_;
+            }
+
+            /**
+             * @brief Returns the peak output level since last reset.
+             *
+             * @return Peak absolute output value.
+             */
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+            FloatType getPeakLevel() const
+            {
+                return peakLevel_;
+            }
+
+            /**
+             * @brief Resets the peak level meter.
+             */
+            CASPI_NON_BLOCKING
+            void resetPeakLevel()
+            {
+                peakLevel_ = FloatType (0);
+            }
+
+            /**
+             * @brief Resets all operator state and clears modulation buffers.
+             */
+            CASPI_NON_BLOCKING
             void reset()
             {
                 for (auto& op : operators_)
@@ -610,47 +794,45 @@ namespace CASPI
                     op->reset();
                 }
 
-                std::fill (modulationSignals_.begin(), modulationSignals_.end(), FloatType (0));
+                std::fill (modulationSignals_.begin(),
+                           modulationSignals_.end(),
+                           FloatType (0));
             }
 
-            // ====================================================================
-            // Real-Time Rendering
-            // ====================================================================
-
             /**
-             * @brief Render one sample
-             * REAL-TIME SAFE: No allocations, bounded execution time
+             * @brief Renders a single audio sample.
+             *
+             * Executes operators in precomputed topological order and propagates
+             * modulation signals through the graph.
+             *
+             * @return Rendered audio sample.
              */
-            CASPI_NON_BLOCKING
-            CASPI_NON_ALLOCATING
+            CASPI_NON_BLOCKING CASPI_NO_DISCARD
             FloatType renderSample() override
             {
-                const size_t numOps = operators_.size();
+                std::fill (modulationSignals_.begin(),
+                           modulationSignals_.end(),
+                           FloatType (0));
 
-                // Clear modulation buffers
-                std::fill (modulationSignals_.begin(), modulationSignals_.end(), FloatType (0));
-
-                // Render in topological order
                 for (size_t opIndex : executionOrder_)
                 {
-                    // Set modulation input
                     operators_[opIndex]->setModulationInput (modulationSignals_[opIndex]);
 
-                    // Render operator
-                    operatorOutputs_[opIndex] = operators_[opIndex]->renderSample();
+                    operatorOutputs_[opIndex] = Core::flushToZero (operators_[opIndex]->renderSample());
 
-                    // Flush denormals
-                    operatorOutputs_[opIndex] = Core::flushToZero (operatorOutputs_[opIndex]);
-
-                    // Distribute to targets (optimized with adjacency list)
+                    // Instead of hardcoded structured bindings:
+#if defined(CASPI_FEATURES_HAS_STRUCTURED_BINDINGS)
                     for (auto [target, connIdx] : adjacencyList_[opIndex])
+#else
+                    for (const auto& connPair : adjacencyList_[opIndex])
                     {
-                        modulationSignals_[target] += operatorOutputs_[opIndex]
-                                                      * connections_[connIdx].modulationDepth;
+                        size_t target = connPair.first;
+                        size_t connIdx = connPair.second;
+#endif
+                        modulationSignals_[target] += operatorOutputs_[opIndex] * connections_[connIdx].modulationDepth;
                     }
                 }
 
-                // Mix outputs
                 if (outputOperators_.empty())
                 {
                     return FloatType (0);
@@ -662,16 +844,30 @@ namespace CASPI
                     output += operatorOutputs_[outIdx];
                 }
 
+                if (autoScaleOutputs_ && outputOperators_.size() > 1)
+                {
+                    output /= static_cast<FloatType> (outputOperators_.size());
+                }
+
+                output *= outputGain_;
+
+                const FloatType absOut = std::abs (output);
+                if (absOut > peakLevel_)
+                {
+                    peakLevel_ = absOut;
+                }
+
                 return Core::flushToZero (output);
             }
 
             /**
-             * @brief Render block of samples
-             * REAL-TIME SAFE: No allocations
+             * @brief Renders a block of audio samples.
+             *
+             * @param buffer Output buffer.
+             * @param numSamples Number of samples to render.
              */
             CASPI_NON_BLOCKING
-            CASPI_NON_ALLOCATING
-            void renderBlock (FloatType* buffer, size_t numSamples)
+            void renderBlock (FloatType* buffer, const size_t numSamples)
             {
                 for (size_t i = 0; i < numSamples; ++i)
                 {
@@ -679,24 +875,49 @@ namespace CASPI
                 }
             }
 
-            // ====================================================================
-            // Inspection
-            // ====================================================================
+            /**
+             * @brief Producer interface override for per-frame rendering.
+             *
+             * @param channel Channel index (ignored).
+             * @param frame Frame index (ignored).
+             * @return Rendered audio sample.
+             */
+            CASPI_NO_DISCARD CASPI_NON_BLOCKING
+                FloatType
+                renderSample (const std::size_t channel,
+                              const std::size_t frame) override
+            {
+                (void) channel;
+                (void) frame;
+                return renderSample();
+            }
 
-            CASPI_NON_ALLOCATING
-            size_t getNumOperators() const { return operators_.size(); }
+            /**
+             * @brief Returns the number of operators in the graph.
+             *
+             * @return Operator count.
+             */
+            CASPI_NON_ALLOCATING CASPI_NO_DISCARD
+            size_t getNumOperators() const
+            {
+                return operators_.size();
+            }
 
-            CASPI_NON_ALLOCATING
+            /**
+             * @brief Returns the execution order used for rendering.
+             *
+             * @return Pointer to execution order vector.
+             */
+            CASPI_NON_ALLOCATING CASPI_NO_DISCARD
             const std::vector<size_t>* getExecutionOrder() const
             {
                 return &executionOrder_;
             }
 
         private:
-            // ====================================================================
-            // Initialization (called from constructor)
-            // ====================================================================
-
+            /**
+             * @brief Computes a topological execution order for the modulation graph.
+             */
             void computeExecutionOrder()
             {
                 const size_t n = operators_.size();
@@ -710,8 +931,9 @@ namespace CASPI
 
                 for (const auto& conn : connections_)
                 {
-                    adjacencyList[conn.sourceOperator].push_back (conn.targetOperator);
-                    inDegree[conn.targetOperator]++;
+                    adjacencyList[conn.sourceOperator].push_back (
+                        conn.targetOperator);
+                    ++inDegree[conn.targetOperator];
                 }
 
                 std::queue<size_t> queue;
@@ -728,14 +950,13 @@ namespace CASPI
 
                 while (! queue.empty())
                 {
-                    size_t current = queue.front();
+                    const size_t current = queue.front();
                     queue.pop();
                     executionOrder_.push_back (current);
 
                     for (size_t neighbor : adjacencyList[current])
                     {
-                        --inDegree[neighbor];
-                        if (inDegree[neighbor] == 0)
+                        if (--inDegree[neighbor] == 0)
                         {
                             queue.push (neighbor);
                         }
@@ -744,8 +965,7 @@ namespace CASPI
             }
 
             /**
-             * @brief Build adjacency list for O(V+E) rendering
-             * Avoids O(V×E) connection search in hot path
+             * @brief Builds an adjacency list for fast modulation routing during rendering.
              */
             void buildAdjacencyList()
             {
@@ -755,32 +975,23 @@ namespace CASPI
                 {
                     const auto& conn = connections_[i];
                     adjacencyList_[conn.sourceOperator].emplace_back (
-                        conn.targetOperator,
-                        i);
+                        conn.targetOperator, i);
                 }
             }
 
-            // ====================================================================
-            // Member Variables
-            // ====================================================================
-
-            // Graph structure (immutable after construction)
             std::vector<std::unique_ptr<Operator<FloatType>>> operators_;
             std::vector<ModulationConnection> connections_;
             std::vector<size_t> outputOperators_;
             std::vector<size_t> executionOrder_;
-
-            // Optimized rendering data structures
             std::vector<std::vector<std::pair<size_t, size_t>>> adjacencyList_;
-
-            // Working buffers (pre-allocated)
             std::vector<FloatType> modulationSignals_;
             std::vector<FloatType> operatorOutputs_;
-
-            // Runtime parameters
             FloatType baseFrequency_;
+            FloatType outputGain_;
+            bool autoScaleOutputs_;
+            FloatType peakLevel_;
     };
 
 } // namespace CASPI
 
-#endif // CASPI_FMGRAPH_SEPARATED_H
+#endif // CASPI_FMGRAPH_H
