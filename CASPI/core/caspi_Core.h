@@ -414,45 +414,65 @@ namespace CASPI::Core
 #endif
     }
 
-    [[maybe_unused]]
     inline void configureFlushToZero(bool enable) {
 #if defined(CASPI_FEATURES_HAS_FLUSH_ZERO_DENORMALS)
         if (enable)
-        {
-            _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON);
-            _MM_SET_DENORMALS_ZERO_MODE (_MM_DENORMALS_ZERO_ON);
-        }
+            _mm_setcsr(_mm_getcsr() | (1u << 15) | (1u << 6));
         else
-        {
-            _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_OFF);
-            _MM_SET_DENORMALS_ZERO_MODE (_MM_DENORMALS_ZERO_OFF);
-        }
-
+            _mm_setcsr(_mm_getcsr() & ~((1u << 15) | (1u << 6)));
 #elif defined(CASPI_FEATURES_HAS_FLUSH_ZERO)
         if (enable)
-            _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+            _mm_setcsr(_mm_getcsr() | (1u << 15));
         else
-            _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
-
+            _mm_setcsr(_mm_getcsr() & ~(1u << 15));
 #else
-        // Fallback for unsupported platforms
         (void) enable;
 #endif
     }
 
-    class ScopedFlushDenormals {
+    template<typename FloatType>
+inline FloatType flushToZeroScalar(FloatType value,
+                                   FloatType threshold = FloatType(1e-15))
+    {
+#if defined(CASPI_DISABLE_FLUSH_DENORMALS)
+        return value;
+#else
+        return (value * static_cast<FloatType>(std::abs(value) >= threshold));
+#endif
+    }
+
+    class ScopedFlushDenormals
+    {
     public:
-        ScopedFlushDenormals() {
-#if ! defined(CASPI_DISABLE_FLUSH_DENORMALS)
-            configureFlushToZero(true);
+#if defined(CASPI_FEATURES_HAS_FLUSH_ZERO)
+
+        ScopedFlushDenormals() noexcept
+            : mxcsr_(_mm_getcsr())
+        {
+#if defined(CASPI_FEATURES_HAS_FLUSH_ZERO_DENORMALS)
+            _mm_setcsr(mxcsr_ | (1u << 15) | (1u << 6)); // FZ | DAZ
+#else
+            _mm_setcsr(mxcsr_ | (1u << 15)); // FZ only
 #endif
         }
 
-        ~ScopedFlushDenormals() {
-#if ! defined(CASPI_DISABLE_FLUSH_DENORMALS)
-            configureFlushToZero(false);
-#endif
+        ~ScopedFlushDenormals() noexcept
+        {
+            _mm_setcsr(mxcsr_);
         }
+
+#else
+        ScopedFlushDenormals() noexcept = default;
+        ~ScopedFlushDenormals() = default;
+#endif
+
+        ScopedFlushDenormals(const ScopedFlushDenormals&) = delete;
+        ScopedFlushDenormals& operator=(const ScopedFlushDenormals&) = delete;
+
+    private:
+#if defined(CASPI_FEATURES_HAS_FLUSH_ZERO)
+        unsigned int mxcsr_;
+#endif
     };
 } // namespace CASPI::Core
 
