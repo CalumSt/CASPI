@@ -144,6 +144,21 @@ namespace CASPI
             envelope.setSampleRate(Constants::DEFAULT_SAMPLE_RATE<FloatType>);
         }
 
+        Operator(FloatType SampleRate, FloatType freq,
+                 FloatType modIndex, FloatType modDepth,
+                 FloatType modFeedback,
+                 const ModulationMode modMode)
+                : frequency(freq),
+              modulationIndex(modIndex),
+              modulationDepth(modDepth),
+              modulationFeedback(modFeedback),
+              modulationMode(modMode)
+        {
+            this->setSampleRate(SampleRate);
+            envelope.setSampleRate(SampleRate);
+            updatePhaseIncrement();
+        }
+
         // ====================================================================
         // Frequency Control
         // ====================================================================
