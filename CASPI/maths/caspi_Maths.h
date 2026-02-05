@@ -6,6 +6,7 @@
 #define CASPI_MATHS_H
 
 #include "base/caspi_Constants.h"
+#include "base/caspi_Features.h"
 #include <cmath>
 #include <vector>
 
@@ -59,7 +60,7 @@ std::vector<FloatType> range (FloatType start, FloatType end, int numberOfSteps)
 }
 
 template <typename FloatType>
-static FloatType linearTodBFS (const FloatType linear)
+CASPI_NO_DISCARD static FloatType linearTodBFS (const FloatType linear)
 {
     if (linear > CASPI::Constants::zero<FloatType>)
     {
@@ -69,7 +70,7 @@ static FloatType linearTodBFS (const FloatType linear)
 }
 
 template <typename FloatType>
-static FloatType dBFSToLinear (const FloatType dBFS)
+CASPI_NO_DISCARD static FloatType dBFSToLinear (const FloatType dBFS)
 {
     if (dBFS > CASPI::Constants::MINUS_INF_DBFS<FloatType>)
     {
@@ -79,13 +80,13 @@ static FloatType dBFSToLinear (const FloatType dBFS)
 }
 
 template <typename FloatType>
-static FloatType midiNoteToHz(const int noteNumber)
+CASPI_NO_DISCARD static FloatType midiNoteToHz(const int noteNumber)
 {
     return static_cast<FloatType>(Constants::A4_FREQUENCY<FloatType> * std::pow(2, (static_cast<double>(noteNumber) - Constants::A4_MIDI<FloatType>) / Constants::NOTES_IN_OCTAVE<FloatType>));
 }
 
 template <typename FloatType>
-[[nodiscard]] FloatType clamp(const FloatType value, const FloatType lower, const FloatType upper)
+CASPI_NO_DISCARD FloatType clamp(const FloatType value, const FloatType lower, const FloatType upper)
 {
     return value < lower ? lower : (value > upper ? upper : value);
 }
@@ -102,6 +103,53 @@ std::underlying_type_t<Enum> to_underlying(Enum e) noexcept
     return static_cast<std::underlying_type_t<Enum>>(e);
 }
 
+    template <typename T>
+CASPI_NO_DISCARD
+inline T abs_branchless(T x) noexcept {
+#if defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
+
+    if constexpr (std::is_integral<T>::value && std::is_signed<T>::value)
+    {
+        // Two's complement branchless abs
+        const T mask = x >> (sizeof(T) * 8 - 1);
+        return (x ^ mask) - mask;
+    }
+    else if constexpr (std::is_floating_point<T>::value)
+    {
+        // Clear sign bit
+        using UInt =
+            typename std::conditional<sizeof(T) == 4, uint32_t, uint64_t>::type;
+
+        UInt bits;
+        std::memcpy(&bits, &x, sizeof(T));
+        bits &= ~(UInt(1) << (sizeof(T) * 8 - 1));
+        std::memcpy(&x, &bits, sizeof(T));
+        return x;
+    }
+    else
+    {
+        return x;
+    }
+
+#else
+    // C++11 fallback (still branchless at machine level)
+    return x < T(0) ? -x : x;
+#endif
+}
+
+template <typename T>
+CASPI_NO_DISCARD
+inline T lerp_branchless(T a, T b, T t) noexcept
+{
+    return a + t * (b - a);
+}
+
+template <typename T>
+CASPI_NO_DISCARD
+inline T wrap_01_branchless(T x) noexcept
+{
+    return x - static_cast<T>(static_cast<int>(x));
+}
 } // namespace CASPI::Maths
 
 #endif //CASPI_MATHS_H
