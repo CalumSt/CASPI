@@ -63,6 +63,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         CASPI
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        CASPI_RT_SAFE_EXPECTS
+)
+
 gtest_discover_tests(${PROJECT_NAME})
 
 add_test(NAME MyUnitTests COMMAND ${PROJECT_NAME})
