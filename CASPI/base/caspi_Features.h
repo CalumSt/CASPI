@@ -54,28 +54,36 @@ Y88b  d88P 888  888      X88 888 d88P 888
     #endif
 
     #if defined(CASPI_CPP_17)
-
+        #if defined(__cpp_lib_math_special_functions)
+            #define CASPI_HAS_STD_BESSEL
+        #endif
         #define CASPI_NO_DISCARD [[nodiscard]]
         #define CASPI_MAYBE_UNUSED [[maybe_unused]]
         #define CASPI_FEATURES_HAS_IF_CONSTEXPR
         #define CASPI_CPP17_IF_CONSTEXPR if constexpr
         #define CASPI_FEATURES_HAS_NOTHROW_SWAPPABLE
         #define CASPI_FEATURES_HAS_TRAIT_VARIABLE_TEMPLATES
+        #define CASPI_FEATURES_HAS_STRUCTURED_BINDINGS
 
     #else
 
         #define CASPI_NO_DISCARD
-#define CASPI_MAYBE_UNUSED
-#define CASPI_CPP17_IF_CONSTEXPR if
-
-#endif
-
-#if defined(CASPI_CPP_14)
-
-#endif
-#if defined(CASPI_CPP_11)
+        #define CASPI_MAYBE_UNUSED
+        #define CASPI_CPP17_IF_CONSTEXPR if
 
     #endif
+
+    #if defined(CASPI_CPP_14)
+        #if defined(__cpp_lib_make_unique) && (__cpp_lib_make_unique >= 201304L)
+        #define CASPI_FEATURES_HAS_MAKE_UNIQUE
+        #endif
+
+#else
+
+    #endif
+    #if defined(CASPI_CPP_11)
+
+        #endif
 
 #endif
 
@@ -121,6 +129,15 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #  endif
 #else
 #  define CASPI_ALLOCATING
+#endif
+
+// always inline
+#if defined(__GNUC__) || defined(CASPI_COMPILER_CLANG)
+    #define CASPI_ALWAYS_INLINE inline __attribute__((always_inline))
+#elif defined(CASPI_COMPILER_MSVC)
+    #define CASPI_ALWAYS_INLINE __forceinline
+#else
+    #define CASPI_ALWAYS_INLINE inline
 #endif
 
 // SSE2 enables FLUSH_ZERO (FZ)

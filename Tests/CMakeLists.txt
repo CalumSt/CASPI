@@ -40,8 +40,10 @@ set(SOURCES
         base/Utilities_test.cpp
         processors/Filter_test.cpp
         processors/Envelope_test.cpp
-        sources/PMOperator_test.cpp
-        synthesizers/PMAlgorithm_test.cpp
+        sources/Operator_test.cpp
+        synthesizers/FMGraph_test.cpp
+        maths/Spectral_test.cpp
+        maths/FMTheory_test.cpp
         processors/Gain_test.cpp
         maths/FFT_test.cpp
         maths/Maths_test.cpp
@@ -51,10 +53,18 @@ set(SOURCES
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 # --------------------------------------------------------------------------
-    
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
         gtest_main
         CASPI
+)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        CASPI_RT_SAFE_EXPECTS
 )
 
 gtest_discover_tests(${PROJECT_NAME})

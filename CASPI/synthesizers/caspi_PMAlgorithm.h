@@ -17,7 +17,7 @@
 * @author CS Islay
 ************************************************************************/
 
-#include "oscillators/caspi_PMOperator.h"
+#include "oscillators/caspi_Operator.h"
 #include "base/caspi_Constants.h"
 #include "maths/caspi_Maths.h"
 

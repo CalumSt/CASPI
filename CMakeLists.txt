@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.29)
 
 set(PROJECT_NAME "CASPI")
+option(CASPI_ENABLE_DEBUG "Enable CASPI debug features (asserts, checks)" OFF)
+
 message(STATUS "Configuring CASPI")
 # Detect if standalone build (top-level project)
 set(CASPI_IS_STANDALONE_BUILD OFF)
@@ -38,6 +40,11 @@ target_include_directories(${PROJECT_NAME} INTERFACE
 # explicitly list the unified header for IDEs (has no build effect)
 target_sources(CASPI INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h
+)
+
+# Define CASPI_DEBUG if CASPI_ENABLE_DEBUG is ON
+target_compile_definitions(CASPI INTERFACE
+        $<$<BOOL:${CASPI_ENABLE_DEBUG}>:CASPI_DEBUG>
 )
 
 # Only do these if this is the main project, and not if it is included through add_subdirectory

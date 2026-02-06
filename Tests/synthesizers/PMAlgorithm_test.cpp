@@ -20,7 +20,7 @@ Algorithm Tests
 
 // For testing, set private to public
 #define private public
-#include "oscillators/caspi_PMOperator.h"
+#include "oscillators/caspi_Operator.h"
 #include "oscillators/caspi_BlepOscillator.h"
 #include "synthesizers/caspi_PMAlgorithm.h"
 

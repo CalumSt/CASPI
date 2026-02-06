@@ -17,7 +17,6 @@
 
 // Utilities
 #include "maths/caspi_FFT.h"
-#include "maths/caspi_FFT_new.h"
 #include "maths/caspi_Maths.h"
 
 // oscillators
