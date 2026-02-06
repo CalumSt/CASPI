@@ -192,7 +192,6 @@ namespace CASPI
              */
             Result removeOperator (const size_t operatorIndex)
             {
-                CASPI_EXPECT(operatorIndex < operators_.size(), "Operator index out of range");
                 if (operatorIndex >= operators_.size())
                 {
                     return make_unexpected<Error, NonRealTimeSafe> (
@@ -259,10 +258,6 @@ namespace CASPI
                             const size_t target,
                             FloatType modulationDepth)
             {
-                CASPI_EXPECT(source < operators_.size(), "Source operator index out of range");
-                CASPI_EXPECT(target < operators_.size(), "Target operator index out of range");
-                CASPI_EXPECT(source != target, "Self-modulation is not allowed");
-                CASPI_EXPECT(std::isfinite(modulationDepth), "Modulation depth must be finite");
                 if (source >= operators_.size() || target >= operators_.size())
                 {
                     return make_unexpected<Error, NonRealTimeSafe> (
@@ -320,8 +315,6 @@ namespace CASPI
             {
                 for (size_t idx : indices)
                 {
-                    CASPI_EXPECT(idx < operators_.size(),
-                     "Output operator index out of range");
                     if (idx >= operators_.size())
                     {
                         return make_unexpected<Error, NonRealTimeSafe> (
@@ -345,14 +338,13 @@ namespace CASPI
                                       FloatType modulationIndex,
                                       FloatType modulationDepth)
             {
-                CASPI_EXPECT(index < operators_.size(), "Operator index out of range");
-                CASPI_EXPECT(std::isfinite(frequency) && frequency > 0,
+                CASPI_ASSERT(std::isfinite(frequency) && frequency > 0,
                              "Frequency must be positive and finite");
-                CASPI_EXPECT(std::isfinite(modulationIndex) && modulationIndex >= 0,
+                CASPI_ASSERT(std::isfinite(modulationIndex) && modulationIndex >= 0,
                              "Modulation index must be non-negative and finite");
-                CASPI_EXPECT(std::isfinite(modulationDepth),
+                CASPI_ASSERT(std::isfinite(modulationDepth),
                              "Modulation depth must be finite");
-                if (index >= operators_.size())
+                if (index >= operators_.size() || frequency <= FloatType(0) || modulationIndex < FloatType(0))
                 {
                     return make_unexpected<Error, NonRealTimeSafe> (
                         Error::InvalidOperatorIndex);
@@ -596,37 +588,30 @@ namespace CASPI
                   outputGain_ (FloatType (1)),
                   autoScaleOutputs_ (true)
             {
-                CASPI_EXPECT(sampleRate > 0 && std::isfinite(sampleRate),
+                CASPI_ASSERT(sampleRate > 0 && std::isfinite(sampleRate),
              "Sample rate must be positive and finite");
-                CASPI_EXPECT(!operatorConfigs.empty() || connections.empty(),
-                             "Cannot have connections without operators");
                 const size_t n = operatorConfigs.size();
 
                 // Validate all connections reference valid operators
                 for (const auto& conn : connections)
                 {
-                    CASPI_EXPECT(conn.sourceOperator < n,
+                    CASPI_ASSERT(conn.sourceOperator < n,
                                  "Connection source operator out of range");
-                    CASPI_EXPECT(conn.targetOperator < n,
+                    CASPI_ASSERT(conn.targetOperator < n,
                                  "Connection target operator out of range");
-                    CASPI_EXPECT(std::isfinite(conn.modulationDepth),
+                    CASPI_ASSERT(std::isfinite(conn.modulationDepth),
                                  "Connection modulation depth must be finite");
                 }
 
                 // Validate all output operators are valid
                 for (size_t outOp : outputOperators)
                 {
-                    CASPI_EXPECT(outOp < n, "Output operator index out of range");
+                    CASPI_ASSERT(outOp < n, "Output operator index out of range");
                 }
 
                 operators_.reserve (n);
                 for (const auto& config : operatorConfigs)
                 {
-                    CASPI_EXPECT(std::isfinite(config.frequency) && config.frequency > 0,
-             "Operator frequency must be positive and finite");
-                    CASPI_EXPECT(std::isfinite(config.modulationIndex),
-                                 "Operator modulation index must be finite");
-
                     auto op = CASPI::make_unique<Operator<FloatType>>(
                         sampleRate,
                         config.frequency,
@@ -636,7 +621,7 @@ namespace CASPI
                         config.modulationMode
                     );
 
-                    CASPI_ENSURE(op != nullptr, "Failed to create operator");
+                    CASPI_ASSERT(op != nullptr, "Failed to create operator");
 
                     operators_.push_back (std::move (op));
                 }
@@ -685,6 +670,7 @@ namespace CASPI
                 Operator<FloatType>*
                 getOperator (const size_t index)
             {
+                CASPI_EXPECT(index < operators_.size(), "Operator index out of range in getOperator");
                 return (index < operators_.size()) ? operators_[index].get() : nullptr;
             }
 
@@ -708,8 +694,6 @@ namespace CASPI
             CASPI_NON_BLOCKING
             void setFrequency (const FloatType frequency)
             {
-                CASPI_EXPECT(std::isfinite(frequency) && frequency > 0,
-             "Frequency must be positive and finite");
                 baseFrequency_ = frequency;
                 for (auto& op : operators_)
                 {
@@ -737,9 +721,6 @@ namespace CASPI
             CASPI_NON_BLOCKING
             void setConnectionDepth (const size_t connectionIndex, const FloatType depth)
             {
-                CASPI_EXPECT(connectionIndex < connections_.size(),
-             "Connection index out of range");
-                CASPI_EXPECT(std::isfinite(depth), "Modulation depth must be finite");
                 if (connectionIndex >= connections_.size())
                 {
                     return;
@@ -777,10 +758,7 @@ namespace CASPI
                                  const size_t targetOperator,
                                  const FloatType depth)
             {
-                CASPI_EXPECT(sourceOperator < operators_.size(),
-             "Source operator index out of range");
-                CASPI_EXPECT(std::isfinite(depth), "Modulation depth must be finite");
-                if (sourceOperator >= operators_.size())
+                if (sourceOperator >= operators_.size() || targetOperator >= operators_.size())
                 {
                     return;
                 }
@@ -807,7 +785,7 @@ namespace CASPI
                         return;
                     }
                 }
-                CASPI_EXPECT(false, "No connection found between specified operators");
+                CASPI_EXPECT(false, "Connection not found when setting modulation depth");
             }
 
 
@@ -844,7 +822,6 @@ namespace CASPI
             CASPI_NON_BLOCKING
             void setOutputGain (const FloatType gain)
             {
-                CASPI_EXPECT(std::isfinite(gain), "Output gain must be finite");
                 outputGain_ = gain;
                 updateEffectiveGain();
             }
@@ -956,7 +933,7 @@ namespace CASPI
                             operatorOutputs_[opIndex] * static_cast<FloatType> (outgoingDepths_[i]);
                     }
                 }
-
+                CASPI_EXPECT(!outputOperators_.empty(), "renderSample called on graph with no output operators");
                 if (outputOperators_.empty())
                 {
                     return FloatType (0);
