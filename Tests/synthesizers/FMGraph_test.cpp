@@ -1,10 +1,11 @@
-#include "synthesizers/caspi_FMGraph.h"
-#include "analysis/caspi_SpectralProfile.h"
-#include "analysis/caspi_FMTheory.h"
 #include <gtest/gtest.h>
 #include <cmath>
 #include <vector>
 #include <fstream>
+
+#include "synthesizers/caspi_FMGraph.h"
+#include "analysis/caspi_SpectralProfile.h"
+#include "analysis/caspi_FMTheory.h"
 
 using namespace CASPI;
 
@@ -76,6 +77,7 @@ TEST(FMGraphBuilder, AddOperator)
 
 TEST(FMGraphBuilder, RemoveOperator)
 {
+    CASPI::expectCounter().reset();
     FMGraphBuilder<double> builder;
 
     size_t op1 = builder.addOperator();
@@ -96,6 +98,7 @@ TEST(FMGraphBuilder, RemoveInvalidOperator)
     auto result = builder.removeOperator(999);
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), FMGraphError::InvalidOperatorIndex);
+    EXPECT_EQ(CASPI::expectCounter().get(), 1);
 }
 
 TEST(FMGraphBuilder, ConnectOperators)
@@ -132,6 +135,7 @@ TEST(FMGraphBuilder, UpdateExistingConnection)
 
 TEST(FMGraphBuilder, ConnectInvalidOperators)
 {
+    CASPI::expectCounter().reset();
     FMGraphBuilder<double> builder;
 
     size_t op1 = builder.addOperator();
@@ -140,11 +144,13 @@ TEST(FMGraphBuilder, ConnectInvalidOperators)
     auto result = builder.connect(op1, 999, 1.0);
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), FMGraphError::InvalidOperatorIndex);
+    EXPECT_EQ(CASPI::expectCounter().get(), 1);
 
     // Self-connection
     result = builder.connect(op1, op1, 1.0);
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), FMGraphError::InvalidConnection);
+    EXPECT_EQ(CASPI::expectCounter().get(), 2);
 }
 
 TEST(FMGraphBuilder, DisconnectOperators)
@@ -180,6 +186,7 @@ TEST(FMGraphBuilder, SetOutputOperators)
 
 TEST(FMGraphBuilder, SetInvalidOutputOperators)
 {
+    CASPI::expectCounter().reset();
     FMGraphBuilder<double> builder;
 
     size_t op1 = builder.addOperator();
@@ -187,6 +194,7 @@ TEST(FMGraphBuilder, SetInvalidOutputOperators)
     auto result = builder.setOutputOperators({op1, 999});
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), FMGraphError::InvalidOperatorIndex);
+    EXPECT_EQ(CASPI::expectCounter().get(), 1);
 }
 
 TEST(FMGraphBuilder, ConfigureOperator)
@@ -201,11 +209,13 @@ TEST(FMGraphBuilder, ConfigureOperator)
 
 TEST(FMGraphBuilder, ConfigureInvalidOperator)
 {
+    CASPI::expectCounter().reset();
     FMGraphBuilder<double> builder;
 
     auto result = builder.configureOperator(999, 440.0, 2.0, 0.8);
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), FMGraphError::InvalidOperatorIndex);
+    EXPECT_EQ(CASPI::expectCounter().get(), 1);
 }
 
 // ============================================================================
@@ -318,6 +328,8 @@ TEST(FMGraphCompilation, InvalidGraphWithCycle)
     auto result = builder.compile(SAMPLE_RATE);
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), FMGraphError::CycleDetected);
+
+    EXPECT_EQ(CASPI::expectCounter().get(), 1);
 }
 
 TEST(FMGraphCompilation, GraphWithoutOutputs)
@@ -368,6 +380,7 @@ TEST_F(FMGraphDSPTest, GetOperator)
 
     auto* invalid = dsp.getOperator(999);
     EXPECT_EQ(invalid, nullptr);
+    EXPECT_EQ(CASPI::expectCounter().get(), 1);
 }
 
 TEST_F(FMGraphDSPTest, SetFrequency)
