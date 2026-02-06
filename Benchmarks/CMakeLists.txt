@@ -28,7 +28,6 @@ FetchContent_MakeAvailable(google_benchmark)
 set(SOURCES
         base/Buffer_bm.cpp
         base/Phase_bm.cpp
-        base/Denormals_bm.cpp
         base/Expected_bm.cpp
 )
 # --------------------------------------------------------------------------

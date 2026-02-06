@@ -3,9 +3,9 @@
 #include <cmath>
 #include <gtest/gtest.h>
 #include "oscillators/caspi_BlepOscillator.h"
-#include "../test_helpers.h"
 #define private public
-#include "maths/caspi_FFT_new.h"
+#include "../test_helpers.h"
+#include "maths/caspi_FFT.h"
 
 /*
  Can initialise an FFT engine
@@ -27,7 +27,7 @@
  Can queue multiple FFT configs
  Can assign priority to FFT configs
  Can complete higher priority FFTs first
- */
+*/
 
 std::vector<double> constructExpectedFrequencyBins(int fft_size, double sampleRate)
 {
@@ -58,25 +58,24 @@ const std::vector<double> sampleRateList = {48000.0,44100.0,22050.0};
 
 TEST(FFTtests, constructor_test)
 {
-    CASPI::FFT_new engine;
+    CASPI::FFT engine;
     ASSERT_TRUE (true);
-    ASSERT_EQ (engine.radix,2);
-    ASSERT_EQ(engine.sampleRate, 44100);
-    ASSERT_EQ(engine.size, 256);
+    ASSERT_EQ(engine.config_.sampleRate, 44100);
+    ASSERT_EQ(engine.config_.size, 256);
 }
 
 TEST(FFTtests, generateFrequencyBins_test)
 {
     auto bins = constructExpectedFrequencyBins(256,44100);
-    CASPI::FFT_new engine;
+    CASPI::FFT engine;
     auto testBins = engine.generateFrequencyBins();
     compareVectors (bins,testBins);
 }
 
 TEST(FFTtests, generateTwiddleTable_test)
 {
-    CASPI::FFT_new engine;
-    ASSERT_EQ (engine.size, 256);
+    CASPI::FFT engine;
+    ASSERT_EQ (engine.config_.size, 256);
 
 }
 

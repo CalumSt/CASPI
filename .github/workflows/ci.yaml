@@ -58,7 +58,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         run: |
-          CONFIGURE_OPTS=""
+          CONFIGURE_OPTS="-DCASPI_ENABLE_TESTS=ON -DCASPI_ENABLE_BENCHMARKS=OFF"
           if [[ "$RUNNER_OS" != "Windows" ]]; then
             CONFIGURE_OPTS="-DCMAKE_C_COMPILER=${{ matrix.c_compiler }} -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}"
           fi
@@ -70,21 +70,6 @@ jobs:
       - name: Run Unit Tests
         working-directory: ${{ env.BUILD_DIR }}
         run: ctest --build-config ${{ matrix.build_type }} --output-on-failure --test-dir ${{ env.TEST_DIR }}
-
-      - name: Run Benchmarks
-        if: matrix.build_type == 'Release'
-        working-directory: ${{ env.BUILD_DIR }}
-        shell: bash  # Use bash on all platforms
-        run: |
-          chmod +x Benchmarks/Benchmarks || true
-          ./Benchmarks/Benchmarks --benchmark_format=json --benchmark_out=benchmark_report.json
-
-      - name: Upload Benchmark Report
-        if: matrix.build_type == 'Release'
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-report
-          path: ./Benchmarks/benchmark_report.json
 
   # Separate job for sanitizers (Linux only, Debug only for now)
   sanitize-test:

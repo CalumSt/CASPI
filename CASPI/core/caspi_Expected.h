@@ -1,24 +1,24 @@
 /*************************************************************************
-*  .d8888b.                             d8b
-* d88P  Y88b                            Y8P
-* 888    888
-* 888         8888b.  .d8888b  88888b.  888
-* 888            "88b 88K      888 "88b 888
-* 888    888 .d888888 "Y8888b. 888  888 888
-* Y88b  d88P 888  888      X88 888 d88P 888
-*  "Y8888P"  "Y888888  88888P' 88888P"  888
-*                              888
-*                              888
-*                              888
-*
-* @file caspi_Expected.h Graceful error handling.
-* @author CS Islay
-* @brief Provides an implementation of the expected<T, E> type that is C++11 compatible.
-*        This type is used to represent a value that may either be a valid result of type T
-*        or an error of type E.
-*        It is similar to std::expected introduced in C++23, probably less robust.
-*        Note that it is written in a format similar to the standard library.
-************************************************************************/
+ *  .d8888b.                             d8b
+ * d88P  Y88b                            Y8P
+ * 888    888
+ * 888         8888b.  .d8888b  88888b.  888
+ * 888            "88b 88K      888 "88b 888
+ * 888    888 .d888888 "Y8888b. 888  888 888
+ * Y88b  d88P 888  888      X88 888 d88P 888
+ *  "Y8888P"  "Y888888  88888P' 88888P"  888
+ *                              888
+ *                              888
+ *                              888
+ *
+ * @file caspi_Expected.h Graceful error handling.
+ * @author CS Islay
+ * @brief Provides an implementation of the expected<T, E> type that is C++11 compatible.
+ *        This type is used to represent a value that may either be a valid result of type T
+ *        or an error of type E.
+ *        It is similar to std::expected introduced in C++23, probably less robust.
+ *        Note that it is written in a format similar to the standard library.
+ ************************************************************************/
 
 #ifndef CASPI_EXPECTED_H
 #define CASPI_EXPECTED_H
@@ -69,39 +69,39 @@ namespace CASPI
      * @param value The value to store.
      * @return An `expected<T, E>` object containing the value.
      */
-    template <typename T, typename E = void, typename RealTimePolicy=NonRealTimeSafe>
+    template <typename T, typename E = void, typename RealTimePolicy = NonRealTimeSafe>
     expected<T, E, RealTimePolicy> make_expected (const T& value)
     {
         return expected<T, E, RealTimePolicy> { value };
     }
 
     /**
- * @brief Constructs a successful expected object with a moved value.
- * @tparam T The type of the value.
- * @tparam E The error type.
- * @param value The value to move.
- * @return An `expected<T, E>` object containing the moved value.
- */
-    template <typename T, typename E = void, typename RealTimePolicy=NonRealTimeSafe>
+     * @brief Constructs a successful expected object with a moved value.
+     * @tparam T The type of the value.
+     * @tparam E The error type.
+     * @param value The value to move.
+     * @return An `expected<T, E>` object containing the moved value.
+     */
+    template <typename T, typename E = void, typename RealTimePolicy = NonRealTimeSafe>
     expected<T, E, RealTimePolicy> make_expected (T&& value)
     {
         return expected<T, E, RealTimePolicy> { std::forward<T> (value) };
     }
 
     /**
- * @brief Constructs a failed expected object with a copy of the error.
- * @tparam T The type of the value.
- * @tparam E The error type.
- * @param error The error to store.
- * @return An `expected<T, E>` object containing the error.
- */
-    template <typename T, typename E, typename RealTimePolicy=NonRealTimeSafe>
+     * @brief Constructs a failed expected object with a copy of the error.
+     * @tparam T The type of the value.
+     * @tparam E The error type.
+     * @param error The error to store.
+     * @return An `expected<T, E>` object containing the error.
+     */
+    template <typename T, typename E, typename RealTimePolicy = NonRealTimeSafe>
     expected<T, E, RealTimePolicy> make_unexpected (const E& error)
     {
         return expected<T, E, RealTimePolicy> { unexpect, error };
     }
 
-    template <typename E, typename RealTimePolicy=NonRealTimeSafe>
+    template <typename E, typename RealTimePolicy = NonRealTimeSafe>
     expected<void, E, RealTimePolicy> make_unexpected (const E& error)
     {
         return expected<void, E, RealTimePolicy> { unexpect, error };
@@ -114,13 +114,13 @@ namespace CASPI
      * @param error The error to move.
      * @return An `expected<T, E>` object containing the moved error.
      */
-    template <typename T, typename E, typename RealTimePolicy=NonRealTimeSafe>
+    template <typename T, typename E, typename RealTimePolicy = NonRealTimeSafe>
     expected<T, E, RealTimePolicy> make_unexpected (E&& error)
     {
         return expected<T, E, RealTimePolicy> { unexpect, std::forward<E> (error) };
     }
 
-    template <typename E, typename RealTimePolicy=NonRealTimeSafe>
+    template <typename E, typename RealTimePolicy = NonRealTimeSafe>
     expected<void, E, RealTimePolicy> make_unexpected (E&& error)
     {
         return expected<void, E, RealTimePolicy> { unexpect, std::forward<E> (error) };
@@ -161,8 +161,8 @@ namespace CASPI
 
         public:
             /**
-            * @brief Swaps two expected objects.
-            */
+             * @brief Swaps two expected objects.
+             */
             friend void swap (expected& lhs, expected& rhs) noexcept (
                 CASPI_IS_NOTHROW_SWAPPABLE (T) && CASPI_IS_NOTHROW_SWAPPABLE (E) && std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_constructible<E>::value)
             {
@@ -219,9 +219,9 @@ namespace CASPI
             }
 
             /**
-* @brief Copy constructor
-* @param other Other expected
-*/
+             * @brief Copy constructor
+             * @param other Other expected
+             */
             expected (const expected& other) : _has_value (other._has_value)
             {
                 if (_has_value)
@@ -231,26 +231,26 @@ namespace CASPI
             }
 
             /**
-         * @brief Move constructor for expected
-         * @param v other expected
-         */
+             * @brief Move constructor for expected
+             * @param v other expected
+             */
             explicit expected (T&& v) : _has_value (true)
             {
                 new (&_val) T (std::move (v));
             }
 
             /**
-         * @brief Move constructor for unexpected
-         * @param e Error expected
-         */
+             * @brief Move constructor for unexpected
+             * @param e Error expected
+             */
             expected (unexpect_tag_t, E&& e) : _has_value (false)
             {
                 new (&_err) E (std::move (e));
             }
 
             /**
-         * @brief Construct a new expected object in place
-         */
+             * @brief Construct a new expected object in place
+             */
             template <typename... Args>
             explicit expected (CASPI::in_place_t, Args&&... args)
                 : _has_value (true)
@@ -259,8 +259,8 @@ namespace CASPI
             }
 
             /**
-         * @brief Construct a new unexpected object in place
-         */
+             * @brief Construct a new unexpected object in place
+             */
             template <typename... Args>
             explicit expected (unexpect_tag_t, Args&&... args)
                 : _has_value (false)
@@ -269,9 +269,9 @@ namespace CASPI
             }
 
             /**
-         * @brief Move constructor for generic expected
-         * @param other other expected object
-         */
+             * @brief Move constructor for generic expected
+             * @param other other expected object
+             */
             expected (expected&& other) noexcept : _has_value (other._has_value)
             {
                 if (_has_value)
@@ -281,16 +281,16 @@ namespace CASPI
             }
 
             /**
-            * @brief Constructs a success `expected` from a value.
-            */
+             * @brief Constructs a success `expected` from a value.
+             */
             explicit expected (const T& val) : _has_value (true)
             {
                 new (&_val) T (val);
             }
 
             /**
-            * @brief Constructs a failure `expected` from an error.
-            */
+             * @brief Constructs a failure `expected` from an error.
+             */
             expected (unexpect_tag_t, const E& err) : _has_value (false)
             {
                 new (&_err) E (err);
@@ -305,9 +305,9 @@ namespace CASPI
             }
 
             /**
-            * @brief Conversion operator to check if the expected contains a value.
-            * @return true if the expected contains a value, false if it contains an error.
-            */
+             * @brief Conversion operator to check if the expected contains a value.
+             * @return true if the expected contains a value, false if it contains an error.
+             */
             explicit operator bool() const noexcept { return _has_value; }
 
             /**
@@ -375,8 +375,8 @@ namespace CASPI
              * @return The result of applying `f` if value is present; otherwise an expected with the same error.
              *
              */
-        template <typename F>
-        auto and_then(F&& f) const& -> std::enable_if_t<!is_rt_safe, decltype(f(std::declval<const T&>()))>
+            template <typename F>
+            auto and_then (F&& f) const& -> std::enable_if_t<! is_rt_safe, decltype (f (std::declval<const T&>()))>
             {
                 using result_t = decltype (f (std::declval<const T&>()));
                 if (_has_value)
@@ -392,7 +392,7 @@ namespace CASPI
              * @return expected<U, E> with transformed value or the original error.
              */
             template <typename F>
-            auto map (F&& f) const&  -> std::enable_if_t<!is_rt_safe, expected<decltype(f(std::move(_val))), E, RealTimePolicy>>
+            auto map (F&& f) const& -> std::enable_if_t<! is_rt_safe, expected<decltype (f (std::move (_val))), E, RealTimePolicy>>
             {
                 using U = decltype (f (std::declval<const T&>()));
                 if (_has_value)
@@ -408,7 +408,7 @@ namespace CASPI
              * @return The original value if present, otherwise result of applying `f` to the error.
              */
             template <typename F>
-            auto or_else (F&& f) const& -> std::enable_if_t<!is_rt_safe, decltype(f(_err))>
+            auto or_else (F&& f) const& -> std::enable_if_t<! is_rt_safe, decltype (f (_err))>
             {
                 using result_t = decltype (f (std::declval<const E&>()));
                 if (! _has_value)
@@ -424,7 +424,7 @@ namespace CASPI
              * @return expected<U, E> with transformed value or the original error.
              */
             template <typename F>
-            auto map (F&& f) && -> std::enable_if_t<!is_rt_safe, expected<decltype(f(std::move(_val))), E, RealTimePolicy>>
+            auto map (F&& f) && -> std::enable_if_t<! is_rt_safe, expected<decltype (f (std::move (_val))), E, RealTimePolicy>>
             {
                 using U = decltype (f (std::move (_val)));
                 if (_has_value)
@@ -438,8 +438,8 @@ namespace CASPI
              * @param f The function to apply.
              * @return The result of applying `f`, or an expected with the moved error.
              */
-        template <typename F>
-        auto and_then(F&& f) && -> std::enable_if_t<!is_rt_safe, decltype(f(std::move(std::declval<T>())))>
+            template <typename F>
+            auto and_then (F&& f) && -> std::enable_if_t<! is_rt_safe, decltype (f (std::move (std::declval<T>())))>
             {
                 using result_t = decltype (f (std::move (_val)));
                 if (_has_value)
@@ -454,7 +454,7 @@ namespace CASPI
              * @return The original value if present, otherwise result of applying `f` to the moved error.
              */
             template <typename F>
-            auto or_else (F&& f) && -> std::enable_if_t<!is_rt_safe, decltype(f(std::move(std::declval<E>())))>
+            auto or_else (F&& f) && -> std::enable_if_t<! is_rt_safe, decltype (f (std::move (std::declval<E>())))>
             {
                 using result_t = decltype (f (std::move (_err)));
                 if (! _has_value)
@@ -463,9 +463,9 @@ namespace CASPI
             }
 
             /**
- * @brief Checks if the expected contains a valid value.
- * @return true if the expected holds a value; false if it holds an error.
- */
+             * @brief Checks if the expected contains a valid value.
+             * @return true if the expected holds a value; false if it holds an error.
+             */
             CASPI_NO_DISCARD bool has_value() const
             {
                 return _has_value;
@@ -481,14 +481,56 @@ namespace CASPI
             }
 
             /**
-             * @brief Retrieves the contained value.
+             * @brief Retrieves the contained value (const lvalue).
              * @return A const reference to the value.
              * @throws Asserts if the expected holds an error instead of a value.
+             *
+             * Usage: const auto& val = result.value();
              */
-            const T& value() const
+            const T& value() const&
             {
                 CASPI_ASSERT (_has_value, "Expected does not hold a value.");
                 return _val;
+            }
+
+            /**
+             * @brief Retrieves the contained value (non-const lvalue).
+             * @return A reference to the value.
+             * @throws Asserts if the expected holds an error instead of a value.
+             *
+             * Usage: auto& val = result.value();
+             */
+            T& value() &
+            {
+                CASPI_ASSERT (_has_value, "Expected does not hold a value.");
+                return _val;
+            }
+
+            /**
+             * @brief Retrieves the contained value (rvalue - for moving out).
+             * @return An rvalue reference to the value.
+             * @throws Asserts if the expected holds an error instead of a value.
+             *
+             * This overload enables moving move-only types out of expected:
+             * Usage: auto dsp = std::move(result).value();
+             */
+            T&& value() &&
+            {
+                CASPI_ASSERT (_has_value, "Expected does not hold a value.");
+                return std::move (_val);
+            }
+
+            /**
+             * @brief Retrieves the contained value (const rvalue).
+             * @return A const rvalue reference to the value.
+             * @throws Asserts if the expected holds an error instead of a value.
+             *
+             * Usage: const auto&& val = std::move(const_result).value();
+             */
+            const T&& value() const&&
+            {
+                CASPI_ASSERT (_has_value, "Expected does not hold a value.");
+                return std::move (_val);
             }
 
             /**
@@ -571,11 +613,57 @@ namespace CASPI
                     _err.~E();
             }
 
-            // Accessors
-            const T& value() const noexcept
+            /**
+             * @brief Retrieves the contained value (const lvalue).
+             * @return A const reference to the value.
+             * @throws Asserts if the expected holds an error instead of a value.
+             *
+             * Usage: const auto& val = result.value();
+             */
+            const T& value() const&
             {
-                // You could do your own assert or error handling, but must not throw
+                CASPI_ASSERT (_has_value, "Expected does not hold a value.");
                 return _val;
+            }
+
+            /**
+             * @brief Retrieves the contained value (non-const lvalue).
+             * @return A reference to the value.
+             * @throws Asserts if the expected holds an error instead of a value.
+             *
+             * Usage: auto& val = result.value();
+             */
+            T& value() &
+            {
+                CASPI_ASSERT (_has_value, "Expected does not hold a value.");
+                return _val;
+            }
+
+            /**
+             * @brief Retrieves the contained value (rvalue - for moving out).
+             * @return An rvalue reference to the value.
+             * @throws Asserts if the expected holds an error instead of a value.
+             *
+             * This overload enables moving move-only types out of expected:
+             * Usage: auto dsp = std::move(result).value();
+             */
+            T&& value() &&
+            {
+                CASPI_ASSERT (_has_value, "Expected does not hold a value.");
+                return std::move (_val);
+            }
+
+            /**
+             * @brief Retrieves the contained value (const rvalue).
+             * @return A const rvalue reference to the value.
+             * @throws Asserts if the expected holds an error instead of a value.
+             *
+             * Usage: const auto&& val = std::move(const_result).value();
+             */
+            const T&& value() const&&
+            {
+                CASPI_ASSERT (_has_value, "Expected does not hold a value.");
+                return std::move (_val);
             }
 
             const E& error() const noexcept
@@ -623,157 +711,183 @@ namespace CASPI
      *
      */
     template <typename E, typename RealTimePolicy>
-class expected<void, E, RealTimePolicy>
-{
-    // E constraints
-    static_assert(!std::is_void<E>::value, "expected<void, E>: E must not be void");
-    static_assert(std::is_nothrow_destructible<E>::value, "E must be noexcept destructible");
-
-    static constexpr bool is_rt_safe = is_real_time_safe<RealTimePolicy>::value;
-    static_assert(!is_rt_safe || std::is_nothrow_move_constructible<E>::value,
-                  "E must be noexcept move constructible");
-    static_assert(!is_rt_safe || std::is_nothrow_move_assignable<E>::value,
-                  "E must be noexcept move assignable");
-
-
-    private:
-        union {
-            char _dummy; // active when has_value == true
-            E    _err;   // active when has_value == false
-        };
-        bool _has_value;
-
-public:
-    // success
-    expected() noexcept : _has_value(true) { _dummy = 0; }
-
-    // error
-    explicit expected(unexpect_tag_t, const E& err) noexcept(
-        std::is_nothrow_copy_constructible<E>::value)
-        : _has_value(false)
+    class expected<void, E, RealTimePolicy>
     {
-        new (&_err) E(err);
-    }
+            // E constraints
+            static_assert (! std::is_void<E>::value, "expected<void, E>: E must not be void");
+            static_assert (std::is_nothrow_destructible<E>::value, "E must be noexcept destructible");
 
-    explicit expected(unexpect_tag_t, E&& err) noexcept(
-        std::is_nothrow_move_constructible<E>::value)
-        : _has_value(false)
-    {
-        new (&_err) E(std::move(err));
-    }
+            static constexpr bool is_rt_safe = is_real_time_safe<RealTimePolicy>::value;
+            static_assert (! is_rt_safe || std::is_nothrow_move_constructible<E>::value,
+                           "E must be noexcept move constructible");
+            static_assert (! is_rt_safe || std::is_nothrow_move_assignable<E>::value,
+                           "E must be noexcept move assignable");
 
-    // copy
-    expected(const expected& other) : _has_value(other._has_value)
-    {
-        if (_has_value) { _dummy = 0; }
-        else { new (&_err) E(other._err); }
-    }
+        private:
+            union
+            {
+                    char _dummy; // active when has_value == true
+                    E _err; // active when has_value == false
+            };
+            bool _has_value;
 
-    // move
-    expected(expected&& other) noexcept : _has_value(other._has_value)
-    {
-        if (_has_value) { _dummy = 0; }
-        else { new (&_err) E(std::move(other._err)); }
-    }
+        public:
+            // success
+            expected() noexcept : _has_value (true) { _dummy = 0; }
 
-    ~expected() noexcept
-    {
-        if (!_has_value) _err.~E();
-    }
+            // error
+            explicit expected (unexpect_tag_t, const E& err) noexcept (
+                std::is_nothrow_copy_constructible<E>::value)
+                : _has_value (false)
+            {
+                new (&_err) E (err);
+            }
 
-    expected& operator=(const expected& rhs)
-    {
-        if (this == &rhs) return *this;
-        expected tmp(rhs);
-        swap(*this, tmp);
-        return *this;
-    }
+            explicit expected (unexpect_tag_t, E&& err) noexcept (
+                std::is_nothrow_move_constructible<E>::value)
+                : _has_value (false)
+            {
+                new (&_err) E (std::move (err));
+            }
 
-    expected& operator=(expected&& rhs) noexcept
-    {
-        if (this == &rhs) return *this;
-        expected tmp(std::move(rhs));
-        swap(*this, tmp);
-        return *this;
-    }
+            // copy
+            expected (const expected& other) : _has_value (other._has_value)
+            {
+                if (_has_value)
+                {
+                    _dummy = 0;
+                }
+                else
+                {
+                    new (&_err) E (other._err);
+                }
+            }
 
-    friend void swap(expected& a, expected& b) noexcept(
-        CASPI_IS_NOTHROW_SWAPPABLE(E))
-    {
-        using std::swap;
-        if (a._has_value && b._has_value) {
-            // nothing to do
-        } else if (!a._has_value && !b._has_value) {
-            swap(a._err, b._err);
-        } else {
-            expected* has = a._has_value ? &a : &b;
-            expected* not_has = a._has_value ? &b : &a;
-            E tmp = std::move(not_has->_err);
-            not_has->~expected();
-            new (not_has) expected();               // becomes success
-            has->~expected();
-            new (has) expected(unexpect, std::move(tmp)); // becomes error
-        }
-    }
+            // move
+            expected (expected&& other) noexcept : _has_value (other._has_value)
+            {
+                if (_has_value)
+                {
+                    _dummy = 0;
+                }
+                else
+                {
+                    new (&_err) E (std::move (other._err));
+                }
+            }
 
-    // Observers
-    bool has_value() const noexcept { return _has_value; }
-    bool has_error() const noexcept { return !_has_value; }
-    explicit operator bool() const noexcept { return _has_value; }
+            ~expected() noexcept
+            {
+                if (! _has_value)
+                    _err.~E();
+            }
 
-    const E& error() const
-    {
-        CASPI_ASSERT(!_has_value, "Expected does not hold an error.");
-        return _err;
-    }
+            expected& operator= (const expected& rhs)
+            {
+                if (this == &rhs)
+                    return *this;
+                expected tmp (rhs);
+                swap (*this, tmp);
+                return *this;
+            }
 
-    // Monadic ops for void-value flavor
-    template <typename F>
-    auto and_then(F&& f) const& -> std::enable_if_t<!is_rt_safe, decltype(f())>
-    {
-        if (_has_value) return f();
-        using R = decltype(f());
-        return R(unexpect, _err);
-    }
+            expected& operator= (expected&& rhs) noexcept
+            {
+                if (this == &rhs)
+                    return *this;
+                expected tmp (std::move (rhs));
+                swap (*this, tmp);
+                return *this;
+            }
 
-    template <typename F>
-    auto and_then(F&& f) && -> std::enable_if_t<!is_rt_safe, decltype(f())>
-    {
-        if (_has_value) return f();
-        using R = decltype(f());
-        return R(unexpect, std::move(_err));
-    }
+            friend void swap (expected& a, expected& b) noexcept (
+                CASPI_IS_NOTHROW_SWAPPABLE (E))
+            {
+                using std::swap;
+                if (a._has_value && b._has_value)
+                {
+                    // nothing to do
+                }
+                else if (! a._has_value && ! b._has_value)
+                {
+                    swap (a._err, b._err);
+                }
+                else
+                {
+                    expected* has     = a._has_value ? &a : &b;
+                    expected* not_has = a._has_value ? &b : &a;
+                    E tmp             = std::move (not_has->_err);
+                    not_has->~expected();
+                    new (not_has) expected(); // becomes success
+                    has->~expected();
+                    new (has) expected (unexpect, std::move (tmp)); // becomes error
+                }
+            }
 
-    template <typename F>
-    auto map(F&& f) const& -> std::enable_if_t<!is_rt_safe,
-        expected<decltype(f()), E, RealTimePolicy>>
-    {
-        if (_has_value) return expected<decltype(f()), E, RealTimePolicy>(f());
-        return expected<decltype(f()), E, RealTimePolicy>(unexpect, _err);
-    }
+            // Observers
+            bool has_value() const noexcept { return _has_value; }
+            bool has_error() const noexcept { return ! _has_value; }
+            explicit operator bool() const noexcept { return _has_value; }
 
-    template <typename F>
-    auto map(F&& f) && -> std::enable_if_t<!is_rt_safe,
-        expected<decltype(f()), E, RealTimePolicy>>
-    {
-        if (_has_value) return expected<decltype(f()), E, RealTimePolicy>(f());
-        return expected<decltype(f()), E, RealTimePolicy>(unexpect, std::move(_err));
-    }
+            const E& error() const
+            {
+                CASPI_ASSERT (! _has_value, "Expected does not hold an error.");
+                return _err;
+            }
 
-    template <typename F>
-    auto or_else(F&& f) const& -> std::enable_if_t<!is_rt_safe, decltype(f(_err))>
-    {
-        if (_has_value) return decltype(f(_err))(); // success path → default-constructed success of result
-        return f(_err);
-    }
+            // Monadic ops for void-value flavor
+            template <typename F>
+            auto and_then (F&& f) const& -> std::enable_if_t<! is_rt_safe, decltype (f())>
+            {
+                if (_has_value)
+                    return f();
+                using R = decltype (f());
+                return R (unexpect, _err);
+            }
 
-    template <typename F>
-    auto or_else(F&& f) && -> std::enable_if_t<!is_rt_safe, decltype(f(std::move(_err)))>
-    {
-        if (_has_value) return decltype(f(std::move(_err)))();
-        return f(std::move(_err));
-    }
-};
+            template <typename F>
+            auto and_then (F&& f) && -> std::enable_if_t<! is_rt_safe, decltype (f())>
+            {
+                if (_has_value)
+                    return f();
+                using R = decltype (f());
+                return R (unexpect, std::move (_err));
+            }
+
+            template <typename F>
+            auto map (F&& f) const& -> std::enable_if_t<! is_rt_safe,
+                                                        expected<decltype (f()), E, RealTimePolicy>>
+            {
+                if (_has_value)
+                    return expected<decltype (f()), E, RealTimePolicy> (f());
+                return expected<decltype (f()), E, RealTimePolicy> (unexpect, _err);
+            }
+
+            template <typename F>
+            auto map (F&& f) && -> std::enable_if_t<! is_rt_safe,
+                                                    expected<decltype (f()), E, RealTimePolicy>>
+            {
+                if (_has_value)
+                    return expected<decltype (f()), E, RealTimePolicy> (f());
+                return expected<decltype (f()), E, RealTimePolicy> (unexpect, std::move (_err));
+            }
+
+            template <typename F>
+            auto or_else (F&& f) const& -> std::enable_if_t<! is_rt_safe, decltype (f (_err))>
+            {
+                if (_has_value)
+                    return decltype (f (_err))(); // success path → default-constructed success of result
+                return f (_err);
+            }
+
+            template <typename F>
+            auto or_else (F&& f) && -> std::enable_if_t<! is_rt_safe, decltype (f (std::move (_err)))>
+            {
+                if (_has_value)
+                    return decltype (f (std::move (_err)))();
+                return f (std::move (_err));
+            }
+    };
 
 } // namespace CASPI
 
