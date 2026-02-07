@@ -53,6 +53,5 @@ void bind_core (py::module_& m)
     // Phase wrapper
     py::class_<Phase<float>> (m, "Phase", "Phase accumulator for oscillators")
         .def (py::init<>())
-        .def ("reset_phase", &Phase<float>::resetPhase)
-        .def ("set_frequency", &Phase<float>::setFrequency, py::arg ("frequency"), py::arg ("sample_rate"));
+        .def ("reset_phase", &Phase<float>::resetPhase);
 }

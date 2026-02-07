@@ -4,8 +4,7 @@ project(CASPy VERSION 0.1.0 LANGUAGES CXX)
 
 message(STATUS "Configuring CASPy (CASPI Python Bindings)")
 
-# pybind11 requires C++14
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Python ---
@@ -39,7 +38,8 @@ pybind11_add_module(caspy
         Source/Bindings/bind_core.cpp
         Source/Bindings/bind_oscillators.cpp
         Source/Bindings/bind_adsr.cpp
-        Source/Bindings/bind_pm.cpp
+        Source/Bindings/bind_operator.cpp
+        Source/Bindings/bind_fmgraph.cpp
 )
 
 target_link_libraries(caspy PRIVATE CASPI)
