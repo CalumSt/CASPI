@@ -8,7 +8,8 @@ namespace py = pybind11;
 void bind_core (py::module_& m);
 void bind_oscillators (py::module_& m);
 void bind_adsr(py::module_& m);
-void bind_pm(py::module_& m);
+void bind_operator(py::module_& m);
+void bind_fmgraph(py::module_& m);
 
 
 PYBIND11_MODULE (caspy, m)
@@ -39,5 +40,6 @@ PYBIND11_MODULE (caspy, m)
     bind_core (m);
     bind_oscillators (m);
     bind_adsr(m);
-    bind_pm(m);
+    bind_operator(m);
+    bind_fmgraph(m);
 }
