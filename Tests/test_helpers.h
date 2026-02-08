@@ -40,19 +40,6 @@ std::vector<FloatType> range (FloatType start, FloatType end, int numberOfSteps)
     return result;
 }
 
-inline void saveToFile(const std::string& filename, std::vector<double> x, std::vector<double> y)
-{
-    const std::filesystem::path path(filename);
-    std::filesystem::create_directory(path.parent_path());
-
-    std::cout << path.stem().string() << " saved to: " << absolute(path).string() << "\n";
-    std::ofstream file(path.string());
-    for (int i = 0; i < x.size(); i++) {
-        file << x[i] << "," << y[i] << "\n";
-    }
-    file.close();
-}
-
 // Helper function to compare two vectors
 template <typename T>
 void compareVectors(const std::vector<T>& expected, const std::vector<T>& actual) {

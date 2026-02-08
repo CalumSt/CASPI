@@ -178,10 +178,6 @@ TEST(TwoOperatorAlgsTests,BasicCascadeRender_test)
             EXPECT_GT (results.at(i), -1.01);
             EXPECT_LT (results.at(i), 1.01);
         }
-        if (fs == 44100.0)
-        {
-            saveToFile ("./GeneratedSignals/FM_BasicCascadeRender.csv", times, results);
-        }
     }
 
 }
