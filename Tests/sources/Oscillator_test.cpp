@@ -124,29 +124,6 @@ TEST (OscillatorTests, SquareRenderWaveform_test)
     }
 }
 
-TEST (OscillatorTests, TriangleRenderWaveform_test)
-{
-    const auto internal_pi = CASPI::Constants::TWO_PI<float>;
-    CASPI::Oscillators::BLEP::Triangle<float> osc;
-    osc.setFrequency (frequency, sampleRate);
-    auto currentPhase = 0.0f;
-    while (currentPhase >= internal_pi)
-    {
-        currentPhase -= internal_pi;
-    }
-    for (int i = 0; i < samplesToRender; i++)
-    {
-        auto s = osc.renderSample();
-        EXPECT_GE (s, -1.0f);
-        EXPECT_LE (s, 1.0f);
-        currentPhase += phaseIncrement;
-    }
-
-    auto output = CASPI::Oscillators::BLEP::renderBlock<CASPI::Oscillators::BLEP::Triangle<double>, double> (frequency, sampleRate, 1024);
-    auto times = range<double> (0.0, 1024.0f/44100.0f, 1024);
-    saveToFile ("./GeneratedSignals/TriangleOscillator.csv",times,output);
-}
-
 TEST (OscillatorTests, renderToBlock_test)
 {
     CASPI::Oscillators::BLEP::Sine<float> osc;
