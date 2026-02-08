@@ -73,19 +73,19 @@ void bind_oscillator_type(py::module_& m, const char* name, const char* docstrin
 void bind_oscillators(py::module_& m)
 {
     // Bind all oscillator types using the template
-    bind_oscillator_type<Oscillators::BLEP::Sine<float>>(
+    bind_oscillator_type<BlepOscillator::Sine<float>>(
         m, "Sine",
         "Band-limited sine wave oscillator. Clean, pure tone with single fundamental frequency.");
 
-    bind_oscillator_type<Oscillators::BLEP::Saw<float>>(
+    bind_oscillator_type<BlepOscillator::Saw<float>>(
         m, "Saw",
         "Band-limited sawtooth oscillator. Rich in harmonics, ideal for subtractive synthesis.");
 
-    bind_oscillator_type<Oscillators::BLEP::Square<float>>(
+    bind_oscillator_type<BlepOscillator::Square<float>>(
         m, "Square",
         "Band-limited square wave oscillator. Hollow tone with odd harmonics only.");
 
-    bind_oscillator_type<Oscillators::BLEP::Triangle<float>>(
+    bind_oscillator_type<BlepOscillator::Triangle<float>>(
         m, "Triangle",
         "Band-limited triangle wave oscillator. Mellow tone, softer than square wave.");
 }
