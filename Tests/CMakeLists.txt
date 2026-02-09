@@ -26,6 +26,7 @@ set(SOURCES
         base/Utilities_test.cpp
         sources/Oscillator_test.cpp
         sources/Operator_test.cpp
+        base/SIMD_test.cpp
         processors/Filter_test.cpp
         processors/Envelope_test.cpp
         processors/Gain_test.cpp
