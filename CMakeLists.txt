@@ -25,9 +25,15 @@ if (NOT DEFINED CASPI_BUILD_BENCHMARKS)
     set(CASPI_BUILD_BENCHMARKS ${CASPI_IS_STANDALONE_BUILD} CACHE BOOL "Build CASPI benchmarks")
 endif ()
 
+# NEW: Python bindings option (off by default)
+if (NOT DEFINED CASPI_BUILD_PYTHON)
+    set(CASPI_BUILD_PYTHON OFF CACHE BOOL "Build Python bindings (CASPy)")
+endif ()
+
 message(STATUS "Standalone build: ${CASPI_IS_STANDALONE_BUILD}")
 message(STATUS "Build testing: ${CASPI_BUILD_TESTING}")
 message(STATUS "Build benchmarks: ${CASPI_BUILD_BENCHMARKS}")
+message(STATUS "Build Python bindings: ${CASPI_BUILD_PYTHON}")
 
 project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
 
@@ -95,6 +101,11 @@ endif()
 if (CASPI_BUILD_BENCHMARKS)
     add_subdirectory(Benchmarks)
 endif ()
+
+# NEW: Python bindings (optional, off by default)
+if (CASPI_BUILD_PYTHON)
+    add_subdirectory(Tools/CASPy)
+endif()
 
 install(TARGETS ${PROJECT_NAME}
         EXPORT ${PROJECT_NAME}Targets)

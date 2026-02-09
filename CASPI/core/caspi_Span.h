@@ -28,210 +28,210 @@ namespace CASPI {
     namespace Core {
 #if defined(CASPI_FEATURES_HAS_SPAN)
 #include <span>
-        template <typename T>
-        using Span = std::span<T>;
+template <typename T>
+using Span = std::span<T>;
 
 #else
 
-        /**
-         * @brief Minimal contiguous, non-owning span
-         *
-         * @tparam T Type of elements
-         */
-        template<typename T>
-        class Span {
-        public:
-            using element_type = T;
-            using value_type = std::remove_cv_t<T>;
-            using size_type = std::size_t;
-            using difference_type = std::ptrdiff_t;
-            using pointer = T *;
-            using reference = T &;
-            using iterator = T *;
-            using const_iterator = const T *;
+    /**
+     * @brief Minimal contiguous, non-owning span
+     *
+     * @tparam T Type of elements
+     */
+    template<typename T>
+    class Span {
+    public:
+        using element_type = T;
+        using value_type = std::remove_cv_t<T>;
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+        using pointer = T *;
+        using reference = T &;
+        using iterator = T *;
+        using const_iterator = const T *;
 
-            Span() noexcept : ptr_(nullptr), sz_(0) {
-            }
+        Span() noexcept : ptr_(nullptr), sz_(0) {
+        }
 
-            Span(T *ptr, size_type count) noexcept : ptr_(ptr), sz_(count) {
-            }
+        Span(T *ptr, size_type count) noexcept : ptr_(ptr), sz_(count) {
+        }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            std::size_t size() const noexcept { return sz_; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        std::size_t size() const noexcept { return sz_; }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            bool empty() const noexcept { return sz_ == 0; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        bool empty() const noexcept { return sz_ == 0; }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            pointer data() const noexcept { return ptr_; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        pointer data() const noexcept { return ptr_; }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            iterator begin() const noexcept { return ptr_; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        iterator begin() const noexcept { return ptr_; }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            iterator end() const noexcept { return ptr_ + sz_; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        iterator end() const noexcept { return ptr_ + sz_; }
 
-            CASPI_NO_DISCARD
+        CASPI_NO_DISCARD
 
-            reference operator[](size_type i) const noexcept {
-                return ptr_[i];
-            }
+        reference operator[](size_type i) const noexcept {
+            return ptr_[i];
+        }
 
-        private:
-            T *ptr_;
-            size_type sz_;
-        };
+    private:
+        T *ptr_;
+        size_type sz_;
+    };
 
 #endif
 
+    /**
+     * @brief Non-owning view over a strided array
+     *
+     * Allows iteration over elements with a fixed stride.
+     *
+     * @tparam T Element type
+     */
+    template<typename T>
+    class StridedSpan {
+    public:
         /**
-         * @brief Non-owning view over a strided array
-         *
-         * Allows iteration over elements with a fixed stride.
-         *
-         * @tparam T Element type
+         * @brief Iterator for StridedSpan
          */
-        template<typename T>
-        class StridedSpan {
+        class iterator {
         public:
-            /**
-             * @brief Iterator for StridedSpan
-             */
-            class iterator {
-            public:
-                using value_type = T;
-                using difference_type = std::ptrdiff_t;
-                using reference = T &;
-                using pointer = T *;
-                using iterator_category = std::forward_iterator_tag;
+            using value_type = T;
+            using difference_type = std::ptrdiff_t;
+            using reference = T &;
+            using pointer = T *;
+            using iterator_category = std::forward_iterator_tag;
 
-                iterator(pointer p, std::size_t stride) noexcept : p_(p), s_(stride) {
-                }
+            iterator(pointer p, std::size_t stride) noexcept : p_(p), s_(stride) {
+            }
 
-                CASPI_NO_DISCARD
-                reference operator*() const noexcept { return *p_; }
+            CASPI_NO_DISCARD
+            reference operator*() const noexcept { return *p_; }
 
-                iterator &operator++() noexcept {
-                    p_ += s_;
-                    return *this;
-                }
+            iterator &operator++() noexcept {
+                p_ += s_;
+                return *this;
+            }
 
-                iterator operator++(int) noexcept {
-                    auto tmp = *this;
-                    ++(*this);
-                    return tmp;
-                }
+            iterator operator++(int) noexcept {
+                auto tmp = *this;
+                ++(*this);
+                return tmp;
+            }
 
-                CASPI_NO_DISCARD
+            CASPI_NO_DISCARD
 
-                bool operator==(const iterator &o) const noexcept {
-                    return p_ == o.p_;
-                }
-
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
-                bool operator!=(const iterator &o) const noexcept {
-                    return p_ != o.p_;
-                }
-
-            private:
-                pointer p_;
-                std::size_t s_;
-            };
-
-            StridedSpan(T *base, std::size_t count, std::size_t stride) noexcept
-                : base_(base), count_(count), stride_(stride) {
+            bool operator==(const iterator &o) const noexcept {
+                return p_ == o.p_;
             }
 
             CASPI_NON_BLOCKING CASPI_NO_DISCARD
 
-            iterator begin() const noexcept {
-                return iterator(base_, stride_);
+            bool operator!=(const iterator &o) const noexcept {
+                return p_ != o.p_;
             }
-
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
-            iterator end() const noexcept {
-                return iterator(base_ + count_ * stride_, stride_);
-            }
-
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            std::size_t size() const noexcept { return count_; }
-
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-
-            T &operator[](std::size_t i) const noexcept {
-                return *(base_ + i * stride_);
-            }
-
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            T *data() const noexcept { return base_; }
-
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            std::size_t stride() const noexcept { return stride_; }
 
         private:
-            T *base_;
-            std::size_t count_;
-            std::size_t stride_;
+            pointer p_;
+            std::size_t s_;
         };
 
-        /**
-         * @brief A unified SpanView that can be contiguous or strided
-         *
-         * Provides random access and iteration over either contiguous or strided memory.
-         *
-         * @tparam T Element type
-         */
-        template<typename T>
-        class SpanView {
-        public:
-            enum class Type { Contiguous, Strided };
+        StridedSpan(T *base, std::size_t count, std::size_t stride) noexcept
+            : base_(base), count_(count), stride_(stride) {
+        }
 
-            // Contiguous constructor
-            SpanView(T *ptr, std::size_t count) noexcept
-                : type_(Type::Contiguous), contig_(ptr, count), stride_(1) {
-            }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
 
-            // Strided constructor
-            SpanView(T *ptr, std::size_t count, std::size_t stride) noexcept
-                : type_(Type::Strided), strided_(ptr, count, stride), stride_(stride) {
-            }
+        iterator begin() const noexcept {
+            return iterator(base_, stride_);
+        }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            Type type() const noexcept { return type_; }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        iterator end() const noexcept {
+            return iterator(base_ + count_ * stride_, stride_);
+        }
 
-            std::size_t size() const noexcept {
-                return type_ == Type::Contiguous ? contig_.size() : strided_.size();
-            }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        std::size_t size() const noexcept { return count_; }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
 
-            T &operator[](std::size_t i) const noexcept {
-                return type_ == Type::Contiguous ? contig_[i] : strided_[i];
-            }
+        T &operator[](std::size_t i) const noexcept {
+            return *(base_ + i * stride_);
+        }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        T *data() const noexcept { return base_; }
 
-            auto begin() const noexcept {
-                return type_ == Type::Contiguous ? contig_.begin() : strided_.begin();
-            }
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        std::size_t stride() const noexcept { return stride_; }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
+    private:
+        T *base_;
+        std::size_t count_;
+        std::size_t stride_;
+    };
 
-            auto end() const noexcept {
-                return type_ == Type::Contiguous ? contig_.end() : strided_.end();
-            }
+    /**
+     * @brief A unified SpanView that can be contiguous or strided
+     *
+     * Provides random access and iteration over either contiguous or strided memory.
+     *
+     * @tparam T Element type
+     */
+    template<typename T>
+    class SpanView {
+    public:
+        enum class Type { Contiguous, Strided };
 
-        private:
-            Type type_;
+        // Contiguous constructor
+        SpanView(T *ptr, std::size_t count) noexcept
+            : type_(Type::Contiguous), contig_(ptr, count), stride_(1) {
+        }
 
-            union {
-                Span<T> contig_;
-                StridedSpan<T> strided_;
-            };
+        // Strided constructor
+        SpanView(T *ptr, std::size_t count, std::size_t stride) noexcept
+            : type_(Type::Strided), strided_(ptr, count, stride), stride_(stride) {
+        }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+        Type type() const noexcept { return type_; }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        std::size_t size() const noexcept {
+            return type_ == Type::Contiguous ? contig_.size() : strided_.size();
+        }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        T &operator[](std::size_t i) const noexcept {
+            return type_ == Type::Contiguous ? contig_[i] : strided_[i];
+        }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        auto begin() const noexcept {
+            return type_ == Type::Contiguous ? contig_.begin() : strided_.begin();
+        }
+
+        CASPI_NON_BLOCKING CASPI_NO_DISCARD
+
+        auto end() const noexcept {
+            return type_ == Type::Contiguous ? contig_.end() : strided_.end();
+        }
+
+    private:
+        Type type_;
+
+        union {
+            Span<T> contig_;
+            StridedSpan<T> strided_;
+        };
 
             std::size_t stride_;
         };

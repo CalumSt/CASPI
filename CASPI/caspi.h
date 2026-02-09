@@ -21,10 +21,9 @@
 
 // oscillators
 #include "oscillators/caspi_BlepOscillator.h"
-#include "oscillators/caspi_PMOperator.h"
+#include "oscillators/caspi_Operator.h"
 
 // Filters
-#include "filters/caspi_LadderFilter.h"
 #include "filters/caspi_OnePoleFilter.h"
 #include "filters/caspi_SvfFilter.h"
 
@@ -35,6 +34,6 @@
 #include "envelopes/caspi_Envelope.h"
 
 // Synthesizers
-#include "synthesizers/caspi_PMAlgorithm.h"
+#include "synthesizers/caspi_FMGraph.h"
 
 #endif // CASPI_H
