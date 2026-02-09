@@ -55,6 +55,19 @@ namespace CASPI {
         template <typename FloatType>
             constexpr FloatType NOTES_IN_OCTAVE = static_cast<FloatType>(12.0);
 
+template <typename FloatType>
+struct SampleRates
+{
+    constexpr static FloatType AUDIO_RATE_22050 = static_cast<FloatType>(22050.0);
+    constexpr static FloatType AUDIO_RATE_44100 = static_cast<FloatType>(44100.0);
+    constexpr static FloatType AUDIO_RATE_48000 = static_cast<FloatType>(48000.0);
+    constexpr static FloatType AUDIO_RATE_96000 = static_cast<FloatType>(96000.0);
+    constexpr static FloatType AUDIO_RATE_192000 = static_cast<FloatType>(192000.0);
+};
+
+template <typename FloatType>
+    constexpr FloatType DEFAULT_SAMPLE_RATE = SampleRates<FloatType>::AUDIO_RATE_44100;
+
         template <typename FloatType>
             constexpr FloatType DEFAULT_SAMPLE_RATE = static_cast<FloatType>(44100.0);
 
