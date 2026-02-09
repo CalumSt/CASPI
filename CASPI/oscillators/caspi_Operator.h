@@ -27,7 +27,7 @@
 #include "base/caspi_Constants.h"
 #include "core/caspi_Core.h"
 #include "core/caspi_Phase.h"
-#include "envelopes/caspi_Envelope.h"
+#include "controls/caspi_Envelope.h"
 #include <cmath>
 
 namespace CASPI
