@@ -42,8 +42,8 @@ std::vector<double> constructExpectedFrequencyBins(int fft_size, double sampleRa
 
 auto constructTestData(int blockSize, double sampleRate)
 {
-    auto data_20Hz  = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (20.0,sampleRate,blockSize);
-    auto data_100Hz = CASPI::BlepOscillator::renderBlock<CASPI::BlepOscillator::Sine<double>> (100.0,sampleRate,blockSize);
+    auto data_20Hz  = CASPI::Oscillators::BLEP::renderBlock<CASPI::Oscillators::BLEP::Sine<double>> (20.0,sampleRate,blockSize);
+    auto data_100Hz = CASPI::Oscillators::BLEP::renderBlock<CASPI::Oscillators::BLEP::Sine<double>> (100.0,sampleRate,blockSize);
     auto data = std::vector<double>(blockSize);
     for (int i = 0; i < blockSize; i++)
     {

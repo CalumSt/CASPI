@@ -31,27 +31,31 @@
 #include <cstddef>
 #include <type_traits>
 
-namespace CASPI::Core
+namespace CASPI
 {
-    namespace Traversal
+    namespace Core
     {
-        // Per-sample: update state every sample
-        struct PerSample
+
+
+        namespace Traversal
         {
-            template<typename Buf, typename F>
-            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept
+            // Per-sample: update state every sample
+            struct PerSample
             {
-                const std::size_t C = buf.numChannels();
-                const std::size_t Fm = buf.numFrames();
-                for (std::size_t f = 0; f < Fm; ++f)
+                template<typename Buf, typename F>
+                static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept
                 {
-                    for (std::size_t ch = 0; ch < C; ++ch)
-                    {
-                        fn(ch, f);
+                    const std::size_t C = buf.numChannels();
+                    const std::size_t Fm = buf.numFrames();
+                    for (std::size_t f = 0; f < Fm; ++f)
+                        {
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                            {
+                            fn(ch, f);
+                        }
                     }
                 }
-            }
-        };
+            };
 
         // Per-frame: update state once per frame, replicate across channels
         struct PerFrame
@@ -98,28 +102,28 @@ namespace CASPI::Core
 
 #if defined(CASPI_FEATURES_HAS_CONCEPTS) && ! defined(CASPI_FEATURES_DISABLE_CONCEPTS)
 
-    template <typename T>
-    concept FloatingPoint = std::is_floating_point_v<T>;
+        template <typename T>
+        concept FloatingPoint = std::is_floating_point_v<T>;
 
-    /**
-     * @class Producer
-     * @brief Defines a common API for producers of audio data.
-     *        Producers are typically oscillators or other sound sources.
-     *        They can render a single sample or a buffer of samples.
-     *        If C++20 concepts are available, they will be used. Define CASPI_FEATURES_DISABLE_CONCEPTS to disable.
-     */
-    template <FloatingPoint FloatType, typename Policy = Traversal::PerSample>
-#else
-    template<typename FloatType = double, typename Policy = Traversal::PerSample>
-#endif
-    class Producer {
+        /**
+         * @class Producer
+         * @brief Defines a common API for producers of audio data.
+         *        Producers are typically oscillators or other sound sources.
+         *        They can render a single sample or a buffer of samples.
+         *        If C++20 concepts are available, they will be used. Define CASPI_FEATURES_DISABLE_CONCEPTS to disable.
+         */
+        template <FloatingPoint FloatType, typename Policy = Traversal::PerSample>
+    #else
+        template<typename FloatType = double, typename Policy = Traversal::PerSample>
+    #endif
+        class Producer {
 #if ! defined(CASPI_FEATURES_HAS_CONCEPTS) || defined(CASPI_FEATURES_DISABLE_CONCEPTS)
-        CASPI_STATIC_ASSERT(std::is_floating_point<FloatType>::value,
-                            "Producer base class requires a floating-point type (float, double, long double)")
-        ;
+            CASPI_STATIC_ASSERT(std::is_floating_point<FloatType>::value,
+                                "Producer base class requires a floating-point type (float, double, long double)")
+            ;
 #endif
-        CASPI_STATIC_ASSERT(is_traversal_policy<Policy>::value,
-                            "Policy must be PerSample, PerFrame, or PerChannel");
+            CASPI_STATIC_ASSERT(is_traversal_policy<Policy>::value,
+                                "Policy must be PerSample, PerFrame, or PerChannel");
 
     public:
         // ---- Hooks for derived types (override what you need) ---
@@ -134,12 +138,12 @@ namespace CASPI::Core
             return renderSample();
         }
 
-        CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel,
-                                                        const std::size_t frame)
-        {
-            (void) frame;
-            return renderSample(channel);
-        }
+            CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel,
+                                                            const std::size_t frame)
+            {
+                (void) frame;
+                return renderSample(channel);
+            }
 
         virtual void prepareBlock(const std::size_t nFrames, const std::size_t nChannels)
         {
@@ -361,7 +365,7 @@ namespace CASPI::Core
         virtual void onSampleRateChanged(FloatType rate) {}
 
     private:
-        FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>;
+        FloatType sampleRate = Constants::DEFAULT_SAMPLE_RATE<FloatType>;
     };
 
     template<typename T>
@@ -461,6 +465,7 @@ inline FloatType flushToZeroScalar(FloatType value,
 #if defined(CASPI_FEATURES_HAS_FLUSH_ZERO)
         unsigned int mxcsr_;
 #endif
+        };
     };
 } // namespace CASPI::Core
 
