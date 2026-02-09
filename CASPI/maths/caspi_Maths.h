@@ -94,17 +94,11 @@ namespace CASPI
             return value < lower ? lower : (value > upper ? upper : value);
         }
 
-        template <typename FloatType>
-        void clamp (FloatType& value, const FloatType lower, const FloatType upper)
-        {
-            value = (value < lower ? lower : (value > upper ? upper : value));
-        }
-
-        template <typename Enum>
-        std::underlying_type_t<Enum> to_underlying (Enum e) noexcept
-        {
-            return static_cast<std::underlying_type_t<Enum>> (e);
-        }
+    template <typename Enum>
+    std::underlying_type_t<Enum> to_underlying (Enum e) noexcept
+    {
+        return static_cast<std::underlying_type_t<Enum>> (e);
+    }
 
         template <typename FloatType>
         CASPI_ALWAYS_INLINE FloatType factorialTerm (int n) noexcept
@@ -151,11 +145,11 @@ namespace CASPI
 #endif
         }
 
-        template <typename T>
-        CASPI_NO_DISCARD inline T lerp_branchless (T a, T b, T t) noexcept
-        {
-            return a + t * (b - a);
-        }
+    template <typename T>
+    CASPI_NO_DISCARD inline T linearInterpolation_bl (T a, T b, T t) noexcept
+    {
+        return a + t * (b - a);
+    }
 
         template <typename T>
         CASPI_NO_DISCARD inline T wrap_01_branchless (T x) noexcept
@@ -246,6 +240,6 @@ namespace CASPI
         }
     } // namespace CASPI::Maths
 }
-    
+
 
 #endif // CASPI_MATHS_H
