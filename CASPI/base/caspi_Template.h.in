@@ -1,0 +1,116 @@
+#ifndef CASPI_<FILENAME>_H
+#define CASPI_<FILENAME>_H
+
+/*************************************************************************
+ *  .d8888b.                             d8b
+ * d88P  Y88b                            Y8P
+ * 888    888
+ * 888         8888b.  .d8888b  88888b.  888
+ * 888            "88b 88K      888 "88b 888
+ * 888    888 .d888888 "Y8888b. 888  888 888
+ * Y88b  d88P 888  888      X88 888 d88P 888
+ *  "Y8888P"  "Y888888  88888P' 88888P"  888
+ *                              888
+ *                              888
+ *                              888
+ *
+ * @file caspi_<Filename>.h A template for CASPI header files.
+ * @author CS Islay
+ * @brief Use this file to write new files.
+ ************************************************************************/
+
+//------------------------------------------------------------------------------
+// Includes - System
+//------------------------------------------------------------------------------
+#include <cstdint>
+#include <string>
+
+//------------------------------------------------------------------------------
+// Includes - Project
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Forward declarations
+//------------------------------------------------------------------------------
+namespace CASPI
+{
+    namespace module
+    {
+
+        class Dependency;
+
+    } // namespace module
+} // namespace CASPI
+
+//------------------------------------------------------------------------------
+// MACROs, constants, enums, typedefs
+//------------------------------------------------------------------------------
+namespace CASPI
+{
+    namespace module
+    {
+
+        #define MACRO_NAME(value) ((value) * 2)
+
+        enum class EnumName
+        {
+            Value1,
+            Value2,
+            Value3
+        };
+    } // namespace module
+} // namespace CASPI
+
+//------------------------------------------------------------------------------
+// Declarations
+//------------------------------------------------------------------------------
+namespace CASPI
+{
+    namespace module
+    {
+
+        /**
+         * @class ClassName
+         * @brief A brief description of the class.
+         * A more detailed description of the class, its purpose, and how it fits into the overall project.
+         */
+        class ClassName
+        {
+            public:
+                /// Constructors / Destructor
+                ClassName();
+                explicit ClassName (int value);
+                ~ClassName();
+
+                /// Rule of Five (declare only what you need)
+                ClassName (const ClassName& other);
+                ClassName& operator= (const ClassName& other);
+
+                ClassName (ClassName&& other) noexcept;
+                ClassName& operator= (ClassName&& other) noexcept;
+
+                /// Getters/Setters
+
+                /// Public API
+
+                /**
+                 * @brief A brief description of the function's purpose.
+                 * A more detailed description of what the function does, its parameters, return value, and any exceptions it might throw.
+                 * @param[in] param1 Description of the first parameter.
+                 * @param[in] param2 Description of the second parameter.
+                 * @return Description of the return value.
+                 */
+                void doSomething() const;
+
+            private:
+                // Helper functions
+                void reset();
+
+                // Data members
+                int value_;
+        };
+
+    } // namespace module
+} // namespace CASPI
+
+#endif // CASPI_<FILENAME>_H
