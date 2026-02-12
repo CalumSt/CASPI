@@ -217,13 +217,12 @@ Y88b  d88P 888  888      X88 888 d88P 888
     #define CASPI_HAS_SSE4_2
 #endif
 
-#if defined(CASPI_HAS_SSE) || defined(CASPI_HAS_SSE2) || defined(CASPI_HAS_SSE3) \
+#if defined(CASPI_HAS_SSE1) || defined(CASPI_HAS_SSE2) || defined(CASPI_HAS_SSE3) \
 || defined(CASPI_HAS_SSSE3) || defined(CASPI_HAS_SSE4_1) || defined(CASPI_HAS_SSE4_2)
     #define CASPI_HAS_SSE
 #endif
 
 #if defined(__AVX__)
-    #include <immintrin.h>
     #define CASPI_HAS_AVX
 #endif
 
@@ -232,16 +231,20 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #endif
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__)
-#include <arm_neon.h>
     #define CASPI_HAS_NEON
+#endif
+
+#if defined(__aarch64__)
+    #define CASPI_HAS_NEON64
 #endif
 
 #if defined(__FMA__) || defined(__FMA3__)
     #define CASPI_HAS_FMA
 #endif
 
-#if defined(CASPI_ARCH_WASM)
-    #include <wasm_simd128.h>
+#if defined(__wasm_simd128__)
+    #define CASPI_HAS_WASM_SIMD
 #endif
+
 
 #endif //CASPI_PLATFORM_H
