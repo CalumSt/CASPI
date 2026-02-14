@@ -87,6 +87,26 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #endif
 
+// Detect compiler support for restrict-like qualifiers
+#if defined(CASPI_COMPILER_MSVC)
+    // Microsoft Visual C++
+    #define CASPI_RESTRICT __restrict
+
+#elif defined(CASPI_COMPILER_CLANG)
+    // Clang (also defines __GNUC__, so must come first)
+    #if __has_extension(cxx_restrict)
+        #define CASPI_RESTRICT __restrict__
+    #else
+        #define CASPI_RESTRICT
+    #endif
+#elif defined(CASPI_COMPILER_GCC)
+    // GCC and compatible
+    #define CASPI_RESTRICT __restrict__
+#else
+    // Unknown compiler
+    #define CASPI_RESTRICT
+#endif
+
 // Non-blocking
 #if defined(__has_cpp_attribute)
 #  if __has_cpp_attribute(clang::nonblocking) && defined(CASPI_COMPILER_CLANG) && !defined(CASPI_PLATFORM_MACOS) && __clang_major__ >= 17
