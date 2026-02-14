@@ -807,7 +807,7 @@ static void BM_AudioBuffer_Fill_ChannelMajor (benchmark::State& state)
 
     for (auto _ : state)
     {
-        block::fill_buffer (buffer, 0.5f);
+        block::fill (buffer, 0.5f);
         benchmark::DoNotOptimize (buffer.data());
     }
 
@@ -824,7 +824,7 @@ static void BM_AudioBuffer_Fill_Interleaved (benchmark::State& state)
 
     for (auto _ : state)
     {
-        block::fill_buffer (buffer, 0.5f);
+        block::fill (buffer, 0.5f);
         benchmark::DoNotOptimize (buffer.data());
     }
 
@@ -899,15 +899,15 @@ static void BM_RealWorld_StereoMix (benchmark::State& state)
     for (auto _ : state)
     {
         // Zero master
-        block::fill_buffer (master, 0.0f);
+        block::fill (master, 0.0f);
 
         // Apply gains
-        block::scale_buffer (track1, 0.7f);
-        block::scale_buffer (track2, 0.5f);
+        block::scale (track1, 0.7f);
+        block::scale (track2, 0.5f);
 
         // Mix to master
-        block::add_buffer (master, track1);
-        block::add_buffer (master, track2);
+        block::add (master, track1);
+        block::add (master, track2);
 
         benchmark::DoNotOptimize (master.data());
     }
