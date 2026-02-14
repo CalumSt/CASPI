@@ -1463,9 +1463,10 @@ TEST_F(FMGraphAudioBufferTest, SampleRenderMethodConsistency)
     }
 
     // Both methods should produce identical output
+    // Interestingly, using SIMD introduces a very slight error of maximum 3e-8. So, this is modified to be with 4e-8
     for (size_t f = 0; f < 128; ++f)
     {
-        EXPECT_DOUBLE_EQ(buffer1.sample(0, f), buffer2.sample(0, f))
+        EXPECT_NEAR(buffer1.sample(0, f), buffer2.sample(0, f), 4e-8)
             << "Mismatch at frame " << f;
     }
 }
