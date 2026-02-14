@@ -182,6 +182,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 *
 ************************************************************************/
 
+#include "caspi_Assert.h"
+
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -1641,6 +1643,9 @@ namespace CASPI
             template <typename T>
             struct AddKernel
             {
+                    CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+                      "SIMD kernels only support floating-point types");
+
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type operator() (simd_type a, simd_type b) const
@@ -1662,6 +1667,8 @@ namespace CASPI
             template <typename T>
             struct SubKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type operator() (simd_type a, simd_type b) const
@@ -1683,6 +1690,8 @@ namespace CASPI
             template <typename T>
             struct MulKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type operator() (simd_type a, simd_type b) const
@@ -1705,6 +1714,8 @@ namespace CASPI
             template <typename T>
             struct ScaleKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type vec;
@@ -1731,6 +1742,8 @@ namespace CASPI
             template <typename T>
             struct CopyKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type operator() (simd_type a) const
@@ -1752,6 +1765,8 @@ namespace CASPI
             template <typename T>
             struct FillKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type vec;
@@ -1772,6 +1787,8 @@ namespace CASPI
             template <typename T>
             struct MACKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type operator() (simd_type acc, simd_type a, simd_type b) const
@@ -1796,6 +1813,8 @@ namespace CASPI
             template <typename T>
             struct LerpKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type t_vec;
@@ -1823,6 +1842,8 @@ namespace CASPI
             template <typename T>
             struct ClampKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type min_vec;
@@ -1860,6 +1881,8 @@ namespace CASPI
             template <typename T>
             struct AbsKernel
             {
+                CASPI_STATIC_ASSERT(std::is_floating_point<T>::value,
+  "SIMD kernels only support floating-point types");
                     using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
 
                     simd_type operator() (simd_type a) const

@@ -309,7 +309,7 @@ namespace CASPI
         template <typename T>
         struct simd_width
         {
-            static constexpr std::size_t value = SIMD::Strategy::min_simd_width<T>::value;
+                static constexpr std::size_t value = SIMD::Strategy::min_simd_width<T>::value;
         };
         /**
          * @brief Check if span is SIMD-eligible at compile time
@@ -322,9 +322,8 @@ namespace CASPI
         template <typename Span>
         struct is_simd_eligible
         {
-            static constexpr bool value =
-                is_contiguous_span<Span>::value &&
-                (SIMD::Strategy::min_simd_width<typename span_element_type<Span>::type>::value > 1);
+                static constexpr bool value =
+                    is_contiguous_span<Span>::value && (SIMD::Strategy::min_simd_width<typename span_element_type<Span>::type>::value > 1);
         };
 
         /**
@@ -349,92 +348,96 @@ namespace CASPI
         These operations automatically use SIMD when beneficial:
         - Span is contiguous
         - Element type is float or double
-        - Array size is large enough
+        - min_simd_width > 1 (indicates SIMD available)
 
-        Otherwise, they fall back to scalar loops.
+        Otherwise, they fall back to scalar loops. This allows AudioBuffer to work with any
+        Plain Old Data (POD) type (int, short, float, double, etc.) while leveraging SIMD
+        acceleration for floating-point types when available.
+
+        Implementation uses SFINAE (enable_if) to completely prevent instantiation of SIMD
+        code paths for non-SIMD types, ensuring compatibility with integer and other types.
         ************************************************************************************************/
 
+        // ===== FILL =====
+
         /**
-         * @brief Fill contiguous span with value, using SIMD when eligible
-         * @tparam T Element type (float or double for SIMD)
-         * @param span Contiguous span to fill
-         * @param value Value to fill with
-         *
-         * Automatically uses SIMD::ops::fill for eligible spans.
+         * @brief Fill contiguous span with value (SIMD version)
+         * @tparam T Element type (float or double)
          */
         template <typename T>
-        inline void fill (Span<T> span, T value) noexcept
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value > 1), void>::type
+            fill (Span<T> span, T value) noexcept
         {
-            constexpr std::size_t min_width = SIMD::Strategy::min_simd_width<T>::value;
-
-            if (is_simd_eligible<Span<T>>::value && span.size() >= min_width)
-            {
-                SIMD::ops::fill (span.data(), span.size(), value);
-            }
-            else
-            {
-                // Scalar fallback
-                for (std::size_t i = 0; i < span.size(); ++i)
-                {
-                    span[i] = value;
-                }
-            }
+            SIMD::ops::fill (span.data(), span.size(), value);
         }
 
         /**
-         * @brief Scale contiguous span by factor, using SIMD when eligible
-         * @tparam T Element type (float or double for SIMD)
-         * @param span Contiguous span to scale
-         * @param factor Scaling factor
-         *
-         * Computes: span[i] *= factor
-         * Automatically uses SIMD::ops::scale for eligible spans.
+         * @brief Fill contiguous span with value (scalar version)
+         * @tparam T Element type (int, short, or any non-SIMD type)
          */
         template <typename T>
-        inline void scale (Span<T> span, T factor) noexcept
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value == 1), void>::type
+            fill (Span<T> span, T value) noexcept
         {
-            constexpr std::size_t min_width = SIMD::Strategy::min_simd_width<T>::value;
-
-            if (is_simd_eligible<Span<T>>::value && span.size() >= min_width)
+            for (std::size_t i = 0; i < span.size(); ++i)
             {
-                SIMD::ops::scale (span.data(), span.size(), factor);
-            }
-            else
-            {
-                // Scalar fallback
-                for (std::size_t i = 0; i < span.size(); ++i)
-                {
-                    span[i] *= factor;
-                }
+                span[i] = value;
             }
         }
 
+        // ===== SCALE =====
+
         /**
-         * @brief Copy from src to dst, using SIMD when eligible
-         * @tparam T Element type (float or double for SIMD)
-         * @param dst Destination span
-         * @param src Source span (can be const)
-         *
-         * Copies min(dst.size(), src.size()) elements.
-         * Automatically uses SIMD::ops::copy for eligible spans.
+         * @brief Scale contiguous span by factor (SIMD version)
+         * @tparam T Element type (float or double)
          */
         template <typename T>
-        inline void copy (Span<T> dst, Span<const T> src) noexcept
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value > 1), void>::type
+            scale (Span<T> span, T factor) noexcept
         {
-            const std::size_t count         = (dst.size() < src.size()) ? dst.size() : src.size();
-            constexpr std::size_t min_width = SIMD::Strategy::min_simd_width<T>::value;
+            SIMD::ops::scale (span.data(), span.size(), factor);
+        }
 
-            if (is_simd_eligible<Span<T>>::value && count >= min_width)
+        /**
+         * @brief Scale contiguous span by factor (scalar version)
+         * @tparam T Element type (int, short, or any non-SIMD type)
+         */
+        template <typename T>
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value == 1), void>::type
+            scale (Span<T> span, T factor) noexcept
+        {
+            for (std::size_t i = 0; i < span.size(); ++i)
             {
-                SIMD::ops::copy (dst.data(), src.data(), count);
+                span[i] *= factor;
             }
-            else
+        }
+
+        // ===== COPY =====
+
+        /**
+         * @brief Copy from src to dst (SIMD version)
+         * @tparam T Element type (float or double)
+         */
+        template <typename T>
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value > 1), void>::type
+            copy (Span<T> dst, Span<const T> src) noexcept
+        {
+            const std::size_t count = (dst.size() < src.size()) ? dst.size() : src.size();
+            SIMD::ops::copy (dst.data(), src.data(), count);
+        }
+
+        /**
+         * @brief Copy from src to dst (scalar version)
+         * @tparam T Element type (int, short, or any non-SIMD type)
+         */
+        template <typename T>
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value == 1), void>::type
+            copy (Span<T> dst, Span<const T> src) noexcept
+        {
+            const std::size_t count = (dst.size() < src.size()) ? dst.size() : src.size();
+            for (std::size_t i = 0; i < count; ++i)
             {
-                // Scalar fallback
-                for (std::size_t i = 0; i < count; ++i)
-                {
-                    dst[i] = src[i];
-                }
+                dst[i] = src[i];
             }
         }
 
@@ -445,32 +448,32 @@ namespace CASPI
             copy (dst, Span<const T> (src.data(), src.size()));
         }
 
+        // ===== ADD =====
+
         /**
-         * @brief Add src to dst, using SIMD when eligible
-         * @tparam T Element type (float or double for SIMD)
-         * @param dst Destination span (modified in-place)
-         * @param src Source span (can be const)
-         *
-         * Computes: dst[i] += src[i]
-         * Automatically uses SIMD::ops::add for eligible spans.
+         * @brief Add src to dst (SIMD version)
+         * @tparam T Element type (float or double)
          */
         template <typename T>
-        inline void add (Span<T> dst, Span<const T> src) noexcept
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value > 1), void>::type
+            add (Span<T> dst, Span<const T> src) noexcept
         {
-            const std::size_t count         = (dst.size() < src.size()) ? dst.size() : src.size();
-            constexpr std::size_t min_width = SIMD::Strategy::min_simd_width<T>::value;
+            const std::size_t count = (dst.size() < src.size()) ? dst.size() : src.size();
+            SIMD::ops::add (dst.data(), src.data(), count);
+        }
 
-            if (is_simd_eligible<Span<T>>::value && count >= min_width)
+        /**
+         * @brief Add src to dst (scalar version)
+         * @tparam T Element type (int, short, or any non-SIMD type)
+         */
+        template <typename T>
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value == 1), void>::type
+            add (Span<T> dst, Span<const T> src) noexcept
+        {
+            const std::size_t count = (dst.size() < src.size()) ? dst.size() : src.size();
+            for (std::size_t i = 0; i < count; ++i)
             {
-                SIMD::ops::add (dst.data(), src.data(), count);
-            }
-            else
-            {
-                // Scalar fallback
-                for (std::size_t i = 0; i < count; ++i)
-                {
-                    dst[i] += src[i];
-                }
+                dst[i] += src[i];
             }
         }
 
@@ -481,31 +484,32 @@ namespace CASPI
             add (dst, Span<const T> (src.data(), src.size()));
         }
 
+        // ===== SUBTRACT =====
+
         /**
-         * @brief Subtract src from dst, using SIMD when eligible
-         * @tparam T Element type (float or double for SIMD)
-         * @param dst Destination span (modified in-place)
-         * @param src Source span (can be const)
-         *
-         * Computes: dst[i] -= src[i]
+         * @brief Subtract src from dst (SIMD version)
+         * @tparam T Element type (float or double)
          */
         template <typename T>
-        inline void subtract (Span<T> dst, Span<const T> src) noexcept
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value > 1), void>::type
+            subtract (Span<T> dst, Span<const T> src) noexcept
         {
-            const std::size_t count         = (dst.size() < src.size()) ? dst.size() : src.size();
-            constexpr std::size_t min_width = SIMD::Strategy::min_simd_width<T>::value;
+            const std::size_t count = (dst.size() < src.size()) ? dst.size() : src.size();
+            SIMD::ops::sub (dst.data(), src.data(), count);
+        }
 
-            if (is_simd_eligible<Span<T>>::value && count >= min_width)
+        /**
+         * @brief Subtract src from dst (scalar version)
+         * @tparam T Element type (int, short, or any non-SIMD type)
+         */
+        template <typename T>
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value == 1), void>::type
+            subtract (Span<T> dst, Span<const T> src) noexcept
+        {
+            const std::size_t count = (dst.size() < src.size()) ? dst.size() : src.size();
+            for (std::size_t i = 0; i < count; ++i)
             {
-                SIMD::ops::sub (dst.data(), src.data(), count);
-            }
-            else
-            {
-                // Scalar fallback
-                for (std::size_t i = 0; i < count; ++i)
-                {
-                    dst[i] -= src[i];
-                }
+                dst[i] -= src[i];
             }
         }
 
@@ -515,31 +519,32 @@ namespace CASPI
             subtract (dst, Span<const T> (src.data(), src.size()));
         }
 
+        // ===== MULTIPLY =====
+
         /**
-         * @brief Element-wise multiply, using SIMD when eligible
-         * @tparam T Element type (float or double for SIMD)
-         * @param dst Destination span (modified in-place)
-         * @param src Source span (can be const)
-         *
-         * Computes: dst[i] *= src[i]
+         * @brief Element-wise multiply (SIMD version)
+         * @tparam T Element type (float or double)
          */
         template <typename T>
-        inline void multiply (Span<T> dst, Span<const T> src) noexcept
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value > 1), void>::type
+            multiply (Span<T> dst, Span<const T> src) noexcept
         {
-            const std::size_t count         = (dst.size() < src.size()) ? dst.size() : src.size();
-            constexpr std::size_t min_width = SIMD::Strategy::min_simd_width<T>::value;
+            const std::size_t count = (dst.size() < src.size()) ? dst.size() : src.size();
+            SIMD::ops::mul (dst.data(), src.data(), count);
+        }
 
-            if (is_simd_eligible<Span<T>>::value && count >= min_width)
+        /**
+         * @brief Element-wise multiply (scalar version)
+         * @tparam T Element type (int, short, or any non-SIMD type)
+         */
+        template <typename T>
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value == 1), void>::type
+            multiply (Span<T> dst, Span<const T> src) noexcept
+        {
+            const std::size_t count = (dst.size() < src.size()) ? dst.size() : src.size();
+            for (std::size_t i = 0; i < count; ++i)
             {
-                SIMD::ops::mul (dst.data(), src.data(), count);
-            }
-            else
-            {
-                // Scalar fallback
-                for (std::size_t i = 0; i < count; ++i)
-                {
-                    dst[i] *= src[i];
-                }
+                dst[i] *= src[i];
             }
         }
 
@@ -549,36 +554,37 @@ namespace CASPI
             multiply (dst, Span<const T> (src.data(), src.size()));
         }
 
+        // ===== CLAMP =====
+
         /**
-         * @brief Clamp span to range, using SIMD when eligible
-         * @tparam T Element type (float or double for SIMD)
-         * @param span Span to clamp (modified in-place)
-         * @param min_val Minimum value
-         * @param max_val Maximum value
-         *
-         * Computes: span[i] = clamp(span[i], min_val, max_val)
+         * @brief Clamp span to range (SIMD version)
+         * @tparam T Element type (float or double)
          */
         template <typename T>
-        inline void clamp (Span<T> span, T min_val, T max_val) noexcept
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value > 1), void>::type
+            clamp (Span<T> span, T min_val, T max_val) noexcept
         {
-            constexpr std::size_t min_width = SIMD::Strategy::min_simd_width<T>::value;
+            SIMD::ops::clamp (span.data(), min_val, max_val, span.size());
+        }
 
-            if (is_simd_eligible<Span<T>>::value && span.size() >= min_width)
+        /**
+         * @brief Clamp span to range (scalar version)
+         * @tparam T Element type (int, short, or any non-SIMD type)
+         */
+        template <typename T>
+        inline typename std::enable_if<(SIMD::Strategy::min_simd_width<T>::value == 1), void>::type
+            clamp (Span<T> span, T min_val, T max_val) noexcept
+        {
+            for (std::size_t i = 0; i < span.size(); ++i)
             {
-                SIMD::ops::clamp (span.data(), min_val, max_val, span.size());
-            }
-            else
-            {
-                // Scalar fallback
-                for (std::size_t i = 0; i < span.size(); ++i)
-                {
-                    if (span[i] < min_val)
-                        span[i] = min_val;
-                    if (span[i] > max_val)
-                        span[i] = max_val;
-                }
+                if (span[i] < min_val)
+                    span[i] = min_val;
+                if (span[i] > max_val)
+                    span[i] = max_val;
             }
         }
+
+        // ===== APPLY (always scalar - no SIMD version) =====
 
         /**
          * @brief Apply unary operation to span
@@ -634,6 +640,7 @@ namespace CASPI
 
         /**
          * @brief Fill strided span (always scalar - no SIMD)
+         * @tparam T Element type (any POD type)
          */
         template <typename T>
         void fill (StridedSpan<T> span, T value) noexcept
@@ -646,6 +653,7 @@ namespace CASPI
 
         /**
          * @brief Scale strided span (always scalar - no SIMD)
+         * @tparam T Element type (any POD type)
          */
         template <typename T>
         void scale (StridedSpan<T> span, T factor) noexcept
@@ -658,6 +666,7 @@ namespace CASPI
 
         /**
          * @brief Copy strided spans (always scalar - no SIMD)
+         * @tparam T Element type (any POD type)
          */
         template <typename T>
         void copy (StridedSpan<T> dst, StridedSpan<const T> src) noexcept
@@ -681,6 +690,7 @@ namespace CASPI
 
         /**
          * @brief Add strided spans (always scalar - no SIMD)
+         * @tparam T Element type (any POD type)
          */
         template <typename T>
         void add (StridedSpan<T> dst, StridedSpan<const T> src) noexcept
@@ -704,6 +714,7 @@ namespace CASPI
 
         /**
          * @brief Subtract strided spans (always scalar - no SIMD)
+         * @tparam T Element type (any POD type)
          */
         template <typename T>
         void subtract (StridedSpan<T> dst, StridedSpan<const T> src) noexcept
@@ -727,6 +738,7 @@ namespace CASPI
 
         /**
          * @brief Multiply strided spans (always scalar - no SIMD)
+         * @tparam T Element type (any POD type)
          */
         template <typename T>
         void multiply (StridedSpan<T> dst, StridedSpan<const T> src) noexcept
@@ -750,6 +762,7 @@ namespace CASPI
 
         /**
          * @brief Clamp strided span (always scalar - no SIMD)
+         * @tparam T Element type (any POD type)
          */
         template <typename T>
         void clamp (StridedSpan<T> span, T min_val, T max_val) noexcept
@@ -761,6 +774,50 @@ namespace CASPI
                 if (*it > max_val)
                     *it = max_val;
             }
+        }
+
+        /**
+         * @brief Apply unary operation to strided span
+         * @tparam T Element type
+         * @tparam UnaryOp Operation type (callable)
+         * @param span Strided span to process
+         * @param op Unary operation
+         */
+        template <typename T, typename UnaryOp>
+        inline void apply (StridedSpan<T> span, UnaryOp op) noexcept
+        {
+            for (auto it = span.begin(); it != span.end(); ++it)
+            {
+                *it = op (*it);
+            }
+        }
+
+        /**
+         * @brief Apply binary operation between two strided spans
+         * @tparam T Element type
+         * @tparam BinaryOp Operation type (callable)
+         * @param dst Destination strided span (modified in-place)
+         * @param src Source strided span
+         * @param op Binary operation
+         */
+        template <typename T, typename BinaryOp>
+        inline void apply2 (StridedSpan<T> dst, StridedSpan<const T> src, BinaryOp op) noexcept
+        {
+            auto it_dst = dst.begin();
+            auto it_src = src.begin();
+
+            while (it_dst != dst.end() && it_src != src.end())
+            {
+                *it_dst = op (*it_dst, *it_src);
+                ++it_dst;
+                ++it_src;
+            }
+        }
+
+        template <typename T, typename BinaryOp>
+        inline void apply2 (StridedSpan<T> dst, StridedSpan<T> src, BinaryOp op) noexcept
+        {
+            apply2 (dst, StridedSpan<const T> (src.data(), src.size(), src.stride()), op);
         }
 
     } // namespace Core
