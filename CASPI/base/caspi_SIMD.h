@@ -1333,13 +1333,22 @@ namespace CASPI
          */
         inline float hsum (float32x4 v)
         {
-#if defined(CASPI_HAS_SSE)
-            // Optimized: avoid slow hadd instruction
-            __m128 shuf = _mm_movehdup_ps (v); // [1, 1, 3, 3]
-            __m128 sums = _mm_add_ps (v, shuf); // [0+1, 1+1, 2+3, 3+3]
-            shuf        = _mm_movehl_ps (shuf, sums); // [2+3, 3+3, ?, ?]
-            sums        = _mm_add_ss (sums, shuf); // [0+1+2+3, ...]
-            return _mm_cvtss_f32 (sums);
+#if defined(CASPI_HAS_SSE3)
+
+            __m128 shuf = _mm_movehdup_ps(v);
+            __m128 sums = _mm_add_ps(v, shuf);
+            shuf        = _mm_movehl_ps(shuf, sums);
+            sums        = _mm_add_ss(sums, shuf);
+            return _mm_cvtss_f32(sums);
+
+#elif defined(CASPI_HAS_SSE)
+
+            // SSE1 fallback (no SSE3 intrinsics)
+            __m128 shuf = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2,3,0,1));
+            __m128 sums = _mm_add_ps(v, shuf);
+            shuf        = _mm_movehl_ps(shuf, sums);
+            sums        = _mm_add_ss(sums, shuf);
+            return _mm_cvtss_f32(sums);
 #else
             float tmp[4];
             store<float, float32x4> (tmp, v);
