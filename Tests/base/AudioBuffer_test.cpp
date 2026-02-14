@@ -351,94 +351,221 @@ TEST(StridedSpanTest, IterationAndIndex) {
     }
 }
 
-// ---------------------- Block operations ----------------------
-TEST(BlocksTest, FillScaleCopyApply) {
+// ---------------------- Block operations tests ----------------------
+// Tests verify that block-level operations (fill, scale, copy, add) correctly
+// delegate to Core::* span operations and handle both buffer-wide and
+// channel/frame-specific operations. These are integration tests ensuring
+// the AudioBuffer wrapper correctly extracts spans and passes them through.
+
+TEST(BlockOperationsTest, FillEntireBuffer) {
+    // Verify fill() sets all samples to the specified value
     CASPI::AudioBuffer<float> buf(2, 3);
-    auto all = buf.all_span();
+    CASPI::block::fill(buf, 3.14f);
 
-    // fill
-    CASPI::block::fill(all, 1.0f);
-    for (auto x: all)
-        EXPECT_EQ(x, 1.0f);
-
-    // scale
-    CASPI::block::scale(all, 2.0f);
-    for (auto x: all)
-        EXPECT_EQ(x, 2.0f);
-
-    // copy
-    float tmp[6] = {};
-    CASPI::block::copy(CASPI::Core::Span<float>(tmp, 6), all);
-    for (size_t i = 0; i < 6; ++i)
-        EXPECT_EQ(tmp[i], 2.0f);
-
-    // apply unary op
-    CASPI::block::apply(all, [](float x) { return x + 1.0f; });
-    for (auto x: all)
-        EXPECT_EQ(x, 3.0f);
-
-    // apply2 binary op
-    float src[6] = {1, 1, 1, 1, 1, 1};
-    CASPI::block::apply2(all, CASPI::Core::Span<float>(src, 6),
-                         [](float a, float b) { return a - b; });
-    for (auto x: all)
-        EXPECT_EQ(x, 2.0f);
-}
-
-// ---------------------- Channel / Frame views with block ops ----------------------
-TEST(AudioBufferTest, ChannelFrameBlocks) {
-    CASPI::AudioBuffer<float> buf(2, 3);
-    auto ch0 = buf.channel_span(0);
-    auto ch1 = buf.channel_span(1);
-
-    CASPI::block::fill(ch0, 1.0f);
-    CASPI::block::fill(ch1, 2.0f);
-
-    EXPECT_EQ(buf.sample(0,0), 1.0f);
-    EXPECT_EQ(buf.sample(1,0), 2.0f);
-
-    auto f2 = buf.frame_span(2);
-    CASPI::block::scale(f2, 2.0f);
-    EXPECT_EQ(buf.sample(0,2), 2.0f);
-    EXPECT_EQ(buf.sample(1,2), 4.0f);
-}
-
-// 3) Move constructor and assignment
-TEST(AudioBufferTest, MoveConstructorAndAssignment) {
-    CASPI::AudioBuffer<int> buf1(1, 1);
-    buf1.setSample(0, 0, 99);
-
-    CASPI::AudioBuffer<int> buf2 = std::move(buf1); // Move constructor
-    EXPECT_EQ(buf2.sample(0, 0), 99);
-
-    CASPI::AudioBuffer<int> buf3;
-    buf3 = std::move(buf2); // Move assignment
-    EXPECT_EQ(buf3.sample(0, 0), 99);
-}
-
-// 4) Fill and clear tests
-TEST(AudioBufferTest, FillAndClear) {
-    CASPI::AudioBuffer<double> buf(3, 3);
-    buf.fill(3.14);
     for (size_t ch = 0; ch < buf.numChannels(); ++ch)
         for (size_t fr = 0; fr < buf.numFrames(); ++fr)
-            EXPECT_DOUBLE_EQ(buf.sample(ch, fr), 3.14);
-
-    buf.clear();
-    for (size_t ch = 0; ch < buf.numChannels(); ++ch)
-        for (size_t fr = 0; fr < buf.numFrames(); ++fr)
-            EXPECT_DOUBLE_EQ(buf.sample(ch, fr), 0.0);
+            EXPECT_FLOAT_EQ(buf.sample(ch, fr), 3.14f);
 }
 
-// 5) Testing different layouts (optional, if supported)
-TEST(AudioBufferTest, DifferentLayouts) {
-    CASPI::AudioBuffer<float, CASPI::ChannelMajorLayout> chBuf(2, 2);
-    chBuf.fill(1.23f);
-    EXPECT_FLOAT_EQ(chBuf.sample(1, 1), 1.23f);
+TEST(BlockOperationsTest, ScaleEntireBuffer) {
+    // Verify scale() multiplies all samples by the factor
+    CASPI::AudioBuffer<float> buf(2, 3);
+    CASPI::block::fill(buf, 2.0f);
+    CASPI::block::scale(buf, 3.0f);
 
-    CASPI::AudioBuffer<float, CASPI::InterleavedLayout> intBuf(2, 2);
-    intBuf.fill(4.56f);
-    EXPECT_FLOAT_EQ(intBuf.sample(0, 0), 4.56f);
+    for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+        for (size_t fr = 0; fr < buf.numFrames(); ++fr)
+            EXPECT_FLOAT_EQ(buf.sample(ch, fr), 6.0f);
+}
+
+TEST(BlockOperationsTest, CopyEntireBuffer) {
+    // Verify copy() transfers all samples from source to destination
+    CASPI::AudioBuffer<float> src(2, 3);
+    CASPI::AudioBuffer<float> dst(2, 3);
+
+    CASPI::block::fill(src, 1.5f);
+    CASPI::block::fill(dst, 0.0f);
+    CASPI::block::copy(dst, src);
+
+    for (size_t ch = 0; ch < dst.numChannels(); ++ch)
+        for (size_t fr = 0; fr < dst.numFrames(); ++fr)
+            EXPECT_FLOAT_EQ(dst.sample(ch, fr), 1.5f);
+}
+
+TEST(BlockOperationsTest, AddEntireBuffer) {
+    // Verify add() accumulates source samples into destination
+    CASPI::AudioBuffer<float> dst(2, 3);
+    CASPI::AudioBuffer<float> src(2, 3);
+
+    CASPI::block::fill(dst, 1.0f);
+    CASPI::block::fill(src, 2.0f);
+    CASPI::block::add(dst, src);
+
+    for (size_t ch = 0; ch < dst.numChannels(); ++ch)
+        for (size_t fr = 0; fr < dst.numFrames(); ++fr)
+            EXPECT_FLOAT_EQ(dst.sample(ch, fr), 3.0f);
+}
+
+TEST(BlockOperationsTest, FillChannelInterleaved) {
+    // Verify fill_channel() works correctly with interleaved layout (strided span)
+    CASPI::AudioBuffer<float, CASPI::InterleavedLayout> buf(2, 4);
+    CASPI::block::fill(buf, 0.0f);
+    CASPI::block::fill_channel(buf, 1, 5.0f);
+
+    // Channel 0 should be zero
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr)
+        EXPECT_FLOAT_EQ(buf.sample(0, fr), 0.0f);
+
+    // Channel 1 should be 5.0
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr)
+        EXPECT_FLOAT_EQ(buf.sample(1, fr), 5.0f);
+}
+
+TEST(BlockOperationsTest, FillChannelChannelMajor) {
+    // Verify fill_channel() works correctly with channel-major layout (contiguous span)
+    CASPI::AudioBuffer<float, CASPI::ChannelMajorLayout> buf(2, 4);
+    CASPI::block::fill(buf, 0.0f);
+    CASPI::block::fill_channel(buf, 0, 7.0f);
+
+    // Channel 0 should be 7.0
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr)
+        EXPECT_FLOAT_EQ(buf.sample(0, fr), 7.0f);
+
+    // Channel 1 should be zero
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr)
+        EXPECT_FLOAT_EQ(buf.sample(1, fr), 0.0f);
+}
+
+TEST(BlockOperationsTest, ScaleChannelInterleaved) {
+    // Verify scale_channel() multiplies only the specified channel (interleaved)
+    CASPI::AudioBuffer<float, CASPI::InterleavedLayout> buf(2, 3);
+    CASPI::block::fill(buf, 2.0f);
+    CASPI::block::scale_channel(buf, 0, 3.0f);
+
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr) {
+        EXPECT_FLOAT_EQ(buf.sample(0, fr), 6.0f);  // scaled
+        EXPECT_FLOAT_EQ(buf.sample(1, fr), 2.0f);  // unchanged
+    }
+}
+
+TEST(BlockOperationsTest, ScaleChannelChannelMajor) {
+    // Verify scale_channel() multiplies only the specified channel (channel-major)
+    CASPI::AudioBuffer<float, CASPI::ChannelMajorLayout> buf(2, 3);
+    CASPI::block::fill(buf, 4.0f);
+    CASPI::block::scale_channel(buf, 1, 0.5f);
+
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr) {
+        EXPECT_FLOAT_EQ(buf.sample(0, fr), 4.0f);  // unchanged
+        EXPECT_FLOAT_EQ(buf.sample(1, fr), 2.0f);  // scaled
+    }
+}
+
+TEST(BlockOperationsTest, FillFrameInterleaved) {
+    // Verify fill_frame() sets all channels in a single frame (contiguous in interleaved)
+    CASPI::AudioBuffer<float, CASPI::InterleavedLayout> buf(3, 4);
+    CASPI::block::fill(buf, 0.0f);
+    CASPI::block::fill_frame(buf, 2, 9.0f);
+
+    // Frame 2 should be 9.0 across all channels
+    for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+        EXPECT_FLOAT_EQ(buf.sample(ch, 2), 9.0f);
+
+    // Other frames should be zero
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr) {
+        if (fr != 2) {
+            for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+                EXPECT_FLOAT_EQ(buf.sample(ch, fr), 0.0f);
+        }
+    }
+}
+
+TEST(BlockOperationsTest, FillFrameChannelMajor) {
+    // Verify fill_frame() sets all channels in a single frame (strided in channel-major)
+    CASPI::AudioBuffer<float, CASPI::ChannelMajorLayout> buf(3, 4);
+    CASPI::block::fill(buf, 0.0f);
+    CASPI::block::fill_frame(buf, 1, 8.0f);
+
+    // Frame 1 should be 8.0 across all channels
+    for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+        EXPECT_FLOAT_EQ(buf.sample(ch, 1), 8.0f);
+
+    // Other frames should be zero
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr) {
+        if (fr != 1) {
+            for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+                EXPECT_FLOAT_EQ(buf.sample(ch, fr), 0.0f);
+        }
+    }
+}
+
+TEST(BlockOperationsTest, ScaleFrameInterleaved) {
+    // Verify scale_frame() multiplies all channels in a single frame (interleaved)
+    CASPI::AudioBuffer<float, CASPI::InterleavedLayout> buf(2, 3);
+    CASPI::block::fill(buf, 5.0f);
+    CASPI::block::scale_frame(buf, 0, 2.0f);
+
+    // Frame 0 should be scaled
+    for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+        EXPECT_FLOAT_EQ(buf.sample(ch, 0), 10.0f);
+
+    // Other frames unchanged
+    for (size_t fr = 1; fr < buf.numFrames(); ++fr)
+        for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+            EXPECT_FLOAT_EQ(buf.sample(ch, fr), 5.0f);
+}
+
+TEST(BlockOperationsTest, ScaleFrameChannelMajor) {
+    // Verify scale_frame() multiplies all channels in a single frame (channel-major)
+    CASPI::AudioBuffer<float, CASPI::ChannelMajorLayout> buf(2, 3);
+    CASPI::block::fill(buf, 3.0f);
+    CASPI::block::scale_frame(buf, 2, 3.0f);
+
+    // Frame 2 should be scaled
+    for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+        EXPECT_FLOAT_EQ(buf.sample(ch, 2), 9.0f);
+
+    // Other frames unchanged
+    for (size_t fr = 0; fr < 2; ++fr)
+        for (size_t ch = 0; ch < buf.numChannels(); ++ch)
+            EXPECT_FLOAT_EQ(buf.sample(ch, fr), 3.0f);
+}
+
+TEST(BlockOperationsTest, MultipleOperationsChained) {
+    // Verify block operations can be chained correctly (integration test)
+    CASPI::AudioBuffer<float> buf(2, 4);
+
+    CASPI::block::fill(buf, 1.0f);
+    CASPI::block::scale(buf, 2.0f);           // all = 2.0
+    CASPI::block::fill_channel(buf, 0, 5.0f); // ch0 = 5.0, ch1 = 2.0
+    CASPI::block::scale_channel(buf, 1, 3.0f);// ch0 = 5.0, ch1 = 6.0
+
+    for (size_t fr = 0; fr < buf.numFrames(); ++fr) {
+        EXPECT_FLOAT_EQ(buf.sample(0, fr), 5.0f);
+        EXPECT_FLOAT_EQ(buf.sample(1, fr), 6.0f);
+    }
+}
+
+TEST(BlockOperationsTest, AddWithDifferentValues) {
+    // Verify add() correctly accumulates when buffers have different values
+    CASPI::AudioBuffer<int> dst(2, 2);
+    CASPI::AudioBuffer<int> src(2, 2);
+
+    dst.setSample(0, 0, 1);
+    dst.setSample(0, 1, 2);
+    dst.setSample(1, 0, 3);
+    dst.setSample(1, 1, 4);
+
+    src.setSample(0, 0, 10);
+    src.setSample(0, 1, 20);
+    src.setSample(1, 0, 30);
+    src.setSample(1, 1, 40);
+
+    CASPI::block::add(dst, src);
+
+    EXPECT_EQ(dst.sample(0, 0), 11);
+    EXPECT_EQ(dst.sample(0, 1), 22);
+    EXPECT_EQ(dst.sample(1, 0), 33);
+    EXPECT_EQ(dst.sample(1, 1), 44);
 }
 
 

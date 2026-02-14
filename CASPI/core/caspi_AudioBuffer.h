@@ -21,18 +21,17 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #define CASPI_AUDIOBUFFER_H
 
 #include "base/caspi_Assert.h"
-#include "base/caspi_Constants.h"
 #include "base/caspi_Features.h"
 #include "base/caspi_Traits.h"
 #include "caspi_Expected.h"
 #include "caspi_Span.h"
 
-#include <atomic>
 #include <cmath>
 #include <memory>
 #include <vector>
 
-namespace CASPI {
+namespace CASPI
+{
     // clang-format off
 #if defined(CASPI_FEATURES_HAS_CONCEPTS)
 template <typename L>
@@ -66,21 +65,24 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
     // clang-format on
     // ===== Error enums =====
-    enum class ResizeError {
+    enum class ResizeError
+    {
         InvalidChannels,
         InvalidFrames,
         OutOfMemory
     };
 
-    enum class ReadError {
+    enum class ReadError
+    {
         OutOfRange
     };
 
     // ===== Layout Base =====
-    template<typename Derived, typename T>
-    class LayoutBase {
-    public:
-        using SampleType = T;
+    template <typename Derived, typename T>
+    class LayoutBase
+    {
+        public:
+            using SampleType = T;
 
         CASPI_NO_DISCARD
         std::size_t numChannels() const noexcept CASPI_NON_BLOCKING { return numChannels_; }
@@ -108,24 +110,30 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
         expected<void, ResizeError> resize(const std::size_t channels, const std::size_t frames) CASPI_BLOCKING
         {
             // Zero-sized is allowed and means "empty buffer"
-            if (channels == 0 || frames == 0) {
-                try {
+            if (channels == 0 || frames == 0)
+            {
+                try
+                {
                     data_.clear();
                     data_.shrink_to_fit(); // optional: keep or drop if you want capacity kept
-                } catch (...) {
+                }
+                catch (...)
+                {
                     return make_unexpected(ResizeError::OutOfMemory);
                 }
                 numChannels_ = 0;
                 numFrames_ = 0;
                 return {};
             }
-
             // Normal resize
-            try {
+            try
+            {
                 data_.resize(channels * frames);
                 numChannels_ = channels;
-                numFrames_ = frames;
-            } catch (...) {
+                numFrames_   = frames;
+            }
+            catch (...)
+            {
                 return make_unexpected(ResizeError::OutOfMemory);
             }
             return {};
@@ -145,7 +153,8 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
 
         void setSample(const std::size_t channel, const std::size_t frame,
-                       SampleType value) noexcept CASPI_NON_BLOCKING {
+                       SampleType value) noexcept CASPI_NON_BLOCKING
+        {
             derived().sample(channel, frame) = value;
         }
 
@@ -156,44 +165,48 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
         const SampleType *begin() const noexcept CASPI_NON_BLOCKING { return data_.data(); }
 
-
-        const SampleType *end() const noexcept CASPI_NON_BLOCKING {
+        const SampleType *end() const noexcept CASPI_NON_BLOCKING
+        {
             return data_.data() + data_.size();
         }
 
-
-        const SampleType *cbegin() const noexcept CASPI_NON_BLOCKING {
+        const SampleType *cbegin() const noexcept CASPI_NON_BLOCKING
+        {
             return data_.data();
         }
 
 
-        const SampleType *cend() const noexcept CASPI_NON_BLOCKING {
+        const SampleType *cend() const noexcept CASPI_NON_BLOCKING
+        {
             return data_.data() + data_.size();
         }
 
-    protected:
-        LayoutBase(const std::size_t channels = 0, const std::size_t frames = 0) {
-            resize(channels, frames);
-        }
+        protected:
+            LayoutBase (const std::size_t channels = 0, const std::size_t frames = 0)
+            {
+                resize (channels, frames);
+            }
 
-        size_t numChannels_{0};
-        size_t numFrames_{0};
-        std::vector<T> data_;
+            size_t numChannels_ { 0 };
+            size_t numFrames_ { 0 };
+            std::vector<T> data_;
 
-        Derived &derived() noexcept CASPI_NON_BLOCKING { return static_cast<Derived &>(*this); }
-        const Derived &derived() const noexcept CASPI_NON_BLOCKING { return static_cast<const Derived &>(*this); }
+            Derived &derived() noexcept CASPI_NON_BLOCKING { return static_cast<Derived &>(*this); }
+            const Derived &derived() const noexcept CASPI_NON_BLOCKING { return static_cast<const Derived &>(*this); }
     };
 
     // ===== Channel Major Layout =====
-    template<typename T>
-    class ChannelMajorLayout : public LayoutBase<ChannelMajorLayout<T>, T> {
-    public:
-        using Base = LayoutBase<ChannelMajorLayout<T>, T>;
-        using typename Base::SampleType;
+    template <typename T>
+    class ChannelMajorLayout : public LayoutBase<ChannelMajorLayout<T>, T>
+    {
+        public:
+            using Base = LayoutBase<ChannelMajorLayout<T>, T>;
+            using typename Base::SampleType;
 
-        ChannelMajorLayout(const std::size_t channels = 0, const std::size_t frames = 0)
-            : Base(channels, frames) {
-        }
+            ChannelMajorLayout (const std::size_t channels = 0, const std::size_t frames = 0)
+                : Base (channels, frames)
+            {
+            }
 
 
         SampleType &sample(const std::size_t channel, const std::size_t frame) noexcept CASPI_NON_BLOCKING
@@ -213,7 +226,6 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
         }
 
         CASPI_NO_DISCARD
-
         expected<SampleType &, ReadError> sample_bounds_checked(
             const std::size_t channel, const std::size_t frame) noexcept CASPI_NON_BLOCKING
         {
@@ -287,15 +299,17 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
     };
 
     // ===== Interleaved Layout =====
-    template<typename T>
-    class InterleavedLayout : public LayoutBase<InterleavedLayout<T>, T> {
-    public:
-        using Base = LayoutBase<InterleavedLayout<T>, T>;
-        using typename Base::SampleType;
+    template <typename T>
+    class InterleavedLayout : public LayoutBase<InterleavedLayout<T>, T>
+    {
+        public:
+            using Base = LayoutBase<InterleavedLayout<T>, T>;
+            using typename Base::SampleType;
 
-        InterleavedLayout(size_t channels = 0, size_t frames = 0)
-            : Base(channels, frames) {
-        }
+            InterleavedLayout (size_t channels = 0, size_t frames = 0)
+                : Base (channels, frames)
+            {
+            }
 
         SampleType &sample(size_t channel, size_t frame) noexcept CASPI_NON_BLOCKING
         {
@@ -383,25 +397,24 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
         }
     };
 
-    template<typename T>
-    struct is_interleaved<InterleavedLayout<T> > : std::true_type {
-    };
+    template <typename T>
+    struct is_interleaved<InterleavedLayout<T>> : std::true_type{};
 
-    template<typename T>
-    struct is_channel_major<ChannelMajorLayout<T> > : std::true_type {
-    };
+    template <typename T>
+    struct is_channel_major<ChannelMajorLayout<T>> : std::true_type{};
 
     // ===== AudioBuffer Wrapper =====
-    template<typename SampleType, template <typename> class Layout = InterleavedLayout>
-    class AudioBuffer {
-        using LayoutType = Layout<SampleType>;
-        CASPI_STATIC_ASSERT(CASPI::is_interleaved<LayoutType>::value || CASPI::is_channel_major<
-                            LayoutType>::value, "Layout must be known type");
+    template <typename SampleType, template <typename> class Layout = InterleavedLayout>
+    class AudioBuffer
+    {
+            using LayoutType = Layout<SampleType>;
+            CASPI_STATIC_ASSERT (CASPI::is_interleaved<LayoutType>::value || CASPI::is_channel_major<LayoutType>::value, "Layout must be known type");
 
-    public:
-        AudioBuffer(size_t channels = 0, size_t frames = 0)
-            : layout_(channels, frames) {
-        }
+        public:
+            AudioBuffer (size_t channels = 0, size_t frames = 0)
+                : layout_ (channels, frames)
+            {
+            }
 
         CASPI_NO_DISCARD
         auto resize(const std::size_t channels, const std::size_t frames) CASPI_BLOCKING
@@ -507,81 +520,105 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
             return layout_.all_span();
         }
 
-    private:
-        LayoutType layout_;
+        private:
+            LayoutType layout_;
     };
 
-    namespace block {
-        // --------------------------- fill ---------------------------
-        template<typename View, typename T>
-        void fill(View v, const T &value) noexcept CASPI_NON_BLOCKING
+    namespace block
+    {
+        /************************************************************************************************
+          SIMD-Aware Block Operations
+
+          These operations work with any span type (contiguous or strided) and automatically
+          use SIMD when beneficial. They are drop-in replacements for the original block:: functions.
+        ************************************************************************************************/
+
+        /**
+         * @brief Fill entire buffer with value
+         */
+        template <typename SampleType, template <typename> class Layout>
+        void fill (AudioBuffer<SampleType, Layout>& buf, SampleType value) noexcept CASPI_NON_BLOCKING
         {
-            for (typename std::remove_reference<decltype (v.begin())>::type it = v.begin();
-                 it != v.end();
-                 ++it) {
-                *it = value;
-            }
+            auto span = buf.all_span();
+            Core::fill (span, value);
         }
 
-        // --------------------------- scale --------------------------
-        template<typename View, typename T>
-        void scale(View v, const T &factor) noexcept CASPI_NON_BLOCKING
+        /**
+         * @brief Scale entire buffer
+         */
+        template <typename SampleType, template <typename> class Layout>
+        CASPI_NON_BLOCKING void scale (AudioBuffer<SampleType, Layout>& buf, SampleType factor) noexcept
         {
-            for (auto &x: v)
-            {
-                using ValueType = typename std::remove_reference<decltype (x)>::type;
-                x = static_cast<ValueType>(x * factor);
-            }
+            auto span = buf.all_span();
+            Core::scale (span, factor);
         }
 
-        // --------------------------- copy ---------------------------
-        template<typename ViewDst, typename ViewSrc>
-        void copy(ViewDst dst, ViewSrc src) noexcept CASPI_NON_BLOCKING
+        /**
+         * @brief Copy entire buffer
+         */
+        template <typename SampleType, template <typename> class Layout>
+        void copy (AudioBuffer<SampleType, Layout>& dst,
+                   const AudioBuffer<SampleType, Layout>& src) noexcept CASPI_NON_BLOCKING
         {
-            typename std::remove_reference<decltype (dst.begin())>::type itD = dst.begin();
-            typename std::remove_reference<decltype (src.begin())>::type itS = src.begin();
-
-            for (; itD != dst.end() && itS != src.end(); ++itD, ++itS) {
-                *itD = *itS;
-            }
+            auto dst_span = dst.all_span();
+            auto src_span = src.all_span();
+            Core::copy (dst_span, src_span);
         }
 
-        // --------------------------- add ----------------------------
-        template<typename ViewDst, typename ViewSrc>
-        void add(ViewDst dst, ViewSrc src) noexcept CASPI_NON_BLOCKING
+        /**
+         * @brief Add entire buffer
+         */
+        template <typename SampleType, template <typename> class Layout>
+        void add (AudioBuffer<SampleType, Layout>& dst,
+                  const AudioBuffer<SampleType, Layout>& src) noexcept CASPI_NON_BLOCKING
         {
-            typename std::remove_reference<decltype (dst.begin())>::type itD = dst.begin();
-            typename std::remove_reference<decltype (src.begin())>::type itS = src.begin();
-
-            for (; itD != dst.end() && itS != src.end(); ++itD, ++itS)
-            {
-                *itD = static_cast<decltype (*itD)>(*itD + *itS);
-            }
+            auto dst_span = dst.all_span();
+            auto src_span = src.all_span();
+            Core::add (dst_span, src_span);
         }
 
-        // --------------------------- apply (unary) ---------------------------
-        template<typename View, typename UnaryOp>
-        void apply(View v, UnaryOp op) noexcept (noexcept (op(*v.begin())))
+        /**
+         * @brief Fill specific channel (SIMD-aware for channel-major, scalar for interleaved)
+         */
+        template <typename SampleType, template <typename> class Layout>
+        void fill_channel (AudioBuffer<SampleType, Layout>& buf,
+                           std::size_t channel, SampleType value) noexcept CASPI_NON_BLOCKING
         {
-            for (typename std::remove_reference<decltype (v.begin())>::type it = v.begin(); it != v.end(); ++it)
-            {
-                // op(x) -> assignable to element type
-                *it = op(*it);
-            }
+            auto chan_span = buf.channel_span (channel);
+            Core::fill (chan_span, value);
         }
 
-        // --------------------------- apply2 (binary) ---------------------------
-        template<typename ViewDst, typename ViewSrc, typename BinaryOp>
-        void apply2(ViewDst dst, ViewSrc src, BinaryOp op) noexcept
-        (noexcept (op(*dst.begin(),*src.begin())))
+        /**
+         * @brief Scale specific channel (SIMD-aware for channel-major, scalar for interleaved)
+         */
+        template <typename SampleType, template <typename> class Layout>
+        void scale_channel (AudioBuffer<SampleType, Layout>& buf,
+                            std::size_t channel, SampleType factor) noexcept CASPI_NON_BLOCKING
         {
-            typename std::remove_reference<decltype (dst.begin())>::type itD = dst.begin();
-            typename std::remove_reference<decltype (src.begin())>::type itS = src.begin();
+            auto chan_span = buf.channel_span (channel);
+            Core::scale (chan_span, factor);
+        }
 
-            for (; itD != dst.end() && itS != src.end(); ++itD, ++itS)
-                {
-                *itD = op(*itD, *itS);
-            }
+        /**
+         * @brief Fill specific frame (SIMD-aware for interleaved, scalar for channel-major)
+         */
+        template <typename SampleType, template <typename> class Layout>
+        void fill_frame (AudioBuffer<SampleType, Layout>& buf,
+                        std::size_t frame, SampleType value) noexcept CASPI_NON_BLOCKING
+        {
+            auto frame_span = buf.frame_span (frame);
+            Core::fill (frame_span, value);
+        }
+
+        /**
+         * @brief Scale specific frame (SIMD-aware for interleaved, scalar for channel-major)
+         */
+        template <typename SampleType, template <typename> class Layout>
+        void scale_frame (AudioBuffer<SampleType, Layout>& buf,
+                          std::size_t frame, SampleType factor) noexcept CASPI_NON_BLOCKING
+        {
+            auto frame_span = buf.frame_span (frame);
+            Core::scale (frame_span, factor);
         }
     } // namespace block
 } // namespace CASPI
