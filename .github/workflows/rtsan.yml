@@ -1,0 +1,84 @@
+name: Sanitizers
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TEST_DIR: Tests
+  BUILD_DIR: build
+
+jobs:
+
+  # =========================================
+  # AddressSanitizer + UndefinedSanitizer
+  # =========================================
+  sanitize-test:
+    name: ${{ matrix.sanitizer }} (Debug)
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        sanitizer: [ ASAN, UBSAN ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: |
+          if [ "${{ matrix.sanitizer }}" = "ASAN" ]; then
+            SAN_FLAG="-DCASPI_ENABLE_ASAN=ON"
+          elif [ "${{ matrix.sanitizer }}" = "UBSAN" ]; then
+            SAN_FLAG="-DCASPI_ENABLE_UBSAN=ON"
+          fi
+
+          cmake -S . -B $BUILD_DIR \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCASPI_BUILD_TESTING=ON \
+            $SAN_FLAG
+
+      - name: Build
+        run: cmake --build $BUILD_DIR --config Debug --parallel
+
+      - name: Run Unit Tests
+        working-directory: $BUILD_DIR
+        run: ctest --output-on-failure
+
+
+  # =========================================
+  # Real-Time Sanitizer (RTSan)
+  # =========================================
+  rtsan-test:
+    name: RTSan (Release)
+    runs-on: ubuntu-latest
+
+    container:
+      image: realtimesanitizer/rtsan-clang:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y cmake git
+
+      - name: Configure
+        run: |
+          cmake -S . -B $BUILD_DIR \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCASPI_BUILD_TESTING=ON \
+            -DCASPI_ENABLE_RTSAN=ON \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++
+
+      - name: Build
+        run: cmake --build $BUILD_DIR --parallel
+
+      - name: Run tests
+        working-directory: $BUILD_DIR
+        run: ctest --output-on-failure

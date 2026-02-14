@@ -2,6 +2,30 @@ cmake_minimum_required(VERSION 3.29)
 
 set(PROJECT_NAME "CASPI")
 option(CASPI_ENABLE_DEBUG "Enable CASPI debug features (asserts, checks)" OFF)
+# =========================
+# Sanitizer Options
+# =========================
+
+option(CASPI_ENABLE_ASAN    "Enable AddressSanitizer" OFF)
+option(CASPI_ENABLE_UBSAN   "Enable UndefinedBehaviorSanitizer" OFF)
+option(CASPI_ENABLE_TSAN    "Enable ThreadSanitizer" OFF)
+option(CASPI_ENABLE_RTSAN   "Enable Real-Time Sanitizer (RTSan)" OFF)
+
+# =========================
+# Sanitizer Validation
+# =========================
+
+set(_CASPI_SANITIZER_COUNT 0)
+
+foreach(opt
+        CASPI_ENABLE_ASAN
+        CASPI_ENABLE_UBSAN
+        CASPI_ENABLE_TSAN
+        CASPI_ENABLE_RTSAN)
+    if (${opt})
+        math(EXPR _CASPI_SANITIZER_COUNT "${_CASPI_SANITIZER_COUNT} + 1")
+    endif ()
+endforeach()
 
 message(STATUS "Configuring CASPI")
 # Detect if standalone build (top-level project)
@@ -75,21 +99,67 @@ if (CASPI_IS_STANDALONE_BUILD)
         message(STATUS "Doxygen not found, not building docs")
     endif()
 
-    if (SANITIZE STREQUAL "address")
+    # Common flags
+    set(_CASPI_SAN_FLAGS "")
+    set(_CASPI_LINK_FLAGS "")
+
+    # -------------------------
+    # AddressSanitizer
+    # -------------------------
+    if (CASPI_ENABLE_ASAN)
         message(STATUS "Enabling AddressSanitizer")
-        # Add AddressSanitizer flags for GCC/Clang
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-        set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
-    elseif (SANITIZE STREQUAL "undefined")
+
+        set(_CASPI_SAN_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+        set(_CASPI_LINK_FLAGS "-fsanitize=address")
+
+        # -------------------------
+        # UndefinedBehaviorSanitizer
+        # -------------------------
+    elseif (CASPI_ENABLE_UBSAN)
         message(STATUS "Enabling UndefinedBehaviorSanitizer")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
-        set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=undefined")
-    elseif (SANITIZE STREQUAL "")
-        # No sanitizer: do nothing
-    else ()
-        message(FATAL_ERROR "Unknown sanitizer type: ${SANITIZE}")
+
+        set(_CASPI_SAN_FLAGS "-fsanitize=undefined")
+        set(_CASPI_LINK_FLAGS "-fsanitize=undefined")
+
+        # -------------------------
+        # ThreadSanitizer
+        # -------------------------
+    elseif (CASPI_ENABLE_TSAN)
+        message(STATUS "Enabling ThreadSanitizer")
+
+        if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            message(FATAL_ERROR "TSan requires GCC or Clang")
+        endif ()
+
+        set(_CASPI_SAN_FLAGS "-fsanitize=thread")
+        set(_CASPI_LINK_FLAGS "-fsanitize=thread")
+
+        # -------------------------
+        # Real-Time Sanitizer (RTSan)
+        # -------------------------
+    elseif (CASPI_ENABLE_RTSAN)
+        message(STATUS "Enabling Real-Time Sanitizer (RTSan)")
+
+        if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            message(FATAL_ERROR "RTSan requires Clang")
+        endif ()
+
+        if (NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+            message(WARNING "RTSan is typically used with Release builds")
+        endif ()
+
+        set(_CASPI_SAN_FLAGS "-fsanitize=realtime")
+        set(_CASPI_LINK_FLAGS "-fsanitize=realtime")
+    endif ()
+
+    # -------------------------
+    # Apply flags if any sanitizer enabled
+    # -------------------------
+    if (NOT _CASPI_SAN_FLAGS STREQUAL "")
+        set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} ${_CASPI_SAN_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${_CASPI_SAN_FLAGS}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_CASPI_LINK_FLAGS}")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${_CASPI_LINK_FLAGS}")
     endif ()
 endif()
 
