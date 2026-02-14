@@ -107,6 +107,18 @@ Y88b  d88P 888  888      X88 888 d88P 888
     #define CASPI_RESTRICT
 #endif
 
+
+// Concept for floating-point types (C++20)
+#if defined(CASPI_FEATURES_HAS_CONCEPTS) && ! defined(CASPI_FEATURES_DISABLE_CONCEPTS)
+#include <concepts>
+template <typename T>
+concept FloatingPoint = std::is_floating_point_v<T>;
+#define CASPI_FLOAT_TYPE FloatingPoint
+#else
+#define CASPI_FLOAT_TYPE typename
+#endif
+
+
 // Non-blocking
 #if defined(__has_cpp_attribute)
 #  if __has_cpp_attribute(clang::nonblocking) && defined(CASPI_COMPILER_CLANG) && !defined(CASPI_PLATFORM_MACOS) && __clang_major__ >= 17
