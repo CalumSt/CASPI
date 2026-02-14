@@ -29,6 +29,7 @@ set(SOURCES
         base/Buffer_bm.cpp
         base/Phase_bm.cpp
         base/Expected_bm.cpp
+        base/SIMD_bm.cpp
 )
 # --------------------------------------------------------------------------
 
