@@ -156,7 +156,7 @@ TEST(BesselFunctionTest, CompareStdBessel)
     {
         for (double x = 0.0; x <= 10.0; x += 0.5)
         {
-            double myVal = besselJ(n, x);
+            double myVal = CASPI::Maths::besselJ(n, x);
             double stdVal = std::cyl_bessel_j(n, x);
             EXPECT_NEAR(myVal, stdVal, 1e-10) << "n=" << n << " x=" << x;
         }

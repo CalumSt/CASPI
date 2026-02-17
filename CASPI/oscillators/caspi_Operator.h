@@ -138,8 +138,6 @@ namespace CASPI
         /**
          * @brief Default constructor
          */
-        CASPI_NON_BLOCKING
-
         Operator()
         {
             envelope.setSampleRate(Constants::DEFAULT_SAMPLE_RATE<FloatType>);
@@ -168,18 +166,14 @@ namespace CASPI
          * @brief Set the oscillator frequency
          * REAL-TIME SAFE: No allocations
          */
-        CASPI_NON_BLOCKING
-
-        void setFrequency(FloatType freq)
+        void setFrequency(FloatType freq) CASPI_NON_BLOCKING
         {
             CASPI_ASSERT(freq >= FloatType(0.0), "Frequency must be non-negative.");
             frequency = freq;
             updatePhaseIncrement();
         }
-
-        CASPI_NON_BLOCKING
-
-        FloatType getFrequency() const { return frequency; }
+            
+        FloatType getFrequency() const CASPI_NON_BLOCKING { return frequency; }
 
         // ====================================================================
         // Modulation Control
@@ -189,38 +183,32 @@ namespace CASPI
          * @brief Set the modulation index
          * REAL-TIME SAFE: No allocations
          */
-        CASPI_NON_BLOCKING
-
-        void setModulationIndex(FloatType index)
+        void setModulationIndex(FloatType index) CASPI_NON_BLOCKING
         {
             CASPI_ASSERT(index >= FloatType(0.0), "Modulation index must be non-negative.");
             modulationIndex = index;
         }
 
-        CASPI_NON_BLOCKING
 
-        void setModulationDepth(FloatType depth)
+        void setModulationDepth(FloatType depth) CASPI_NON_BLOCKING
         {
             modulationDepth = depth;
         }
 
-        CASPI_NON_BLOCKING
 
-        void setModulationFeedback(FloatType feedback)
+        void setModulationFeedback(FloatType feedback) CASPI_NON_BLOCKING
         {
             modulationFeedback = feedback;
         }
 
-        CASPI_NON_BLOCKING
 
-        void setModulationMode(ModulationMode mode)
+        void setModulationMode(ModulationMode mode) CASPI_NON_BLOCKING
         {
             modulationMode = mode;
         }
 
-        CASPI_NON_BLOCKING
 
-        void setModulation(FloatType index, FloatType depth, FloatType feedback = FloatType(0.0))
+        void setModulation(FloatType index, FloatType depth, FloatType feedback = FloatType(0.0)) CASPI_NON_BLOCKING
         {
             setModulationIndex(index);
             setModulationDepth(depth);
@@ -234,9 +222,7 @@ namespace CASPI
          * REAL-TIME SAFE: No allocations
          * NEW: Added for FMGraph compatibility
          */
-        CASPI_NON_BLOCKING
-
-        void setModulationInput(FloatType value)
+        void setModulationInput(FloatType value) CASPI_NON_BLOCKING
         {
             currentModulation_ = value;
         }
@@ -245,18 +231,15 @@ namespace CASPI
          * @brief Set external modulation input buffer (legacy API)
          * REAL-TIME SAFE: Only stores pointer (buffer must remain valid)
          */
-        CASPI_NON_BLOCKING
-
-        void setModulationInput(const FloatType* buffer, std::size_t numSamples)
+        void setModulationInput(const FloatType* buffer, std::size_t numSamples) CASPI_NON_BLOCKING
         {
             modulationBuffer = buffer;
             modulationBufferSize = numSamples;
             modulationFrame = 0;
         }
 
-        CASPI_NON_BLOCKING
 
-        void clearModulationInput()
+        void clearModulationInput() CASPI_NON_BLOCKING
         {
             modulationBuffer = nullptr;
             modulationBufferSize = 0;
@@ -265,38 +248,28 @@ namespace CASPI
         }
 
         // Getters
-        CASPI_NON_BLOCKING
+        FloatType getModulationIndex() const CASPI_NON_BLOCKING { return modulationIndex; }
 
-        FloatType getModulationIndex() const { return modulationIndex; }
 
-        CASPI_NON_BLOCKING
+        FloatType getModulationDepth() const CASPI_NON_BLOCKING { return modulationDepth; }
 
-        FloatType getModulationDepth() const { return modulationDepth; }
 
-        CASPI_NON_BLOCKING
+        FloatType getModulationFeedback() const CASPI_NON_BLOCKING { return modulationFeedback; }
 
-        FloatType getModulationFeedback() const { return modulationFeedback; }
 
-        CASPI_NON_BLOCKING
-
-        ModulationMode getModulationMode() const { return modulationMode; }
+        ModulationMode getModulationMode() const CASPI_NON_BLOCKING { return modulationMode; }
 
         // ====================================================================
         // Envelope Control
         // ====================================================================
+        void enableEnvelope(bool enabled = true) CASPI_NON_BLOCKING { envelopeEnabled = enabled; }
 
-        CASPI_NON_BLOCKING
 
-        void enableEnvelope(bool enabled = true) { envelopeEnabled = enabled; }
+        void disableEnvelope() CASPI_NON_BLOCKING { envelopeEnabled = false; }
 
-        CASPI_NON_BLOCKING
-
-        void disableEnvelope() { envelopeEnabled = false; }
-
-        CASPI_NON_BLOCKING
 
         void setADSR(FloatType attackTime_s, FloatType decayTime_s,
-                     FloatType sustainLevel, FloatType releaseTime_s)
+                     FloatType sustainLevel, FloatType releaseTime_s) CASPI_NON_BLOCKING
         {
             envelope.setAttackTime(attackTime_s);
             envelope.setSustainLevel(sustainLevel);
@@ -304,13 +277,13 @@ namespace CASPI
             envelope.setReleaseTime(releaseTime_s);
         }
 
-        CASPI_NON_BLOCKING
 
-        void noteOn() { envelope.noteOn(); }
 
-        CASPI_NON_BLOCKING
+        void noteOn() CASPI_NON_BLOCKING { envelope.noteOn(); }
 
-        void noteOff() { envelope.noteOff(); }
+
+
+        void noteOff() CASPI_NON_BLOCKING { envelope.noteOff(); }
 
         // ====================================================================
         // State Management
@@ -320,9 +293,9 @@ namespace CASPI
          * @brief Reset all operator state to defaults
          * REAL-TIME SAFE: No allocations
          */
-        CASPI_NON_BLOCKING
 
-        void reset()
+
+        void reset() CASPI_NON_BLOCKING
         {
             phase.resetPhase();
             frequency = FloatType(0.0);
@@ -348,9 +321,9 @@ namespace CASPI
          * REAL-TIME SAFE: No allocations, bounded execution time
          * Uses modulation from setModulationInput() or buffer
          */
-        CASPI_NON_BLOCKING
+
         CASPI_NO_DISCARD
-        FloatType renderSample() override
+        FloatType renderSample() CASPI_NON_BLOCKING override
         {
             // Get modulation signal
             FloatType modulationSignal = getCurrentModulationSignal();
@@ -367,9 +340,9 @@ namespace CASPI
          * REAL-TIME SAFE: No allocations, bounded execution time
          * NEW: Preferred API for explicit data flow
          */
-        CASPI_NON_BLOCKING
+
         CASPI_NO_DISCARD
-        FloatType renderSample(FloatType modulationInput)
+        FloatType renderSample(FloatType modulationInput) CASPI_NON_BLOCKING
         {
             return renderSampleWithModulation(modulationInput);
         }
@@ -377,8 +350,7 @@ namespace CASPI
         /**
          * @brief Render sample for multi-channel rendering
          */
-CASPI_NON_BLOCKING
-        FloatType renderSample(std::size_t channel, std::size_t frame) override
+        FloatType renderSample(std::size_t channel, std::size_t frame) CASPI_NON_BLOCKING override
         {
             (void)channel;
             (void)frame;
@@ -389,8 +361,7 @@ CASPI_NON_BLOCKING
          * @brief Handle sample rate changes
          * NOT REAL-TIME SAFE: May trigger envelope recalculations
          */
-        CASPI_ALLOCATING
-        void onSampleRateChanged(FloatType rate) override
+        void onSampleRateChanged(FloatType rate) CASPI_NON_BLOCKING override
         {
             envelope.setSampleRate(rate);
             updatePhaseIncrement();
@@ -427,8 +398,8 @@ CASPI_NON_BLOCKING
          * @brief Update phase increment when frequency or sample rate changes
          * REAL-TIME SAFE: No allocations
          */
-        CASPI_NON_BLOCKING
-        void updatePhaseIncrement()
+
+        void updatePhaseIncrement() CASPI_NON_BLOCKING
         {
             phase.increment = Constants::TWO_PI<FloatType> * frequency / this->getSampleRate();
         }
@@ -438,8 +409,8 @@ CASPI_NON_BLOCKING
          * REAL-TIME SAFE: Predictable, bounded execution
          * IMPROVED: Single modulo operation instead of loops
          */
-        CASPI_NON_BLOCKING
-        void wrapPhase()
+
+        void wrapPhase() CASPI_NON_BLOCKING
         {
             const FloatType twoPi = Constants::TWO_PI<FloatType>;
 
@@ -457,8 +428,8 @@ CASPI_NON_BLOCKING
          * REAL-TIME SAFE: No allocations
          * Priority: currentModulation_ > buffer > 0.0
          */
-        CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        FloatType getCurrentModulationSignal() const
+        CASPI_NO_DISCARD
+        FloatType getCurrentModulationSignal() const CASPI_NON_BLOCKING
         {
             // Priority 1: Single-value modulation (from setModulationInput(value))
             if (currentModulation_ != FloatType(0))
@@ -483,8 +454,8 @@ CASPI_NON_BLOCKING
          *
          * REAL-TIME SAFE: No allocations, bounded execution
          */
-        CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        FloatType renderSampleWithModulation(FloatType modulationSignal)
+        CASPI_NO_DISCARD
+        FloatType renderSampleWithModulation(FloatType modulationSignal) CASPI_NON_BLOCKING
         {
             Core::ScopedFlushDenormals flush{};
             // Get envelope amount
