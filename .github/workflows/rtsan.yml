@@ -47,8 +47,7 @@ jobs:
         run: cmake --build $BUILD_DIR --config Debug --parallel
 
       - name: Run Unit Tests
-        working-directory: $BUILD_DIR
-        run: ctest --output-on-failure
+        run: ctest --test-dir $BUILD_DIR/Tests --output-on-failure
 
 
   # =========================================
@@ -72,6 +71,7 @@ jobs:
           cmake -S . -B $BUILD_DIR \
             -DCMAKE_BUILD_TYPE=Release \
             -DCASPI_BUILD_TESTING=ON \
+            -DCASPI_BUILD_BENCHMARKS=OFF \
             -DCASPI_ENABLE_RTSAN=ON \
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++
@@ -80,5 +80,4 @@ jobs:
         run: cmake --build $BUILD_DIR --parallel
 
       - name: Run tests
-        working-directory: $BUILD_DIR
-        run: ctest --output-on-failure
+        run: ctest --test-dir $BUILD_DIR/Tests --output-on-failure
