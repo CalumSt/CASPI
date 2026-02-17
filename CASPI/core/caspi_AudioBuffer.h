@@ -497,11 +497,13 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
         CASPI_NO_DISCARD
         auto frame_span(std::size_t f) const noexcept CASPI_NON_BLOCKING
-            {
+        {
             return layout_.frame_span(f);
-        }CASPI_NO_DISCARD
+        }
+
+        CASPI_NO_DISCARD
         auto all_span() const noexcept CASPI_NON_BLOCKING
-            {
+        {
             return layout_.all_span();
         }
 
@@ -525,7 +527,8 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
         template<typename View, typename T>
         void scale(View v, const T &factor) noexcept CASPI_NON_BLOCKING
         {
-            for (auto &x: v) {
+            for (auto &x: v)
+            {
                 using ValueType = typename std::remove_reference<decltype (x)>::type;
                 x = static_cast<ValueType>(x * factor);
             }
@@ -545,21 +548,23 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
         // --------------------------- add ----------------------------
         template<typename ViewDst, typename ViewSrc>
-        void add(ViewDst dst, ViewSrc src) noexcept CASPI_NON_BLOCKING {
+        void add(ViewDst dst, ViewSrc src) noexcept CASPI_NON_BLOCKING
+        {
             typename std::remove_reference<decltype (dst.begin())>::type itD = dst.begin();
             typename std::remove_reference<decltype (src.begin())>::type itS = src.begin();
 
-            for (; itD != dst.end() && itS != src.end(); ++itD, ++itS) {
+            for (; itD != dst.end() && itS != src.end(); ++itD, ++itS)
+            {
                 *itD = static_cast<decltype (*itD)>(*itD + *itS);
             }
         }
 
         // --------------------------- apply (unary) ---------------------------
         template<typename View, typename UnaryOp>
-        void apply(View v, UnaryOp op) CASPI_NON_BLOCKING noexcept (noexcept (op(*v.begin()))) {
-            for (typename std::remove_reference<decltype (v.begin())>::type it = v.begin();
-                 it != v.end();
-                 ++it) {
+        void apply(View v, UnaryOp op) noexcept (noexcept (op(*v.begin())))
+        {
+            for (typename std::remove_reference<decltype (v.begin())>::type it = v.begin(); it != v.end(); ++it)
+            {
                 // op(x) -> assignable to element type
                 *it = op(*it);
             }
@@ -567,7 +572,7 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
 
         // --------------------------- apply2 (binary) ---------------------------
         template<typename ViewDst, typename ViewSrc, typename BinaryOp>
-        void apply2(ViewDst dst, ViewSrc src, BinaryOp op) CASPI_NON_BLOCKING noexcept
+        void apply2(ViewDst dst, ViewSrc src, BinaryOp op) noexcept
         (noexcept (op(*dst.begin(),*src.begin())))
         {
             typename std::remove_reference<decltype (dst.begin())>::type itD = dst.begin();

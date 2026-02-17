@@ -43,7 +43,7 @@ namespace CASPI
             struct PerSample
             {
                 template<typename Buf, typename F>
-                static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept
+                static void for_each(Buf &buf, F &&fn) noexcept
                 {
                     const std::size_t C = buf.numChannels();
                     const std::size_t Fm = buf.numFrames();
@@ -61,7 +61,7 @@ namespace CASPI
         struct PerFrame
         {
             template<typename Buf, typename F>
-            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept
+            static void for_each(Buf &buf, F &&fn) noexcept
             {
                 const std::size_t C = buf.numChannels();
                 const std::size_t Fm = buf.numFrames();
@@ -76,7 +76,7 @@ namespace CASPI
         struct PerChannel
         {
             template<typename Buf, typename F>
-            static CASPI_NON_BLOCKING void for_each(Buf &buf, F &&fn) noexcept
+            static void for_each(Buf &buf, F &&fn) noexcept
             {
                 const std::size_t C = buf.numChannels();
                 const std::size_t Fm = buf.numFrames();
@@ -127,19 +127,19 @@ namespace CASPI
 
     public:
         // ---- Hooks for derived types (override what you need) ---
-        CASPI_NO_DISCARD virtual FloatType renderSample()
+        CASPI_NO_DISCARD virtual FloatType renderSample() CASPI_NON_BLOCKING
         {
             return FloatType(0);
         }
 
-        CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel)
+        CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel) CASPI_NON_BLOCKING
         {
             (void) channel;
             return renderSample();
         }
 
-            CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel,
-                                                            const std::size_t frame)
+        CASPI_NO_DISCARD virtual FloatType renderSample(const std::size_t channel,
+                                                            const std::size_t frame) CASPI_NON_BLOCKING
             {
                 (void) frame;
                 return renderSample(channel);
@@ -151,7 +151,7 @@ namespace CASPI
         }
 
         template<typename Span>
-        void renderSpan(Span span, const std::size_t channel, const std::size_t frameOffset = 0)
+        void renderSpan(Span span, const std::size_t channel, const std::size_t frameOffset = 0) CASPI_NON_BLOCKING
         {
             CASPI_CPP17_IF_CONSTEXPR (std::is_same_v<Policy, Traversal::PerFrame>)
             {
@@ -176,8 +176,7 @@ namespace CASPI
 
         // ---- Generic processing over AudioBuffer ----
         template<template <typename> class Layout>
-        CASPI_NON_BLOCKING
-        void render(AudioBuffer<FloatType, Layout> &buf) noexcept
+        void render(AudioBuffer<FloatType, Layout> &buf) noexcept CASPI_NON_BLOCKING
         {
             using P = Policy;
             const std::size_t C = buf.numChannels();
@@ -241,19 +240,19 @@ namespace CASPI
     public:
         // ---- Hooks for derived types (override what you need) ----
 
-        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in)
+        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in) CASPI_NON_BLOCKING
         {
             return in;
         }
 
-        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in, const std::size_t channel)
+        CASPI_NO_DISCARD virtual FloatType processSample(FloatType in, const std::size_t channel) CASPI_NON_BLOCKING
         {
             (void) channel;
             return processSample(in);
         }
 
         CASPI_NO_DISCARD virtual FloatType processSample(FloatType in, const std::size_t channel,
-                                                         const std::size_t frame)
+                                                         const std::size_t frame) CASPI_NON_BLOCKING
         {
             (void) frame;
             return processSample(in, channel);
@@ -265,7 +264,7 @@ namespace CASPI
         }
 
         template<typename Span>
-        void processSpan(Span span, std::size_t channel, std::size_t frameOffset = 0)
+        void processSpan(Span span, std::size_t channel, std::size_t frameOffset = 0) CASPI_NON_BLOCKING
         {
             std::size_t frame = frameOffset;
             for (auto &s: span)
@@ -277,8 +276,7 @@ namespace CASPI
 
         // ---- Generic processing over AudioBuffer ----
         template<template <typename> class Layout>
-        CASPI_NON_BLOCKING
-        void process(AudioBuffer<FloatType, Layout> &buf) noexcept
+        void process(AudioBuffer<FloatType, Layout> &buf) noexcept CASPI_NON_BLOCKING
         {
             using P = Policy;
             const std::size_t C = buf.numChannels();

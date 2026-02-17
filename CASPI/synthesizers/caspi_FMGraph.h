@@ -502,14 +502,14 @@ namespace CASPI
             // Inspection
             // ====================================================================
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            size_t getNumOperators() const { return operators_.size(); }
+            CASPI_NO_DISCARD
+            size_t getNumOperators() const CASPI_NON_BLOCKING { return operators_.size(); }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            const std::vector<ModulationConnection>& getConnections() const { return connections_; }
+            CASPI_NO_DISCARD
+            const std::vector<ModulationConnection>& getConnections() const CASPI_NON_BLOCKING { return connections_; }
 
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD const std::vector<size_t>&
-                getOutputOperators() const { return outputOperators_; }
+            CASPI_NO_DISCARD
+            const std::vector<size_t>& getOutputOperators() const CASPI_NON_BLOCKING { return outputOperators_; }
 
         private:
             std::vector<OperatorConfig<FloatType>> operators_;
@@ -666,9 +666,8 @@ namespace CASPI
              * @param index Operator index.
              * @return Pointer to operator, or nullptr if index is invalid.
              */
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-                Operator<FloatType>*
-                getOperator (const size_t index)
+            CASPI_NO_DISCARD 
+            Operator<FloatType>* getOperator (const size_t index) CASPI_NON_BLOCKING
             {
                 CASPI_EXPECT(index < operators_.size(), "Operator index out of range in getOperator");
                 return (index < operators_.size()) ? operators_[index].get() : nullptr;
@@ -680,8 +679,8 @@ namespace CASPI
              * @param index Operator index.
              * @return Const pointer to operator, or nullptr if index is invalid.
              */
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            const Operator<FloatType>* getOperator (const size_t index) const
+            CASPI_NO_DISCARD 
+            const Operator<FloatType>* getOperator (const size_t index) const CASPI_NON_BLOCKING
             {
                 return (index < operators_.size()) ? operators_[index].get() : nullptr;
             }
@@ -691,8 +690,7 @@ namespace CASPI
              *
              * @param frequency Base frequency in Hz.
              */
-            CASPI_NON_BLOCKING
-            void setFrequency (const FloatType frequency)
+                void setFrequency (const FloatType frequency) CASPI_NON_BLOCKING
             {
                 baseFrequency_ = frequency;
                 for (auto& op : operators_)
@@ -706,8 +704,7 @@ namespace CASPI
              *
              * @return Base frequency in Hz.
              */
-            CASPI_NON_BLOCKING
-            FloatType getFrequency() const
+                FloatType getFrequency() const CASPI_NON_BLOCKING
             {
                 return baseFrequency_;
             }
@@ -718,8 +715,7 @@ namespace CASPI
              * @param connectionIndex Index of the modulation connection.
              * @param depth New modulation depth value.
              */
-            CASPI_NON_BLOCKING
-            void setConnectionDepth (const size_t connectionIndex, const FloatType depth)
+                void setConnectionDepth (const size_t connectionIndex, const FloatType depth) CASPI_NON_BLOCKING
             {
                 if (connectionIndex >= connections_.size())
                 {
@@ -753,10 +749,9 @@ namespace CASPI
  * @param targetOperator Target operator index.
  * @param depth New modulation depth value.
  */
-        CASPI_NON_BLOCKING
         void setModulationDepth (const size_t sourceOperator,
                                  const size_t targetOperator,
-                                 const FloatType depth)
+                                 const FloatType depth) CASPI_NON_BLOCKING
             {
                 if (sourceOperator >= operators_.size() || targetOperator >= operators_.size())
                 {
@@ -792,8 +787,7 @@ namespace CASPI
             /**
              * @brief Triggers note-on for all operators.
              */
-            CASPI_NON_BLOCKING
-            void noteOn()
+                void noteOn() CASPI_NON_BLOCKING
             {
                 for (auto& op : operators_)
                 {
@@ -804,8 +798,7 @@ namespace CASPI
             /**
              * @brief Triggers note-off for all operators.
              */
-            CASPI_NON_BLOCKING
-            void noteOff()
+                void noteOff() CASPI_NON_BLOCKING
             {
                 for (auto& op : operators_)
                 {
@@ -819,8 +812,7 @@ namespace CASPI
              *
              * @param gain Linear gain multiplier.
              */
-            CASPI_NON_BLOCKING
-            void setOutputGain (const FloatType gain)
+                void setOutputGain (const FloatType gain) CASPI_NON_BLOCKING
             {
                 outputGain_ = gain;
                 updateEffectiveGain();
@@ -831,9 +823,8 @@ namespace CASPI
              *
              * @return Output gain value.
              */
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-                FloatType
-                getOutputGain() const
+            CASPI_NO_DISCARD 
+            FloatType getOutputGain() const CASPI_NON_BLOCKING
             {
                 return outputGain_;
             }
@@ -843,8 +834,7 @@ namespace CASPI
              *
              * @param enable True to enable scaling, false to disable.
              */
-            CASPI_NON_BLOCKING
-            void setAutoScaleOutputs (const bool enable)
+                void setAutoScaleOutputs (const bool enable) CASPI_NON_BLOCKING
             {
                 autoScaleOutputs_ = enable;
                 updateEffectiveGain();
@@ -855,8 +845,8 @@ namespace CASPI
              *
              * @return True if enabled.
              */
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-        bool getAutoScaleOutputs() const
+            CASPI_NO_DISCARD 
+        bool getAutoScaleOutputs() const CASPI_NON_BLOCKING
             {
                 return autoScaleOutputs_;
             }
@@ -864,8 +854,7 @@ namespace CASPI
             /**
              * @brief Resets all operator state and clears modulation buffers.
              */
-            CASPI_NON_BLOCKING
-            void reset()
+                void reset() CASPI_NON_BLOCKING
             {
                 for (auto& op : operators_)
                 {
@@ -889,8 +878,8 @@ namespace CASPI
              *
              * @return Rendered audio sample.
              */
-            CASPI_NON_BLOCKING CASPI_NO_DISCARD
-            FloatType renderSample() override
+            CASPI_NO_DISCARD 
+            FloatType renderSample() CASPI_NON_BLOCKING override 
             {
                 Core::ScopedFlushDenormals flush{};
 
@@ -959,8 +948,7 @@ namespace CASPI
              * @param buffer Output buffer.
              * @param numSamples Number of samples to render.
              */
-            CASPI_NON_BLOCKING
-            void renderBlock (FloatType* buffer, const size_t numSamples)
+                void renderBlock (FloatType* buffer, const size_t numSamples) CASPI_NON_BLOCKING
             {
                 for (size_t i = 0; i < numSamples; ++i)
                 {
@@ -975,10 +963,10 @@ namespace CASPI
              * @param frame Frame index (ignored).
              * @return Rendered audio sample.
              */
-            CASPI_NO_DISCARD CASPI_NON_BLOCKING
+            CASPI_NO_DISCARD
                 FloatType
                 renderSample (const std::size_t channel,
-                              const std::size_t frame) override
+                              const std::size_t frame) CASPI_NON_BLOCKING override
             {
                 (void) channel;
                 (void) frame;
@@ -990,8 +978,8 @@ namespace CASPI
              *
              * @return Operator count.
              */
-            CASPI_NON_ALLOCATING CASPI_NO_DISCARD
-            size_t getNumOperators() const
+            CASPI_NO_DISCARD
+            size_t getNumOperators() const CASPI_NON_BLOCKING
             {
                 return operators_.size();
             }
@@ -1001,8 +989,8 @@ namespace CASPI
             *
             * @return Reference to output operators vector.
             */
-            CASPI_NON_ALLOCATING CASPI_NO_DISCARD
-            const std::vector<size_t>& getOutputOperators() const
+            CASPI_NO_DISCARD
+            const std::vector<size_t>& getOutputOperators() const CASPI_NON_BLOCKING
             {
                 return outputOperators_;
             }
@@ -1013,8 +1001,8 @@ namespace CASPI
              *
              * @return Pointer to execution order vector.
              */
-            CASPI_NON_ALLOCATING CASPI_NO_DISCARD
-            const std::vector<size_t>& getExecutionOrder() const
+            CASPI_NO_DISCARD
+            const std::vector<size_t>& getExecutionOrder() const CASPI_NON_BLOCKING
             {
                 return executionOrder_;
             }
@@ -1023,7 +1011,7 @@ namespace CASPI
             /**
              * @brief Computes a topological execution order for the modulation graph.
              */
-        void computeExecutionOrder()
+        void computeExecutionOrder() CASPI_ALLOCATING
         {
             const size_t n = operators_.size();
             if (n == 0)
@@ -1132,8 +1120,7 @@ namespace CASPI
         /**
  * @brief Recomputes the effective gain based on output gain and auto-scaling.
  */
-        CASPI_NON_BLOCKING
-        void updateEffectiveGain()
+        void updateEffectiveGain() CASPI_NON_BLOCKING
             {
                 FloatType scale = FloatType (1);
 

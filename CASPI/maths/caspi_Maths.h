@@ -195,8 +195,8 @@ namespace CASPI
          * Reference: Abramowitz & Stegun (1964), Chapter 9
          */
         template <typename FloatType>
-        CASPI_NON_ALLOCATING CASPI_NO_DISCARD
-        FloatType besselJ (int n, FloatType x)
+        CASPI_NO_DISCARD
+        FloatType besselJ (int n, FloatType x) CASPI_NON_BLOCKING
         {
             // Symmetry for negative order
             if (n < 0)
