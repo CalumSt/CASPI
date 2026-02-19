@@ -5,7 +5,7 @@
 
 using namespace CASPI;
 
-constexpr double sampleRate = 48000.0;
+constexpr double TESTS_SAMPLE_RATE = 48000.0;
 constexpr double tolerance = 1e-6;
 
 // ============================================================================
@@ -17,10 +17,10 @@ namespace TestSignals
     /**
      * @brief Generate pure sine wave
      */
-    std::vector<double> generateSine(double frequency, 
-                                    double sampleRate,
-                                    double duration,
-                                    double amplitude = 1.0)
+    std::vector<double> generateSine(const double frequency,
+                                      const double sampleRate,
+                                    const double duration,
+                                    const double amplitude = 1.0)
     {
         size_t numSamples = static_cast<size_t>(duration * sampleRate);
         std::vector<double> samples(numSamples);
@@ -94,7 +94,7 @@ namespace TestSignals
 TEST(SpectralProfileTest, EmptySignal)
 {
     std::vector<double> empty;
-    SpectralProfile profile(empty, sampleRate);
+    SpectralProfile profile(empty, TESTS_SAMPLE_RATE);
 
     EXPECT_TRUE(profile.getPeaks().empty());
     EXPECT_EQ(profile.getFFTSize(), 0u);
@@ -102,8 +102,8 @@ TEST(SpectralProfileTest, EmptySignal)
 
 TEST(SpectralProfileTest, PureSineHasSingleDominantPeak)
 {
-    auto samples = TestSignals::generateSine(440.0, sampleRate, 0.1);
-    SpectralProfile profile(samples, sampleRate);
+    auto samples = TestSignals::generateSine(440.0, TESTS_SAMPLE_RATE, 0.1);
+    SpectralProfile profile(samples, TESTS_SAMPLE_RATE);
 
     EXPECT_TRUE(profile.hasPeakAt(440.0, 5.0));
     EXPECT_GE(profile.getPeaks().size(), 1);
@@ -111,11 +111,11 @@ TEST(SpectralProfileTest, PureSineHasSingleDominantPeak)
 
 TEST(SpectralProfileTest, DifferentFrequenciesProduceDifferentCentroids)
 {
-    auto low = TestSignals::generateSine(200.0, sampleRate, 0.1);
-    auto high = TestSignals::generateSine(2000.0, sampleRate, 0.1);
+    auto low = TestSignals::generateSine(200.0, TESTS_SAMPLE_RATE, 0.1);
+    auto high = TestSignals::generateSine(2000.0, TESTS_SAMPLE_RATE, 0.1);
 
-    SpectralProfile lowProfile(low, sampleRate);
-    SpectralProfile highProfile(high, sampleRate);
+    SpectralProfile lowProfile(low, TESTS_SAMPLE_RATE);
+    SpectralProfile highProfile(high, TESTS_SAMPLE_RATE);
 
     EXPECT_LT(lowProfile.getSpectralCentroid(),
               highProfile.getSpectralCentroid());
@@ -126,8 +126,8 @@ TEST(SpectralProfileTest, DifferentFrequenciesProduceDifferentCentroids)
 
 TEST(SpectralProfileTest, EnergyIsLocalizedAroundTone)
 {
-    auto samples = TestSignals::generateSine(1000.0, sampleRate, 0.1);
-    SpectralProfile profile(samples, sampleRate);
+    auto samples = TestSignals::generateSine(1000.0, TESTS_SAMPLE_RATE, 0.1);
+    SpectralProfile profile(samples, TESTS_SAMPLE_RATE);
 
     double bandEnergy = profile.getEnergyInRange(900.0, 1100.0);
     double totalEnergy = profile.getTotalEnergy();
@@ -138,9 +138,9 @@ TEST(SpectralProfileTest, EnergyIsLocalizedAroundTone)
 TEST(SpectralProfileTest, HarmonicSignalHasMultiplePeaks)
 {
     auto samples = TestSignals::generateHarmonicSeries(
-        100.0, 5, sampleRate, 0.1);
+        100.0, 5, TESTS_SAMPLE_RATE, 0.1);
 
-    SpectralProfile profile(samples, sampleRate);
+    SpectralProfile profile(samples, TESTS_SAMPLE_RATE);
 
     EXPECT_TRUE(profile.hasPeakAt(100.0, 5.0));
     EXPECT_TRUE(profile.hasPeakAt(200.0, 5.0));
@@ -151,7 +151,7 @@ TEST(SpectralProfileTest, HarmonicSignalHasMultiplePeaks)
 TEST(SpectralProfileTest, DCSignalHasEnergyNearZeroFrequency)
 {
     std::vector<double> dc(2048, 1.0);
-    SpectralProfile profile(dc, sampleRate);
+    SpectralProfile profile(dc, TESTS_SAMPLE_RATE);
 
     double dcEnergy = profile.getEnergyInRange(0.0, 50.0);
     double totalEnergy = profile.getTotalEnergy();
@@ -161,22 +161,22 @@ TEST(SpectralProfileTest, DCSignalHasEnergyNearZeroFrequency)
 
 TEST(SpectralProfileTest, SpectralCorrelationIdenticalSignals)
 {
-    auto a = TestSignals::generateSine(440.0, sampleRate, 0.1);
-    auto b = TestSignals::generateSine(440.0, sampleRate, 0.1);
+    auto a = TestSignals::generateSine(440.0, TESTS_SAMPLE_RATE, 0.1);
+    auto b = TestSignals::generateSine(440.0, TESTS_SAMPLE_RATE, 0.1);
 
-    SpectralProfile pa(a, sampleRate);
-    SpectralProfile pb(b, sampleRate);
+    SpectralProfile pa(a, TESTS_SAMPLE_RATE);
+    SpectralProfile pb(b, TESTS_SAMPLE_RATE);
 
     EXPECT_NEAR(spectralCorrelation(pa, pb), 1.0, 0.1);
 }
 
 TEST(SpectralProfileTest, SpectralCorrelationDifferentSignals)
 {
-    auto a = TestSignals::generateSine(440.0, sampleRate, 0.1);
-    auto b = TestSignals::generateSine(880.0, sampleRate, 0.1);
+    auto a = TestSignals::generateSine(440.0, TESTS_SAMPLE_RATE, 0.1);
+    auto b = TestSignals::generateSine(880.0, TESTS_SAMPLE_RATE, 0.1);
 
-    SpectralProfile pa(a, sampleRate);
-    SpectralProfile pb(b, sampleRate);
+    SpectralProfile pa(a, TESTS_SAMPLE_RATE);
+    SpectralProfile pb(b, TESTS_SAMPLE_RATE);
 
     EXPECT_LT(spectralCorrelation(pa, pb), 0.9);
 }
