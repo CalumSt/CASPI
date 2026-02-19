@@ -830,7 +830,8 @@ TEST(SIMD_float64x2, Blend) {
     float64x2 b = {100.0, 200.0};
 
     // Create mask: lane 0 = true, lane 1 = false
-    float64x2 mask = cmp_lt(a, {15.0, 15.0});
+    float64x2 bitmask = {15.0, 15.0};
+    float64x2 mask = cmp_lt(a, bitmask);
 
     float64x2 result = blend(a, b, mask);
 
