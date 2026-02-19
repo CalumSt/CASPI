@@ -187,7 +187,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include "caspi_Assert.h"
 
 #include <cmath>
-#include <cstdint>
 #include <cstring>
 
 #include "caspi_Features.h"
@@ -291,9 +290,9 @@ namespace CASPI
             struct min_simd_width<float>
             {
 #if defined(CASPI_HAS_SSE) || defined(CASPI_HAS_NEON) || defined(CASPI_HAS_WASM_SIMD)
-                static constexpr std::size_t value = 4;
+                    static constexpr std::size_t value = 4;
 #else
-                static constexpr std::size_t value = 1;
+                    static constexpr std::size_t value = 1;
 #endif
             };
 
@@ -301,9 +300,9 @@ namespace CASPI
             struct min_simd_width<double>
             {
 #if defined(CASPI_HAS_SSE2) || defined(CASPI_HAS_NEON64) || defined(CASPI_HAS_WASM_SIMD)
-                static constexpr std::size_t value = 2;
+                    static constexpr std::size_t value = 2;
 #else
-                static constexpr std::size_t value = 1;
+                    static constexpr std::size_t value = 1;
 #endif
             };
 
@@ -332,8 +331,8 @@ namespace CASPI
             template <std::size_t Alignment, typename T>
             inline std::size_t samples_to_alignment (const T* ptr) noexcept
             {
-                const auto addr                     = reinterpret_cast<std::uintptr_t> (ptr);
-                const std::uintptr_t misalignment   = addr % Alignment;
+                const auto addr                   = reinterpret_cast<std::uintptr_t> (ptr);
+                const std::uintptr_t misalignment = addr % Alignment;
                 if (misalignment == 0)
                     return 0;
                 const std::uintptr_t bytes_to_align = Alignment - misalignment;
@@ -354,6 +353,35 @@ namespace CASPI
 #else
                 return alignof (T);
 #endif
+            }
+
+            /**
+             * @brief Byte size of L1 data cache for NT store threshold calculations.
+             *
+             * Injected at compile time via -DCASPI_L1_CACHE_BYTES=N.
+             * Defaults to 32768 (32KB) — the smallest L1 found on modern x86/ARM targets.
+             * The NT threshold is set to 2x L1 so that a working set that no longer fits
+             * in L1 does not pollute it with streaming writes.
+             *
+             * To override in CMake:
+             *   target_compile_definitions(your_target PRIVATE CASPI_L1_CACHE_BYTES=49152)
+             */
+#if ! defined(CASPI_L1_CACHE_BYTES)
+#define CASPI_L1_CACHE_BYTES 32768
+#endif
+
+            static constexpr std::size_t L1_CACHE_BYTES = CASPI_L1_CACHE_BYTES;
+
+            /**
+             * @brief Number of elements of type T above which NT stores are preferred.
+             *
+             * Set to 2x L1 capacity for T. At this point the working set has
+             * overflowed L1 and temporal stores cause unnecessary cache pollution.
+             */
+            template <typename T>
+            constexpr std::size_t nt_store_threshold() noexcept
+            {
+                return (2 * L1_CACHE_BYTES) / sizeof (T);
             }
         } // namespace Strategy
 
@@ -445,8 +473,8 @@ namespace CASPI
          * Use this for ad-hoc loads; block processors hoist the check.
          */
         template <typename T>
-        inline typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type
-            load (const T* p)
+        typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type
+        load (const T* p)
         {
             constexpr std::size_t alignment = Strategy::simd_alignment<T>();
             return Strategy::is_aligned<alignment> (p) ? load_aligned<T> (p)
@@ -477,7 +505,8 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             wasm_v128_store (p, v);
 #else
-            for (int i = 0; i < 4; i++) p[i] = v.data[i];
+            for (int i = 0; i < 4; i++)
+                p[i] = v.data[i];
 #endif
         }
 
@@ -491,7 +520,8 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             wasm_v128_store (p, v);
 #else
-            p[0] = v.data[0]; p[1] = v.data[1];
+            p[0] = v.data[0];
+            p[1] = v.data[1];
 #endif
         }
 
@@ -505,7 +535,8 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             wasm_v128_store (p, v);
 #else
-            for (int i = 0; i < 4; i++) p[i] = v.data[i];
+            for (int i = 0; i < 4; i++)
+                p[i] = v.data[i];
 #endif
         }
 
@@ -519,7 +550,8 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             wasm_v128_store (p, v);
 #else
-            p[0] = v.data[0]; p[1] = v.data[1];
+            p[0] = v.data[0];
+            p[1] = v.data[1];
 #endif
         }
 
@@ -527,23 +559,25 @@ namespace CASPI
         inline void store (float* p, float32x4 v)
         {
             Strategy::is_aligned<Strategy::simd_alignment<float>()> (p)
-                ? store_aligned (p, v) : store_unaligned (p, v);
+                ? store_aligned (p, v)
+                : store_unaligned (p, v);
         }
 
         /** @brief Store float64x2 with automatic alignment detection. */
         inline void store (double* p, float64x2 v)
         {
             Strategy::is_aligned<Strategy::simd_alignment<double>()> (p)
-                ? store_aligned (p, v) : store_unaligned (p, v);
+                ? store_aligned (p, v)
+                : store_unaligned (p, v);
         }
 
 #if defined(CASPI_HAS_AVX)
         /** @brief Store float32x8 to aligned memory (AVX). */
-        inline void store_aligned   (float*  p, float32x8 v) { _mm256_store_ps  (p, v); }
+        inline void store_aligned (float* p, float32x8 v) { _mm256_store_ps (p, v); }
         /** @brief Store float32x8 to unaligned memory (AVX). */
-        inline void store_unaligned (float*  p, float32x8 v) { _mm256_storeu_ps (p, v); }
+        inline void store_unaligned (float* p, float32x8 v) { _mm256_storeu_ps (p, v); }
         /** @brief Store float64x4 to aligned memory (AVX). */
-        inline void store_aligned   (double* p, float64x4 v) { _mm256_store_pd  (p, v); }
+        inline void store_aligned (double* p, float64x4 v) { _mm256_store_pd (p, v); }
         /** @brief Store float64x4 to unaligned memory (AVX). */
         inline void store_unaligned (double* p, float64x4 v) { _mm256_storeu_pd (p, v); }
 
@@ -551,16 +585,77 @@ namespace CASPI
         inline void store (float* p, float32x8 v)
         {
             Strategy::is_aligned<Strategy::simd_alignment<float>()> (p)
-                ? store_aligned (p, v) : store_unaligned (p, v);
+                ? store_aligned (p, v)
+                : store_unaligned (p, v);
         }
 
         /** @brief Store float64x4 with automatic alignment detection. */
         inline void store (double* p, float64x4 v)
         {
             Strategy::is_aligned<Strategy::simd_alignment<double>()> (p)
-                ? store_aligned (p, v) : store_unaligned (p, v);
+                ? store_aligned (p, v)
+                : store_unaligned (p, v);
         }
 #endif
+
+        /**
+         * @brief Write float32x4 to memory using a non-temporal (streaming) store.
+         * @note Requires 16-byte alignment. No cache line allocation.
+         */
+        inline void stream_store (float* p, float32x4 v) noexcept
+        {
+#if defined(CASPI_HAS_SSE)
+            _mm_stream_ps (p, v);
+#else
+            store_aligned (p, v); // fallback: no NT stores available
+#endif
+        }
+
+        /**
+         * @brief Write float64x2 to memory using a non-temporal store.
+         * @note Requires 16-byte alignment.
+         */
+        inline void stream_store (double* p, float64x2 v) noexcept
+        {
+#if defined(CASPI_HAS_SSE2)
+            _mm_stream_pd (p, v);
+#else
+            store_aligned (p, v);
+#endif
+        }
+
+#if defined(CASPI_HAS_AVX)
+        /**
+         * @brief Write float32x8 to memory using a non-temporal store.
+         * @note Requires 32-byte alignment.
+         */
+        inline void stream_store (float* p, float32x8 v) noexcept
+        {
+            _mm256_stream_ps (p, v);
+        }
+
+        /**
+         * @brief Write float64x4 to memory using a non-temporal store.
+         * @note Requires 32-byte alignment.
+         */
+        inline void stream_store (double* p, float64x4 v) noexcept
+        {
+            _mm256_stream_pd (p, v);
+        }
+#endif
+
+        /**
+         * @brief Store fence: ensures all prior NT stores are globally visible.
+         * Must be called after any sequence of NT stores before subsequent reads
+         * of the written region by any thread.
+         */
+        inline void store_fence() noexcept
+        {
+#if defined(CASPI_HAS_SSE)
+            _mm_sfence();
+#endif
+            // On non-SSE targets (NEON, WASM) there are no NT stores so no fence needed.
+        }
 
         /************************************************************************************************
           Broadcast Operations
@@ -586,7 +681,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_splat (x);
 #else
-            float32x4 v; for (int i = 0; i < 4; i++) v.data[i] = x; return v;
+            float32x4 v;
+            for (int i = 0; i < 4; i++)
+                v.data[i] = x;
+            return v;
 #endif
         }
 
@@ -600,7 +698,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f64x2_splat (x);
 #else
-            float64x2 v; v.data[0] = x; v.data[1] = x; return v;
+            float64x2 v;
+            v.data[0] = x;
+            v.data[1] = x;
+            return v;
 #endif
         }
 
@@ -611,7 +712,7 @@ namespace CASPI
          * Overloaded for float (float32x8) and double (float64x4).
          * Named set1_256 to avoid conflicting with the 128-bit set1<T> template.
          */
-        inline float32x8 set1_256 (float  x) { return _mm256_set1_ps (x); }
+        inline float32x8 set1_256 (float x) { return _mm256_set1_ps (x); }
         inline float64x4 set1_256 (double x) { return _mm256_set1_pd (x); }
 #endif
 
@@ -628,7 +729,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_add (a, b);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = a.data[i] + b.data[i]; return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = a.data[i] + b.data[i];
+            return r;
 #endif
         }
 
@@ -641,7 +745,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f64x2_add (a, b);
 #else
-            float64x2 r; r.data[0] = a.data[0] + b.data[0]; r.data[1] = a.data[1] + b.data[1]; return r;
+            float64x2 r;
+            r.data[0] = a.data[0] + b.data[0];
+            r.data[1] = a.data[1] + b.data[1];
+            return r;
 #endif
         }
 
@@ -654,7 +761,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_sub (a, b);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = a.data[i] - b.data[i]; return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = a.data[i] - b.data[i];
+            return r;
 #endif
         }
 
@@ -667,7 +777,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f64x2_sub (a, b);
 #else
-            float64x2 r; r.data[0] = a.data[0] - b.data[0]; r.data[1] = a.data[1] - b.data[1]; return r;
+            float64x2 r;
+            r.data[0] = a.data[0] - b.data[0];
+            r.data[1] = a.data[1] - b.data[1];
+            return r;
 #endif
         }
 
@@ -680,7 +793,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_mul (a, b);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = a.data[i] * b.data[i]; return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = a.data[i] * b.data[i];
+            return r;
 #endif
         }
 
@@ -693,7 +809,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f64x2_mul (a, b);
 #else
-            float64x2 r; r.data[0] = a.data[0] * b.data[0]; r.data[1] = a.data[1] * b.data[1]; return r;
+            float64x2 r;
+            r.data[0] = a.data[0] * b.data[0];
+            r.data[1] = a.data[1] * b.data[1];
+            return r;
 #endif
         }
 
@@ -707,7 +826,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_div (a, b);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = a.data[i] / b.data[i]; return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = a.data[i] / b.data[i];
+            return r;
 #endif
         }
 
@@ -720,7 +842,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f64x2_div (a, b);
 #else
-            float64x2 r; r.data[0] = a.data[0] / b.data[0]; r.data[1] = a.data[1] / b.data[1]; return r;
+            float64x2 r;
+            r.data[0] = a.data[0] / b.data[0];
+            r.data[1] = a.data[1] / b.data[1];
+            return r;
 #endif
         }
 
@@ -801,7 +926,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_div (wasm_f32x4_splat (1.0f), x);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = 1.0f / x.data[i]; return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = 1.0f / x.data[i];
+            return r;
 #endif
         }
 
@@ -819,7 +947,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_div (wasm_f32x4_splat (1.0f), wasm_f32x4_sqrt (x));
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = 1.0f / std::sqrt (x.data[i]); return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = 1.0f / std::sqrt (x.data[i]);
+            return r;
 #endif
         }
 
@@ -841,7 +972,8 @@ namespace CASPI
             return wasm_f32x4_eq (a, b);
 #else
             float32x4 r;
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++)
+            {
                 uint32_t mask = (a.data[i] == b.data[i]) ? 0xFFFFFFFF : 0x00000000;
                 std::memcpy (&r.data[i], &mask, sizeof (float));
             }
@@ -860,7 +992,8 @@ namespace CASPI
             return wasm_f32x4_lt (a, b);
 #else
             float32x4 r;
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++)
+            {
                 uint32_t mask = (a.data[i] < b.data[i]) ? 0xFFFFFFFF : 0x00000000;
                 std::memcpy (&r.data[i], &mask, sizeof (float));
             }
@@ -879,7 +1012,8 @@ namespace CASPI
             return wasm_f64x2_eq (a, b);
 #else
             float64x2 r;
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < 2; i++)
+            {
                 uint64_t mask = (a.data[i] == b.data[i]) ? 0xFFFFFFFFFFFFFFFFULL : 0x0ULL;
                 std::memcpy (&r.data[i], &mask, sizeof (double));
             }
@@ -898,7 +1032,8 @@ namespace CASPI
             return wasm_f64x2_lt (a, b);
 #else
             float64x2 r;
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < 2; i++)
+            {
                 uint64_t mask = (a.data[i] < b.data[i]) ? 0xFFFFFFFFFFFFFFFFULL : 0x0ULL;
                 std::memcpy (&r.data[i], &mask, sizeof (double));
             }
@@ -919,7 +1054,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_min (a, b);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = (a.data[i] < b.data[i]) ? a.data[i] : b.data[i]; return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = (a.data[i] < b.data[i]) ? a.data[i] : b.data[i];
+            return r;
 #endif
         }
 
@@ -932,7 +1070,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_max (a, b);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = (a.data[i] > b.data[i]) ? a.data[i] : b.data[i]; return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = (a.data[i] > b.data[i]) ? a.data[i] : b.data[i];
+            return r;
 #endif
         }
 
@@ -1040,9 +1181,12 @@ namespace CASPI
             __m128 t2 = _mm_max_ss (t1, _mm_shuffle_ps (t1, t1, 1));
             return _mm_cvtss_f32 (t2);
 #else
-            float tmp[4]; store (tmp, v);
+            float tmp[4];
+            store (tmp, v);
             float out = tmp[0];
-            for (int i = 1; i < 4; i++) if (tmp[i] > out) out = tmp[i];
+            for (int i = 1; i < 4; i++)
+                if (tmp[i] > out)
+                    out = tmp[i];
             return out;
 #endif
         }
@@ -1053,7 +1197,8 @@ namespace CASPI
             __m128d t = _mm_max_sd (v, _mm_shuffle_pd (v, v, 1));
             return _mm_cvtsd_f64 (t);
 #else
-            double tmp[2]; store (tmp, v);
+            double tmp[2];
+            store (tmp, v);
             return tmp[0] > tmp[1] ? tmp[0] : tmp[1];
 #endif
         }
@@ -1065,9 +1210,12 @@ namespace CASPI
             __m128 t2 = _mm_min_ss (t1, _mm_shuffle_ps (t1, t1, 1));
             return _mm_cvtss_f32 (t2);
 #else
-            float tmp[4]; store (tmp, v);
+            float tmp[4];
+            store (tmp, v);
             float out = tmp[0];
-            for (int i = 1; i < 4; i++) if (tmp[i] < out) out = tmp[i];
+            for (int i = 1; i < 4; i++)
+                if (tmp[i] < out)
+                    out = tmp[i];
             return out;
 #endif
         }
@@ -1078,7 +1226,8 @@ namespace CASPI
             __m128d t = _mm_min_sd (v, _mm_shuffle_pd (v, v, 1));
             return _mm_cvtsd_f64 (t);
 #else
-            double tmp[2]; store (tmp, v);
+            double tmp[2];
+            store (tmp, v);
             return tmp[0] < tmp[1] ? tmp[0] : tmp[1];
 #endif
         }
@@ -1103,8 +1252,10 @@ namespace CASPI
             return wasm_v128_bitselect (b, a, mask);
 #else
             float32x4 r;
-            for (int i = 0; i < 4; ++i) {
-                uint32_t m; std::memcpy (&m, &mask.data[i], sizeof (m));
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t m;
+                std::memcpy (&m, &mask.data[i], sizeof (m));
                 r.data[i] = (m != 0) ? b.data[i] : a.data[i];
             }
             return r;
@@ -1121,8 +1272,10 @@ namespace CASPI
             return wasm_v128_bitselect (b, a, mask);
 #else
             float64x2 r;
-            for (int i = 0; i < 2; ++i) {
-                uint64_t m; std::memcpy (&m, &mask.data[i], sizeof (m));
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t m;
+                std::memcpy (&m, &mask.data[i], sizeof (m));
                 r.data[i] = (m != 0) ? b.data[i] : a.data[i];
             }
             return r;
@@ -1142,7 +1295,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_neg (a);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = -a.data[i]; return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = -a.data[i];
+            return r;
 #endif
         }
 
@@ -1155,7 +1311,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f64x2_neg (a);
 #else
-            float64x2 r; r.data[0] = -a.data[0]; r.data[1] = -a.data[1]; return r;
+            float64x2 r;
+            r.data[0] = -a.data[0];
+            r.data[1] = -a.data[1];
+            return r;
 #endif
         }
 
@@ -1166,7 +1325,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_NEON)
             return vabsq_f32 (a);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = std::fabs (a.data[i]); return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = std::fabs (a.data[i]);
+            return r;
 #endif
         }
 
@@ -1177,7 +1339,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_NEON64)
             return vabsq_f64 (a);
 #else
-            float64x2 r; r.data[0] = std::fabs (a.data[0]); r.data[1] = std::fabs (a.data[1]); return r;
+            float64x2 r;
+            r.data[0] = std::fabs (a.data[0]);
+            r.data[1] = std::fabs (a.data[1]);
+            return r;
 #endif
         }
 
@@ -1189,7 +1354,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_NEON)
             return vsqrtq_f32 (a);
 #else
-            float32x4 r; for (int i = 0; i < 4; i++) r.data[i] = std::sqrt (a.data[i]); return r;
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = std::sqrt (a.data[i]);
+            return r;
 #endif
         }
 
@@ -1200,7 +1368,10 @@ namespace CASPI
 #elif defined(CASPI_HAS_NEON64)
             return vsqrtq_f64 (a);
 #else
-            float64x2 r; r.data[0] = std::sqrt (a.data[0]); r.data[1] = std::sqrt (a.data[1]); return r;
+            float64x2 r;
+            r.data[0] = std::sqrt (a.data[0]);
+            r.data[1] = std::sqrt (a.data[1]);
+            return r;
 #endif
         }
 
@@ -1217,59 +1388,61 @@ namespace CASPI
             template <typename T>
             struct AddKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type operator() (simd_type a, simd_type b) const { return add (a, b); }
-                T         operator() (T a, T b)                 const { return a + b; }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type operator() (simd_type a, simd_type b) const { return add (a, b); }
+                    T operator() (T a, T b) const { return a + b; }
             };
 
             template <typename T>
             struct SubKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type operator() (simd_type a, simd_type b) const { return sub (a, b); }
-                T         operator() (T a, T b)                 const { return a - b; }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type operator() (simd_type a, simd_type b) const { return sub (a, b); }
+                    T operator() (T a, T b) const { return a - b; }
             };
 
             template <typename T>
             struct MulKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type operator() (simd_type a, simd_type b) const { return mul (a, b); }
-                T         operator() (T a, T b)                 const { return a * b; }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type operator() (simd_type a, simd_type b) const { return mul (a, b); }
+                    T operator() (T a, T b) const { return a * b; }
             };
 
             template <typename T>
             struct ScaleKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type vec; T scalar;
-                explicit ScaleKernel (T factor) : vec (set1<T> (factor)), scalar (factor) {}
-                simd_type operator() (simd_type a) const { return mul (a, vec); }
-                T         operator() (T a)         const { return a * scalar; }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type vec;
+                    T scalar;
+                    explicit ScaleKernel (T factor) : vec (set1<T> (factor)), scalar (factor) {}
+                    simd_type operator() (simd_type a) const { return mul (a, vec); }
+                    T operator() (T a) const { return a * scalar; }
             };
 
             template <typename T>
             struct FillKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type vec; T scalar;
-                explicit FillKernel (T value) : vec (set1<T> (value)), scalar (value) {}
-                simd_type simd_value()   const { return vec; }
-                T         scalar_value() const { return scalar; }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type vec;
+                    T scalar;
+                    explicit FillKernel (T value) : vec (set1<T> (value)), scalar (value) {}
+                    simd_type simd_value() const { return vec; }
+                    T scalar_value() const { return scalar; }
             };
 
             template <typename T>
             struct MACKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type operator() (simd_type acc, simd_type a, simd_type b) const { return mul_add (a, b, acc); }
-                T         operator() (T acc, T a, T b)                         const { return acc + a * b; }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type operator() (simd_type acc, simd_type a, simd_type b) const { return mul_add (a, b, acc); }
+                    T operator() (T acc, T a, T b) const { return acc + a * b; }
             };
 
             /**
@@ -1279,37 +1452,41 @@ namespace CASPI
             template <typename T>
             struct LerpKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type t_vec; T t_scalar;
-                explicit LerpKernel (T t) : t_vec (set1<T> (t)), t_scalar (t) {}
-                simd_type operator() (simd_type a, simd_type b) const { return mul_add (sub (b, a), t_vec, a); }
-                T         operator() (T a, T b)                 const { return a + t_scalar * (b - a); }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type t_vec;
+                    T t_scalar;
+                    explicit LerpKernel (T t) : t_vec (set1<T> (t)), t_scalar (t) {}
+                    simd_type operator() (simd_type a, simd_type b) const { return mul_add (sub (b, a), t_vec, a); }
+                    T operator() (T a, T b) const { return a + t_scalar * (b - a); }
             };
 
             template <typename T>
             struct ClampKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type min_vec, max_vec; T min_scalar, max_scalar;
-                ClampKernel (T lo, T hi) : min_vec (set1<T> (lo)), max_vec (set1<T> (hi)), min_scalar (lo), max_scalar (hi) {}
-                simd_type operator() (simd_type v) const { return min (max (v, min_vec), max_vec); }
-                T         operator() (T v)         const
-                {
-                    if (v < min_scalar) v = min_scalar;
-                    if (v > max_scalar) v = max_scalar;
-                    return v;
-                }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type min_vec, max_vec;
+                    T min_scalar, max_scalar;
+                    ClampKernel (T lo, T hi) : min_vec (set1<T> (lo)), max_vec (set1<T> (hi)), min_scalar (lo), max_scalar (hi) {}
+                    simd_type operator() (simd_type v) const { return min (max (v, min_vec), max_vec); }
+                    T operator() (T v) const
+                    {
+                        if (v < min_scalar)
+                            v = min_scalar;
+                        if (v > max_scalar)
+                            v = max_scalar;
+                        return v;
+                    }
             };
 
             template <typename T>
             struct AbsKernel
             {
-                CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
-                using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
-                simd_type operator() (simd_type a) const { return abs (a); }
-                T         operator() (T a)         const { return std::fabs (a); }
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value, "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+                    simd_type operator() (simd_type a) const { return abs (a); }
+                    T operator() (T a) const { return std::fabs (a); }
             };
         } // namespace kernels
 
@@ -1323,141 +1500,309 @@ namespace CASPI
 
         /** @brief dst[i] = kernel(dst[i], src[i]) */
         template <typename T, typename Kernel>
-        inline void block_op_binary (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT src, std::size_t count, const Kernel& kernel)
+        void block_op_binary (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT src, std::size_t count, const Kernel& kernel)
         {
+            if ((dst == nullptr) || (src == nullptr) || (count == 0))
+            {
+                return;
+            }
             constexpr std::size_t Width     = Strategy::min_simd_width<T>::value;
             constexpr std::size_t Alignment = Strategy::simd_alignment<T>();
-            std::size_t i = 0;
+            std::size_t i                   = 0;
 
             const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (dst), count);
-            for (; i < prologue_count; ++i) dst[i] = kernel (dst[i], src[i]);
+            for (; i < prologue_count; ++i)
+                dst[i] = kernel (dst[i], src[i]);
 
             const std::size_t simd_end = i + ((count - i) / Width) * Width;
             const bool dst_aligned     = Strategy::is_aligned<Alignment> (dst + i);
             const bool src_aligned     = Strategy::is_aligned<Alignment> (src + i);
 
+            // NOTE: binary ops (add, sub, mul) are latency-bound not bandwidth-bound —
+            // NT stores rarely help since we read AND write the same cache lines.
+            // No NT path here; unrolling gives the most benefit.
             if (dst_aligned && src_aligned)
+            {
+                const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                for (; i < unroll_end; i += Width * 4)
+                {
+                    store_aligned (dst + i, kernel (load_aligned<T> (dst + i), load_aligned<T> (src + i)));
+                    store_aligned (dst + i + Width, kernel (load_aligned<T> (dst + i + Width), load_aligned<T> (src + i + Width)));
+                    store_aligned (dst + i + Width * 2, kernel (load_aligned<T> (dst + i + Width * 2), load_aligned<T> (src + i + Width * 2)));
+                    store_aligned (dst + i + Width * 3, kernel (load_aligned<T> (dst + i + Width * 3), load_aligned<T> (src + i + Width * 3)));
+                }
                 for (; i < simd_end; i += Width)
                     store_aligned (dst + i, kernel (load_aligned<T> (dst + i), load_aligned<T> (src + i)));
+            }
             else
+            {
                 for (; i < simd_end; i += Width)
+                {
                     store_unaligned (dst + i, kernel (load_unaligned<T> (dst + i), load_unaligned<T> (src + i)));
+                }
+            }
 
-            for (; i < count; ++i) dst[i] = kernel (dst[i], src[i]);
+            for (; i < count; ++i)
+            {
+                dst[i] = kernel (dst[i], src[i]);
+            }
         }
 
         /** @brief dst[i] = kernel(src[i]) */
         template <typename T, typename Kernel>
-        inline void block_op_unary (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT src, std::size_t count, const Kernel& kernel)
+        void block_op_unary (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT src, std::size_t count, const Kernel& kernel)
         {
+            if ((dst == nullptr) || (src == nullptr) || (count == 0))
+            {
+                return;
+            }
             constexpr std::size_t Width     = Strategy::min_simd_width<T>::value;
             constexpr std::size_t Alignment = Strategy::simd_alignment<T>();
-            std::size_t i = 0;
+            std::size_t i                   = 0;
 
             const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (dst), count);
-            for (; i < prologue_count; ++i) dst[i] = kernel (src[i]);
+            for (; i < prologue_count; ++i)
+            {
+                dst[i] = kernel (src[i]);
+            }
 
             const std::size_t simd_end = i + ((count - i) / Width) * Width;
             const bool dst_aligned     = Strategy::is_aligned<Alignment> (dst + i);
             const bool src_aligned     = Strategy::is_aligned<Alignment> (src + i);
 
             if (dst_aligned && src_aligned)
-                for (; i < simd_end; i += Width)
+            {
+                const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                for (; i < unroll_end; i += Width * 4)
+                {
                     store_aligned (dst + i, kernel (load_aligned<T> (src + i)));
-            else
+                    store_aligned (dst + i + Width, kernel (load_aligned<T> (src + i + Width)));
+                    store_aligned (dst + i + Width * 2, kernel (load_aligned<T> (src + i + Width * 2)));
+                    store_aligned (dst + i + Width * 3, kernel (load_aligned<T> (src + i + Width * 3)));
+                }
                 for (; i < simd_end; i += Width)
+                {
+                    store_aligned (dst + i, kernel (load_aligned<T> (src + i)));
+                }
+            }
+            else
+            {
+                for (; i < simd_end; i += Width)
+                {
                     store_unaligned (dst + i, kernel (load_unaligned<T> (src + i)));
+                }
+            }
 
-            for (; i < count; ++i) dst[i] = kernel (src[i]);
+            for (; i < count; ++i)
+            {
+                dst[i] = kernel (src[i]);
+            }
         }
 
-        /** @brief data[i] = kernel(data[i]) */
+        /**
+         * @brief data[i] = kernel(data[i])
+         *
+         * Fix A: 4x manual unroll in the aligned SIMD loop.
+         * Fix B: NT stores for large aligned buffers to avoid cache pollution.
+         */
         template <typename T, typename Kernel>
-        inline void block_op_inplace (T* CASPI_RESTRICT data, std::size_t count, const Kernel& kernel)
+        void block_op_inplace (T* CASPI_RESTRICT data, std::size_t count, const Kernel& kernel)
         {
+            if ((data == nullptr) || (count == 0))
+                return;
+
             constexpr std::size_t Width     = Strategy::min_simd_width<T>::value;
             constexpr std::size_t Alignment = Strategy::simd_alignment<T>();
-            std::size_t i = 0;
+            std::size_t i                   = 0;
 
             const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (data), count);
-            for (; i < prologue_count; ++i) data[i] = kernel (data[i]);
+            for (; i < prologue_count; ++i)
+            {
+                data[i] = kernel (data[i]);
+            }
 
             const std::size_t simd_end = i + ((count - i) / Width) * Width;
             const bool aligned         = Strategy::is_aligned<Alignment> (data + i);
 
             if (aligned)
+            {
+                const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                for (; i < unroll_end; i += Width * 4)
+                {
+                    store_aligned (data + i,           kernel (load_aligned<T> (data + i)));
+                    store_aligned (data + i + Width,   kernel (load_aligned<T> (data + i + Width)));
+                    store_aligned (data + i + Width*2, kernel (load_aligned<T> (data + i + Width*2)));
+                    store_aligned (data + i + Width*3, kernel (load_aligned<T> (data + i + Width*3)));
+                }
                 for (; i < simd_end; i += Width)
+                {
                     store_aligned (data + i, kernel (load_aligned<T> (data + i)));
+                }
+            }
             else
+            {
                 for (; i < simd_end; i += Width)
+                {
                     store_unaligned (data + i, kernel (load_unaligned<T> (data + i)));
+                }
+            }
 
-            for (; i < count; ++i) data[i] = kernel (data[i]);
+            for (; i < count; ++i)
+            {
+                data[i] = kernel (data[i]);
+            }
         }
 
-        /** @brief dst[i] = kernel.scalar_value() */
+        /**
+         * @brief dst[i] = kernel.scalar_value()
+         *
+         * NT store path for large aligned buffers: fill is write-only so NT stores
+         * are particularly effective (no read traffic at all on the written region).
+         */
         template <typename T, typename Kernel>
         inline void block_op_fill (T* CASPI_RESTRICT dst, std::size_t count, const Kernel& kernel)
         {
+            if ((dst == nullptr) || (count == 0))
+            {
+                return;
+            }
             constexpr std::size_t Width     = Strategy::min_simd_width<T>::value;
             constexpr std::size_t Alignment = Strategy::simd_alignment<T>();
-            std::size_t i = 0;
+            std::size_t i                   = 0;
 
             const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (dst), count);
-            for (; i < prologue_count; ++i) dst[i] = kernel.scalar_value();
+            for (; i < prologue_count; ++i)
+            {
+                dst[i] = kernel.scalar_value();
+            }
 
-            const std::size_t simd_end = i + ((count - i) / Width) * Width;
-            const bool aligned         = Strategy::is_aligned<Alignment> (dst + i);
-            const auto vec             = kernel.simd_value();
+            const std::size_t simd_end     = i + ((count - i) / Width) * Width;
+            const bool aligned             = Strategy::is_aligned<Alignment> (dst + i);
+            const auto vec                 = kernel.simd_value();
+            const std::size_t nt_threshold = Strategy::nt_store_threshold<T>();
 
             if (aligned)
-                for (; i < simd_end; i += Width) store_aligned (dst + i, vec);
-            else
-                for (; i < simd_end; i += Width) store_unaligned (dst + i, vec);
+            {
+#if defined(CASPI_HAS_SSE)
+                // NT path: fill generates no reads so bypassing cache is always correct
+                // above the threshold — the written data is not reused in L1.
+                if ((simd_end - i) >= nt_threshold)
+                {
+                    const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                    for (; i < unroll_end; i += Width * 4)
+                    {
+                        stream_store (dst + i, vec);
+                        stream_store (dst + i + Width, vec);
+                        stream_store (dst + i + Width * 2, vec);
+                        stream_store (dst + i + Width * 3, vec);
+                    }
+                    for (; i < simd_end; i += Width)
+                    {
+                        stream_store (dst + i, vec);
+                    }
 
-            for (; i < count; ++i) dst[i] = kernel.scalar_value();
+                    store_fence();
+                }
+                else
+#endif
+                {
+                    const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                    for (; i < unroll_end; i += Width * 4)
+                    {
+                        store_aligned (dst + i, vec);
+                        store_aligned (dst + i + Width, vec);
+                        store_aligned (dst + i + Width * 2, vec);
+                        store_aligned (dst + i + Width * 3, vec);
+                    }
+                    for (; i < simd_end; i += Width)
+                    {
+                        store_aligned (dst + i, vec);
+                    }
+                }
+            }
+            else
+            {
+                for (; i < simd_end; i += Width)
+                {
+                    store_unaligned (dst + i, vec);
+                }
+            }
+
+            for (; i < count; ++i)
+            {
+                dst[i] = kernel.scalar_value();
+            }
         }
 
-        /** @brief dst[i] = kernel(dst[i], src1[i], src2[i]) */
+        /** @brief dst[i] = kernel(dst[i], src1[i], src2[i]) — unchanged, no NT benefit */
         template <typename T, typename Kernel>
         inline void block_op_ternary (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT src1, const T* CASPI_RESTRICT src2, std::size_t count, const Kernel& kernel)
         {
             constexpr std::size_t Width     = Strategy::min_simd_width<T>::value;
             constexpr std::size_t Alignment = Strategy::simd_alignment<T>();
-            std::size_t i = 0;
+            std::size_t i                   = 0;
 
             const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (dst), count);
-            for (; i < prologue_count; ++i) dst[i] = kernel (dst[i], src1[i], src2[i]);
+            for (; i < prologue_count; ++i)
+            {
+                dst[i] = kernel (dst[i], src1[i], src2[i]);
+            }
 
-            const std::size_t simd_end  = i + ((count - i) / Width) * Width;
-            const bool dst_aligned      = Strategy::is_aligned<Alignment> (dst + i);
-            const bool src1_aligned     = Strategy::is_aligned<Alignment> (src1 + i);
-            const bool src2_aligned     = Strategy::is_aligned<Alignment> (src2 + i);
+            const std::size_t simd_end = i + ((count - i) / Width) * Width;
+            const bool dst_aligned     = Strategy::is_aligned<Alignment> (dst + i);
+            const bool src1_aligned    = Strategy::is_aligned<Alignment> (src1 + i);
+            const bool src2_aligned    = Strategy::is_aligned<Alignment> (src2 + i);
 
             if (dst_aligned && src1_aligned && src2_aligned)
-                for (; i < simd_end; i += Width)
+            {
+                const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                for (; i < unroll_end; i += Width * 4)
+                {
                     store_aligned (dst + i, kernel (load_aligned<T> (dst + i), load_aligned<T> (src1 + i), load_aligned<T> (src2 + i)));
-            else
+                    store_aligned (dst + i + Width, kernel (load_aligned<T> (dst + i + Width), load_aligned<T> (src1 + i + Width), load_aligned<T> (src2 + i + Width)));
+                    store_aligned (dst + i + Width * 2, kernel (load_aligned<T> (dst + i + Width * 2), load_aligned<T> (src1 + i + Width * 2), load_aligned<T> (src2 + i + Width * 2)));
+                    store_aligned (dst + i + Width * 3, kernel (load_aligned<T> (dst + i + Width * 3), load_aligned<T> (src1 + i + Width * 3), load_aligned<T> (src2 + i + Width * 3)));
+                }
                 for (; i < simd_end; i += Width)
+                {
+                    store_aligned (dst + i, kernel (load_aligned<T> (dst + i), load_aligned<T> (src1 + i), load_aligned<T> (src2 + i)));
+                }
+            }
+            else
+            {
+                for (; i < simd_end; i += Width)
+                {
                     store_unaligned (dst + i, kernel (load_unaligned<T> (dst + i), load_unaligned<T> (src1 + i), load_unaligned<T> (src2 + i)));
+                }
+            }
 
-            for (; i < count; ++i) dst[i] = kernel (dst[i], src1[i], src2[i]);
+            for (; i < count; ++i)
+            {
+                dst[i] = kernel (dst[i], src1[i], src2[i]);
+            }
         }
 
         /**
-         * @brief dst[i] = kernel(a[i], b[i])  (separate output, two read-only inputs)
-         *
-         * Used by ops::lerp to avoid duplicating prologue/SIMD/epilogue logic inline.
+         * @brief dst[i] = kernel(a[i], b[i]) — unchanged, no NT benefit
+         * (lerp: 2 reads + 1 write, cache lines needed for reads anyway)
          */
         template <typename T, typename Kernel>
         inline void block_op_binary_out (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT a, const T* CASPI_RESTRICT b, std::size_t count, const Kernel& kernel)
         {
+            if ((dst == nullptr) || (a == nullptr) || (b == nullptr) || (count == 0))
+            {
+                return;
+            }
+
             constexpr std::size_t Width     = Strategy::min_simd_width<T>::value;
             constexpr std::size_t Alignment = Strategy::simd_alignment<T>();
-            std::size_t i = 0;
+            std::size_t i                   = 0;
 
             const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (dst), count);
-            for (; i < prologue_count; ++i) dst[i] = kernel (a[i], b[i]);
+            for (; i < prologue_count; ++i)
+            {
+                dst[i] = kernel (a[i], b[i]);
+            }
 
             const std::size_t simd_end = i + ((count - i) / Width) * Width;
             const bool dst_aligned     = Strategy::is_aligned<Alignment> (dst + i);
@@ -1465,13 +1810,30 @@ namespace CASPI
             const bool b_aligned       = Strategy::is_aligned<Alignment> (b + i);
 
             if (dst_aligned && a_aligned && b_aligned)
-                for (; i < simd_end; i += Width)
+            {
+                const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                for (; i < unroll_end; i += Width * 4)
+                {
                     store_aligned (dst + i, kernel (load_aligned<T> (a + i), load_aligned<T> (b + i)));
-            else
+                    store_aligned (dst + i + Width, kernel (load_aligned<T> (a + i + Width), load_aligned<T> (b + i + Width)));
+                    store_aligned (dst + i + Width * 2, kernel (load_aligned<T> (a + i + Width * 2), load_aligned<T> (b + i + Width * 2)));
+                    store_aligned (dst + i + Width * 3, kernel (load_aligned<T> (a + i + Width * 3), load_aligned<T> (b + i + Width * 3)));
+                }
                 for (; i < simd_end; i += Width)
+                {
+                    store_aligned (dst + i, kernel (load_aligned<T> (a + i), load_aligned<T> (b + i)));
+                }
+            }
+            else
+            {
+                for (; i < simd_end; i += Width)
+                {
                     store_unaligned (dst + i, kernel (load_unaligned<T> (a + i), load_unaligned<T> (b + i)));
+                }
+            }
 
-            for (; i < count; ++i) dst[i] = kernel (a[i], b[i]);
+            for (; i < count; ++i)
+                dst[i] = kernel (a[i], b[i]);
         }
 
         /************************************************************************************************
@@ -1524,7 +1886,8 @@ namespace CASPI
             template <typename T>
             void fill (T* CASPI_RESTRICT dst, std::size_t count, T value)
             {
-                block_op_fill (dst, count, kernels::FillKernel<T> (value));
+               // probably not beating this.
+               std::fill_n (dst, count, value);
             }
 
             /** @brief dst[i] += src1[i] * src2[i]  (uses FMA when available) */
@@ -1553,7 +1916,117 @@ namespace CASPI
                 block_op_inplace (data, count, kernels::ClampKernel<T> (min_val, max_val));
             }
 
-            /** @brief data[i] = |data[i]| */
+            /**
+             * @brief data[i] = |data[i]|  — float specialisation.
+             *
+             * Bypasses AbsKernel dispatch. Uses SIMD::abs() directly with the same
+             * prologue/SIMD/epilogue structure as block_op_inplace, plus NT stores
+             * for large buffers and 4x unrolling for small ones.
+             */
+                        /**
+             * @brief data[i] = |data[i]|  — float specialisation.
+             *
+             * Direct SIMD::abs() call bypasses AbsKernel dispatch overhead.
+             * 4x unroll in aligned path. No NT stores: this is RMW.
+             */
+            inline void abs (float* CASPI_RESTRICT data, std::size_t count)
+            {
+                if (data == nullptr || count == 0)
+                    return;
+
+                constexpr std::size_t Width     = Strategy::min_simd_width<float>::value;
+                constexpr std::size_t Alignment = Strategy::simd_alignment<float>();
+                std::size_t i                   = 0;
+
+                const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (data), count);
+                for (; i < prologue_count; ++i)
+                {
+                    data[i] = std::fabs (data[i]);
+                }
+
+                const std::size_t simd_end = i + ((count - i) / Width) * Width;
+                const bool aligned         = Strategy::is_aligned<Alignment> (data + i);
+
+                if (aligned)
+                {
+                    const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                    for (; i < unroll_end; i += Width * 4)
+                    {
+                        store_aligned (data + i,           SIMD::abs (load_aligned<float> (data + i)));
+                        store_aligned (data + i + Width,   SIMD::abs (load_aligned<float> (data + i + Width)));
+                        store_aligned (data + i + Width*2, SIMD::abs (load_aligned<float> (data + i + Width*2)));
+                        store_aligned (data + i + Width*3, SIMD::abs (load_aligned<float> (data + i + Width*3)));
+                    }
+                    for (; i < simd_end; i += Width)
+                    {
+                        store_aligned (data + i, SIMD::abs (load_aligned<float> (data + i)));
+                    }
+                }
+                else
+                {
+                    for (; i < simd_end; i += Width)
+                    {
+                        store_unaligned (data + i, SIMD::abs (load_unaligned<float> (data + i)));
+                    }
+                }
+
+                for (; i < count; ++i)
+                {
+                    data[i] = std::fabs (data[i]);
+                }
+            }
+
+            /**
+             * @brief data[i] = |data[i]|  — double specialisation.
+             */
+            inline void abs (double* CASPI_RESTRICT data, std::size_t count)
+            {
+                if (data == nullptr || count == 0)
+                    return;
+
+                constexpr std::size_t Width     = Strategy::min_simd_width<double>::value;
+                constexpr std::size_t Alignment = Strategy::simd_alignment<double>();
+                std::size_t i                   = 0;
+
+                const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (data), count);
+                for (; i < prologue_count; ++i)
+                {
+                    data[i] = std::fabs (data[i]);
+                }
+
+                const std::size_t simd_end = i + ((count - i) / Width) * Width;
+                const bool aligned         = Strategy::is_aligned<Alignment> (data + i);
+
+                if (aligned)
+                {
+                    const std::size_t unroll_end = i + ((simd_end - i) / (Width * 4)) * (Width * 4);
+                    for (; i < unroll_end; i += Width * 4)
+                    {
+                        store_aligned (data + i,           SIMD::abs (load_aligned<double> (data + i)));
+                        store_aligned (data + i + Width,   SIMD::abs (load_aligned<double> (data + i + Width)));
+                        store_aligned (data + i + Width*2, SIMD::abs (load_aligned<double> (data + i + Width*2)));
+                        store_aligned (data + i + Width*3, SIMD::abs (load_aligned<double> (data + i + Width*3)));
+                    }
+                    for (; i < simd_end; i += Width)
+                    {
+                        store_aligned (data + i, SIMD::abs (load_aligned<double> (data + i)));
+                    }
+                }
+                else
+                {
+                    for (; i < simd_end; i += Width)
+                    {
+                        store_unaligned (data + i, SIMD::abs (load_unaligned<double> (data + i)));
+                    }
+                }
+
+                for (; i < count; ++i)
+                {
+                    data[i] = std::fabs (data[i]);
+                }
+            }
+
+            // Generic template version (for any T not specialised above) — unchanged
             template <typename T>
             void abs (T* CASPI_RESTRICT data, std::size_t count)
             {
@@ -1569,7 +2042,10 @@ namespace CASPI
             template <typename T>
             T find_min (const T* data, std::size_t count)
             {
-                if (count == 0) return T (0);
+                if (data == nullptr || (count == 0))
+                {
+                    return T (0);
+                }
 
                 using simd_t                = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
                 constexpr std::size_t Width = Strategy::min_simd_width<T>::value;
@@ -1583,18 +2059,30 @@ namespace CASPI
                     count);
 
                 for (; i < prologue_end; ++i)
-                    if (data[i] < result) result = data[i];
+                {
+                    if (data[i] < result)
+                    {
+                        result = data[i];
+                    }
+                }
 
                 if (i + Width <= count)
                 {
                     simd_t vmin = set1<T> (result);
                     for (; i + Width <= count; i += Width)
+                    {
                         vmin = min (vmin, load<T> (data + i));
+                    }
                     result = hmin (vmin);
                 }
 
                 for (; i < count; ++i)
-                    if (data[i] < result) result = data[i];
+                {
+                    if (data[i] < result)
+                    {
+                        result = data[i];
+                    }
+                }
 
                 return result;
             }
@@ -1607,7 +2095,10 @@ namespace CASPI
             template <typename T>
             T find_max (const T* data, std::size_t count)
             {
-                if (count == 0) return T (0);
+                if (data == nullptr || (count == 0))
+                {
+                    return T (0);
+                }
 
                 using simd_t                = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
                 constexpr std::size_t Width = Strategy::min_simd_width<T>::value;
@@ -1621,18 +2112,30 @@ namespace CASPI
                     count);
 
                 for (; i < prologue_end; ++i)
-                    if (data[i] > result) result = data[i];
+                {
+                    if (data[i] > result)
+                    {
+                        result = data[i];
+                    }
+                }
 
                 if (i + Width <= count)
                 {
                     simd_t vmax = set1<T> (result);
                     for (; i + Width <= count; i += Width)
+                    {
                         vmax = max (vmax, load<T> (data + i));
+                    }
                     result = hmax (vmax);
                 }
 
                 for (; i < count; ++i)
-                    if (data[i] > result) result = data[i];
+                {
+                    if (data[i] > result)
+                    {
+                        result = data[i];
+                    }
+                }
 
                 return result;
             }
@@ -1651,7 +2154,10 @@ namespace CASPI
                     Strategy::samples_to_alignment<Strategy::simd_alignment<T>()> (data),
                     count);
 
-                for (; i < prologue_end; ++i) result += data[i];
+                for (; i < prologue_end; ++i)
+                {
+                    result += data[i];
+                }
 
                 if (i + Width <= count)
                 {
@@ -1661,7 +2167,10 @@ namespace CASPI
                     result += hsum (vsum);
                 }
 
-                for (; i < count; ++i) result += data[i];
+                for (; i < count; ++i)
+                {
+                    result += data[i];
+                }
 
                 return result;
             }
@@ -1680,7 +2189,10 @@ namespace CASPI
                     Strategy::samples_to_alignment<Strategy::simd_alignment<T>()> (a),
                     count);
 
-                for (; i < prologue_end; ++i) result += a[i] * b[i];
+                for (; i < prologue_end; ++i)
+                {
+                    result += a[i] * b[i];
+                }
 
                 if (i + Width <= count)
                 {
@@ -1690,7 +2202,8 @@ namespace CASPI
                     result += hsum (vsum);
                 }
 
-                for (; i < count; ++i) result += a[i] * b[i];
+                for (; i < count; ++i)
+                    result += a[i] * b[i];
 
                 return result;
             }
