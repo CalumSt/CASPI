@@ -30,6 +30,7 @@ set(SOURCES
         base/Phase_bm.cpp
         base/Expected_bm.cpp
         base/SIMD_bm.cpp
+        base/AudioBuffer_SIMD_bm.cpp
 )
 # --------------------------------------------------------------------------
 
