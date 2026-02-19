@@ -547,7 +547,7 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
          * @brief Scale entire buffer
          */
         template <typename SampleType, template <typename> class Layout>
-        CASPI_NON_BLOCKING void scale (AudioBuffer<SampleType, Layout>& buf, SampleType factor) noexcept
+        void scale (AudioBuffer<SampleType, Layout>& buf, SampleType factor) noexcept CASPI_NON_BLOCKING
         {
             auto span = buf.all_span();
             Core::scale (span, factor);
