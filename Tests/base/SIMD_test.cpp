@@ -1309,7 +1309,7 @@ TEST(SIMD_Kernels, AddKernel) {
     float32x4 result = kernel(a, b);
 
     float out[4];
-    store<float>(out, result);
+    store(out, result);
     for (int i = 0; i < 4; i++) {
         EXPECT_NEAR(out[i], 5.0f, EPSILON_F32);
     }
@@ -1325,7 +1325,7 @@ TEST(SIMD_Kernels, SubKernel) {
     float64x2 result = kernel(a, b);
 
     double out[2];
-    store<double>(out, result);
+    store(out, result);
     for (int i = 0; i < 2; i++) {
         EXPECT_NEAR(out[i], 7.0, EPSILON_F64);
     }
@@ -1346,7 +1346,7 @@ TEST(SIMD_Kernels, ScaleKernel) {
     float32x4 result = kernel(a);
 
     float out[4];
-    store<float>(out, result);
+    store(out, result);
     for (int i = 0; i < 4; i++) {
         EXPECT_NEAR(out[i], 10.0f, EPSILON_F32);
     }
@@ -1359,7 +1359,7 @@ TEST(SIMD_Kernels, FillKernel) {
 
     float32x4 result = kernel.simd_value();
     float out[4];
-    store<float>(out, result);
+    store(out, result);
     for (int i = 0; i < 4; i++) {
         EXPECT_NEAR(out[i], 3.14f, EPSILON_F32);
     }
@@ -1854,7 +1854,7 @@ TEST(SIMD_Correctness, BlendSemantics) {
     float32x4 result_true = blend(a, b, all_true);
 
     float out_true[4];
-    store<float>(out_true, result_true);
+    store(out_true, result_true);
     for (int i = 0; i < 4; i++) {
         EXPECT_NEAR(out_true[i], 2.0f, EPSILON_F32);
     }
@@ -1864,7 +1864,7 @@ TEST(SIMD_Correctness, BlendSemantics) {
     float32x4 result_false = blend(a, b, all_false);
 
     float out_false[4];
-    store<float>(out_false, result_false);
+    store(out_false, result_false);
     for (int i = 0; i < 4; i++) {
         EXPECT_NEAR(out_false[i], 1.0f, EPSILON_F32);
     }
@@ -1890,7 +1890,7 @@ TEST(SIMD_Correctness, LoadStoreRoundtrip) {
     alignas(16) float roundtrip[4];
 
     float32x4 v = load_aligned<float>(original);
-    store_aligned<float>(roundtrip, v);
+    store_aligned(roundtrip, v);
 
     for (int i = 0; i < 4; i++) {
         EXPECT_FLOAT_EQ(original[i], roundtrip[i]);
