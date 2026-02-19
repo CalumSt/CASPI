@@ -1,190 +1,145 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_NAME "CASPI")
-option(CASPI_ENABLE_DEBUG "Enable CASPI debug features (asserts, checks)" OFF)
-# =========================
-# Sanitizer Options
-# =========================
+project(CASPI VERSION 0.1 LANGUAGES CXX)
 
-option(CASPI_ENABLE_ASAN    "Enable AddressSanitizer" OFF)
-option(CASPI_ENABLE_UBSAN   "Enable UndefinedBehaviorSanitizer" OFF)
-option(CASPI_ENABLE_TSAN    "Enable ThreadSanitizer" OFF)
-option(CASPI_ENABLE_RTSAN   "Enable Real-Time Sanitizer (RTSan)" OFF)
+message(STATUS "Configuring ${PROJECT_NAME}")
 
-# =========================
-# Sanitizer Validation
-# =========================
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(_CASPI_SANITIZER_COUNT 0)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 
-foreach(opt
-        CASPI_ENABLE_ASAN
-        CASPI_ENABLE_UBSAN
-        CASPI_ENABLE_TSAN
-        CASPI_ENABLE_RTSAN)
-    if (${opt})
-        math(EXPR _CASPI_SANITIZER_COUNT "${_CASPI_SANITIZER_COUNT} + 1")
-    endif ()
-endforeach()
+# ============================================================
+# Options
+# ============================================================
 
-message(STATUS "Configuring CASPI")
-# Detect if standalone build (top-level project)
-set(CASPI_IS_STANDALONE_BUILD OFF)
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(CASPI_IS_STANDALONE_BUILD ON)
-endif ()
+option(CASPI_ENABLE_DEBUG     "Enable debug features"    OFF)
+option(CASPI_BUILD_TESTING    "Build tests"              OFF)
+option(CASPI_BUILD_BENCHMARKS "Build benchmarks"         OFF)
+option(CASPI_BUILD_PYTHON     "Build Python bindings"    OFF)
 
-# Optionally allow SANITIZE to be empty or not set
-if (NOT DEFINED SANITIZE)
-    set(SANITIZE "")
-endif ()
+set(CASPI_SANITIZER "None" CACHE STRING "Sanitizer (None, Address, Undefined, Thread, Realtime)")
+set_property(CACHE CASPI_SANITIZER PROPERTY STRINGS None Address Undefined Thread Realtime)
 
-# Define options with default depending on standalone or not,
-# but only if the user hasn't set them already:
-if (NOT DEFINED CASPI_BUILD_TESTING)
-    set(CASPI_BUILD_TESTING ${CASPI_IS_STANDALONE_BUILD} CACHE BOOL "Build CASPI tests")
-endif ()
+message(STATUS "Sanitizer: ${CASPI_SANITIZER}")
 
-if (NOT DEFINED CASPI_BUILD_BENCHMARKS)
-    set(CASPI_BUILD_BENCHMARKS ${CASPI_IS_STANDALONE_BUILD} CACHE BOOL "Build CASPI benchmarks")
-endif ()
+# ============================================================
+# Library (Header-only)
+# ============================================================
 
-# NEW: Python bindings option (off by default)
-if (NOT DEFINED CASPI_BUILD_PYTHON)
-    set(CASPI_BUILD_PYTHON OFF CACHE BOOL "Build Python bindings (CASPy)")
-endif ()
-
-message(STATUS "Standalone build: ${CASPI_IS_STANDALONE_BUILD}")
-message(STATUS "Build testing: ${CASPI_BUILD_TESTING}")
-message(STATUS "Build benchmarks: ${CASPI_BUILD_BENCHMARKS}")
-message(STATUS "Build Python bindings: ${CASPI_BUILD_PYTHON}")
-
-project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
-
-add_library(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h)
+add_library(${PROJECT_NAME} INTERFACE)
 
 target_include_directories(${PROJECT_NAME} INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/CASPI>
         $<INSTALL_INTERFACE:include>
 )
-# explicitly list the unified header for IDEs (has no build effect)
-target_sources(CASPI INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h
-)
 
-# Define CASPI_DEBUG if CASPI_ENABLE_DEBUG is ON
-target_compile_definitions(CASPI INTERFACE
+target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_11)
+
+target_compile_definitions(${PROJECT_NAME} INTERFACE
         $<$<BOOL:${CASPI_ENABLE_DEBUG}>:CASPI_DEBUG>
 )
 
-# Only do these if this is the main project, and not if it is included through add_subdirectory
-if (CASPI_IS_STANDALONE_BUILD)
+# ============================================================
+# Sanitizer Helper
+# ============================================================
 
-    # Let's ensure -std=c++xx instead of -std=g++xx
-    set(CMAKE_CXX_EXTENSIONS OFF)
-
-    # Let's nicely support folders in IDEs
-    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-    # Docs only available if this is the main app
-    find_package(Doxygen)
-    if(DOXYGEN_FOUND)
-        add_custom_target(doc_doxygen
-                COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                COMMENT "Generating documentation with Doxygen"
-                VERBATIM
-        )
-    else()
-        message(STATUS "Doxygen not found, not building docs")
+function(caspi_apply_sanitizer TARGET)
+    if(CASPI_SANITIZER STREQUAL "None")
+        return()
     endif()
 
-    # Common flags
-    set(_CASPI_SAN_FLAGS "")
-    set(_CASPI_LINK_FLAGS "")
+    if(CASPI_SANITIZER STREQUAL "Address")
+        set(_flags -fsanitize=address -fno-omit-frame-pointer)
+    elseif(CASPI_SANITIZER STREQUAL "Undefined")
+        set(_flags -fsanitize=undefined)
+    elseif(CASPI_SANITIZER STREQUAL "Thread")
+        if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            message(FATAL_ERROR "ThreadSanitizer requires GCC or Clang")
+        endif()
+        set(_flags -fsanitize=thread)
+    elseif(CASPI_SANITIZER STREQUAL "Realtime")
+        if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            message(FATAL_ERROR "RealtimeSanitizer requires Clang")
+        endif()
+        set(_flags -fsanitize=realtime)
+    else()
+        message(FATAL_ERROR "Unknown sanitizer: ${CASPI_SANITIZER}")
+    endif()
 
-    # -------------------------
-    # AddressSanitizer
-    # -------------------------
-    if (CASPI_ENABLE_ASAN)
-        message(STATUS "Enabling AddressSanitizer")
+    target_compile_options(${TARGET} PRIVATE ${_flags})
+    target_link_options(${TARGET} PRIVATE ${_flags})
+endfunction()
 
-        set(_CASPI_SAN_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
-        set(_CASPI_LINK_FLAGS "-fsanitize=address")
+# ============================================================
+# Extra flags for debug builds
+# ============================================================
+function(caspi_apply_debug_flags TARGET)
+    if(NOT CASPI_ENABLE_DEBUG)
+        return()
+    endif()
 
-        # -------------------------
-        # UndefinedBehaviorSanitizer
-        # -------------------------
-    elseif (CASPI_ENABLE_UBSAN)
-        message(STATUS "Enabling UndefinedBehaviorSanitizer")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(${TARGET} PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Werror
+        )
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        target_compile_options(${TARGET} PRIVATE
+                /W4
+                /WX
+        )
+    endif()
+endfunction()
 
-        set(_CASPI_SAN_FLAGS "-fsanitize=undefined")
-        set(_CASPI_LINK_FLAGS "-fsanitize=undefined")
+# ============================================================
+# Subdirectories
+# ============================================================
 
-        # -------------------------
-        # ThreadSanitizer
-        # -------------------------
-    elseif (CASPI_ENABLE_TSAN)
-        message(STATUS "Enabling ThreadSanitizer")
-
-        if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-            message(FATAL_ERROR "TSan requires GCC or Clang")
-        endif ()
-
-        set(_CASPI_SAN_FLAGS "-fsanitize=thread")
-        set(_CASPI_LINK_FLAGS "-fsanitize=thread")
-
-        # -------------------------
-        # Real-Time Sanitizer (RTSan)
-        # -------------------------
-    elseif (CASPI_ENABLE_RTSAN)
-        message(STATUS "Enabling Real-Time Sanitizer (RTSan)")
-
-        if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            message(FATAL_ERROR "RTSan requires Clang")
-        endif ()
-
-        if (NOT CMAKE_BUILD_TYPE STREQUAL "Release")
-            message(WARNING "RTSan is typically used with Release builds")
-        endif ()
-
-        set(_CASPI_SAN_FLAGS "-fsanitize=realtime")
-        set(_CASPI_LINK_FLAGS "-fsanitize=realtime")
-    endif ()
-
-    # -------------------------
-    # Apply flags if any sanitizer enabled
-    # -------------------------
-    if (NOT _CASPI_SAN_FLAGS STREQUAL "")
-        set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} ${_CASPI_SAN_FLAGS}")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${_CASPI_SAN_FLAGS}")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_CASPI_LINK_FLAGS}")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${_CASPI_LINK_FLAGS}")
-    endif ()
-endif()
-
-# Testing only available if this is the main app
 if(CASPI_BUILD_TESTING)
+    enable_testing()
     add_subdirectory(Tests)
 endif()
 
-if (CASPI_BUILD_BENCHMARKS)
+if(CASPI_BUILD_BENCHMARKS)
     add_subdirectory(Benchmarks)
-endif ()
+endif()
 
-# NEW: Python bindings (optional, off by default)
-if (CASPI_BUILD_PYTHON)
+if(CASPI_BUILD_PYTHON)
     add_subdirectory(Tools/CASPy)
 endif()
 
+# ============================================================
+# Installation
+# ============================================================
+
+include(CMakePackageConfigHelpers)
+
 install(TARGETS ${PROJECT_NAME}
-        EXPORT ${PROJECT_NAME}Targets)
+        EXPORT ${PROJECT_NAME}Targets
+)
 
-install(DIRECTORY Library/
+install(DIRECTORY CASPI/
         DESTINATION include
-        FILES_MATCHING PATTERN "*.h")
+        FILES_MATCHING PATTERN "*.h"
+)
 
+install(EXPORT ${PROJECT_NAME}Targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION lib/cmake/${PROJECT_NAME}
+)
 
+write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
 
-
-
+install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        DESTINATION lib/cmake/${PROJECT_NAME}
+)
