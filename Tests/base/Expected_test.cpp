@@ -86,6 +86,7 @@ TEST(ExpectedTest, CopyAssignmentThrowsButLeavesOriginalIntact) {
         FAIL() << "Expected exception not thrown";
     } catch (const std::runtime_error& e) {
         // still OK — original object should be valid
+        (void) e;  // silence unused variable warning
         EXPECT_TRUE(good.has_value());
     }
 }
@@ -215,6 +216,7 @@ TEST(ExpectedMonadic, OrElseRvalueCallsOnError) {
 
     auto result = std::move(e).or_else([](std::string&& err) {
         // Transform error into a new expected<int, std::string> holding a value
+        (void) err;  // silence unused variable warning
         return CASPI::expected<int, std::string>(42);
     });
 
@@ -288,6 +290,7 @@ TEST(ExpectedMonadic, AndThenOrElseChain) {
         })
         .or_else([](const std::string& err) {
             // Recover from error by returning default value
+            (void) err;  // silence unused variable warning
             return CASPI::expected<int, std::string>(42);
         });
 
@@ -304,6 +307,7 @@ TEST(ExpectedMonadic, AndThenOrElseChain) {
         })
         .or_else([](const std::string& err) {
             // Recover by returning 42
+            (void) err;  // silence unused variable warning
             return CASPI::expected<int, std::string>(42);
         });
 
@@ -318,10 +322,12 @@ TEST(ExpectedMonadic, ChainedAndThenOrElseSkipsAfterError) {
     auto result = e
         .and_then([](int v) {
             // First and_then adds 1 -> 11
+            (void) v;  // silence unused variable warning
             return CASPI::expected<int, std::string>(v + 1);
         })
         .and_then([](int v) {
             // Second and_then introduces an error
+            (void) v;  // silence unused variable warning
             return CASPI::expected<int, std::string>(CASPI::unexpect, "error occurred");
         })
         .and_then([](int v) {

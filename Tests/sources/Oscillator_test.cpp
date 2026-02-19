@@ -9,24 +9,24 @@
 #include <utility>
 
 // Test params
-constexpr auto frequency  = 1000.0f;
-constexpr auto sampleRate = 44100.0f;
+constexpr auto TESTS_FREQUENCY  = 1000.0f;
+constexpr auto TESTS_SAMPLE_RATE = 44100.0f;
 constexpr auto renderTime = 1;
 constexpr auto modIndex   = 0.8f;
 
 // derived
-constexpr auto samplesToRender = renderTime * static_cast<int> (sampleRate);
-constexpr auto phaseIncrement  = frequency / sampleRate;
+constexpr auto samplesToRender = renderTime * static_cast<int> (TESTS_SAMPLE_RATE);
+constexpr auto phaseIncrement  = TESTS_FREQUENCY / TESTS_SAMPLE_RATE;
 
 TEST (OscillatorTests, test)
 {
     EXPECT_TRUE (true);
 }
 
-TEST (OscillatorTests, SineSetFrequency_test)
+TEST (OscillatorTests, SineSetTESTS_FREQUENCY_test)
 {
     CASPI::Oscillators::BLEP::Sine<float> osc;
-    osc.setFrequency (frequency, sampleRate);
+    osc.setFrequency (TESTS_FREQUENCY, TESTS_SAMPLE_RATE);
     EXPECT_GT (osc.phase.increment, -1.0f);
     EXPECT_NE (osc.phase.increment, 0.0f);
     EXPECT_LT (osc.phase.increment, 1.0f);
@@ -36,7 +36,7 @@ TEST (OscillatorTests, SineSetFrequency_test)
 TEST (OscillatorTests, SawSetFrequency_test)
 {
     CASPI::Oscillators::BLEP::Saw<float> osc;
-    osc.setFrequency (frequency, sampleRate);
+    osc.setFrequency (TESTS_FREQUENCY, TESTS_SAMPLE_RATE);
     EXPECT_GT (osc.phase.increment, -1.0f);
     EXPECT_NE (osc.phase.increment, 0.0f);
     EXPECT_LT (osc.phase.increment, 1.0f);
@@ -46,7 +46,7 @@ TEST (OscillatorTests, SawSetFrequency_test)
 TEST (OscillatorTests, SquareSetFrequency_test)
 {
     CASPI::Oscillators::BLEP::Square<float> osc;
-    osc.setFrequency (frequency, sampleRate);
+    osc.setFrequency (TESTS_FREQUENCY, TESTS_SAMPLE_RATE);
     EXPECT_GT (osc.phase.increment, -1.0f);
     EXPECT_NE (osc.phase.increment, 0.0f);
     EXPECT_LT (osc.phase.increment, 1.0f);
@@ -61,7 +61,7 @@ TEST (OscillatorTests, SquareSetFrequency_test)
 TEST (OscillatorTests, SineGetNextSample_test)
 {
     CASPI::Oscillators::BLEP::Sine<float> osc;
-    osc.setFrequency (frequency, sampleRate);
+    osc.setFrequency (TESTS_FREQUENCY, TESTS_SAMPLE_RATE);
     const auto s = osc.renderSample();
     EXPECT_GE (s, -1.0f);
     EXPECT_LE (s, 1.0f);
@@ -75,7 +75,7 @@ TEST (OscillatorTests, SineRenderWaveform_test)
     const auto internal_pi                    = CASPI::Constants::TWO_PI<float>;
     const auto testInternalPhaseIncrement = internal_pi * phaseIncrement;
     CASPI::Oscillators::BLEP::Sine<float> osc;
-    osc.setFrequency (frequency, sampleRate);
+    osc.setFrequency (TESTS_FREQUENCY, TESTS_SAMPLE_RATE);
     EXPECT_NEAR (testInternalPhaseIncrement, osc.phase.increment, 0.001f);
 
     for (int i = 0; i < samplesToRender; i++)
@@ -90,7 +90,7 @@ TEST (OscillatorTests, SawRenderWaveform_test)
 {
     const auto internal_pi = CASPI::Constants::TWO_PI<float>;
     CASPI::Oscillators::BLEP::Saw<float> osc;
-    osc.setFrequency (frequency, sampleRate);
+    osc.setFrequency (TESTS_FREQUENCY, TESTS_SAMPLE_RATE);
     auto currentPhase = 0.0f;
     while (currentPhase >= internal_pi)
     {
@@ -109,7 +109,7 @@ TEST (OscillatorTests, SquareRenderWaveform_test)
 {
     const auto internal_pi = CASPI::Constants::TWO_PI<float>;
     CASPI::Oscillators::BLEP::Square<float> osc;
-    osc.setFrequency (frequency, sampleRate);
+    osc.setFrequency (TESTS_FREQUENCY, TESTS_SAMPLE_RATE);
     auto currentPhase = 0.0f;
     while (currentPhase >= internal_pi)
     {
@@ -127,7 +127,7 @@ TEST (OscillatorTests, SquareRenderWaveform_test)
 TEST (OscillatorTests, renderToBlock_test)
 {
     CASPI::Oscillators::BLEP::Sine<float> osc;
-    osc.setFrequency (frequency, sampleRate);
+    osc.setFrequency (TESTS_FREQUENCY, TESTS_SAMPLE_RATE);
     auto test = std::vector<float> (1024);
     for (int i = 0; i < 1024; i++)
     {
@@ -135,7 +135,7 @@ TEST (OscillatorTests, renderToBlock_test)
     }
     osc.resetPhase();
     // This API is ugly but will work for now
-    auto output = CASPI::Oscillators::BLEP::renderBlock<CASPI::Oscillators::BLEP::Sine<float>, float> (frequency, sampleRate, 1024);
+    auto output = CASPI::Oscillators::BLEP::renderBlock<CASPI::Oscillators::BLEP::Sine<float>, float> (TESTS_FREQUENCY, TESTS_SAMPLE_RATE, 1024);
     for (int i = 0; i < 1024; i++)
     {
         EXPECT_EQ (output[i], test[i]);

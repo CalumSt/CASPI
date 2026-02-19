@@ -148,6 +148,7 @@ namespace CASPI
         virtual void prepareBlock(const std::size_t nFrames, const std::size_t nChannels)
         {
             // Default: do nothing.
+            (void) nFrames;  (void) nChannels;
         }
 
         template<typename Span>
@@ -261,6 +262,7 @@ namespace CASPI
         virtual void prepareBlock(const std::size_t nFrames, const std::size_t nChannels)
         {
             // Default: do nothing.
+            (void) nFrames;  (void) nChannels;
         }
 
         template<typename Span>
@@ -360,7 +362,10 @@ namespace CASPI
      * @brief Hook for derived classes to respond to sample rate changes
      * @param rate New sample rate in Hz
      */
-        virtual void onSampleRateChanged(FloatType rate) {}
+        virtual void onSampleRateChanged(FloatType rate)
+        {
+            (void)rate; // Default implementation does nothing, override in derived classes if needed
+        }
 
     private:
         FloatType sampleRate = Constants::DEFAULT_SAMPLE_RATE<FloatType>;

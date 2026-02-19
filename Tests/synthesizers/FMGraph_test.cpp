@@ -82,7 +82,8 @@ TEST(FMGraphBuilder, RemoveOperator)
     size_t op1 = builder.addOperator();
     size_t op2 = builder.addOperator();
     size_t op3 = builder.addOperator();
-
+    (void) op1;  // Silence unused variable warning
+    (void) op3;
     EXPECT_EQ(builder.getNumOperators(), 3);
 
     auto result = builder.removeOperator(op2);

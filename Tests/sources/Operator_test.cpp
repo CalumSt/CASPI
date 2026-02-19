@@ -265,7 +265,6 @@ TEST_F(OperatorPhaseModulationTest, CreatesHarmonics)
     for (int i = 0; i < 4410; ++i)
         pureSine.push_back(carrier.renderSample());
 
-    int pureCrossings = TestHelpers::countZeroCrossings(pureSine);
     double pureRMS = TestHelpers::calculateRMS(pureSine);
 
     // Reset and apply PM
