@@ -38,7 +38,7 @@
 //    Why: Core functionality for DSP, must work identically across platforms.
 //    Tests:
 //    - Basic operations: add, sub, mul, div for all types
-//    - Edge cases: zeros, negatives, large/small values
+//    - Edge cases: zeros, negatives, large/small_value values
 //    - Chained operations: complex expressions like (a+b)*c-d
 //
 // 4. FMA AND MUL_ADD TESTS
@@ -105,14 +105,14 @@
 //
 // 11. EDGE CASE TESTS
 //     Purpose: Verify behavior with special values.
-//     Why: Audio processing encounters zeros, very small values, etc.
+//     Why: Audio processing encounters zeros, very small_value values, etc.
 //          Must handle gracefully across platforms.
 //     Tests:
 //     - Zero operations: add/mul with zero
 //     - Negative numbers: ensure sign handling is correct
-//     - Small numbers: near machine epsilon
+//     - small_value numbers: near machine epsilon
 //     - Large numbers: near overflow
-//     - Division by small values (avoiding exact zero to prevent UB)
+//     - Division by small_value values (avoiding exact zero to prevent UB)
 //
 // 12. REAL-WORLD INTEGRATION TESTS
 //     Purpose: Verify API works correctly in realistic usage patterns.
@@ -153,7 +153,7 @@
 //
 // 17. EDGE CASES
 //    - Zero-length arrays
-//    - Arrays smaller than SIMD width
+//    - Arrays small_valueer than SIMD width
 //    - Odd-sized arrays
 //    - Large arrays
 //
@@ -174,6 +174,83 @@ constexpr double EPSILON_F64 = 1e-12;
 
 // For fast approximations (rcp, rsqrt) which have lower accuracy
 constexpr float EPSILON_APPROX = 1.5e-3f;
+
+TEST(SamplesToAlignment, AlreadyAlignedReturnsZero)
+{
+    alignas(32) float buffer[8];
+
+    const std::size_t s =
+        Strategy::samples_to_alignment<32>(buffer);
+
+    EXPECT_EQ(s, 0u);
+}
+
+TEST(SamplesToAlignment, OneSampleMisalignedReturnsOne)
+{
+    alignas(32) std::uint8_t raw[64];
+
+    auto ptr = reinterpret_cast<float*>(raw + 31);
+
+    const std::size_t s =
+        Strategy::samples_to_alignment<32>(ptr);
+
+    EXPECT_EQ(s, 1u);
+}
+
+
+TEST(SamplesToAlignment, AlignmentAndMinimality)
+{
+    alignas(64) std::uint8_t raw[128];
+
+    for (std::size_t offset = 0; offset < 32; ++offset)
+    {
+        auto ptr = reinterpret_cast<float*>(raw + offset);
+
+        const std::uintptr_t addr =
+            reinterpret_cast<std::uintptr_t>(ptr);
+
+        // Skip impossible cases
+        if ((addr % sizeof(float)) != 0)
+        {
+            continue;
+        }
+
+        const std::size_t s =
+            Strategy::samples_to_alignment<32>(ptr);
+
+        const float* aligned = ptr + s;
+
+        EXPECT_TRUE(Strategy::is_aligned<32>(aligned))
+            << "offset=" << offset;
+
+        if (s > 0)
+        {
+            const float* prev = ptr + (s - 1);
+
+            EXPECT_FALSE(Strategy::is_aligned<32>(prev))
+                << "offset=" << offset;
+        }
+    }
+}
+
+
+TEST(SamplesToAlignment, UpperBound)
+{
+    alignas(64) std::uint8_t raw[128];
+
+    for (std::size_t offset = 0; offset < 32; ++offset)
+    {
+        float* ptr = reinterpret_cast<float*>(raw + offset);
+
+        const std::size_t s =
+            Strategy::samples_to_alignment<32>(ptr);
+
+        // At most Alignment / sizeof(T)
+        EXPECT_LE(s, 32u / sizeof(float));
+    }
+}
+
+
 
 // ============================================================================
 // FLOAT32X4 TESTS
@@ -766,10 +843,10 @@ TEST(SIMD_float64x2, Blend) {
     EXPECT_NEAR(out[1], 20.0, EPSILON_F64);
 }
 
-TEST(SIMD_float64x2, SmallNumbers) {
+TEST(SIMD_float64x2, small_valueNumbers) {
     // Test with numbers near machine epsilon
-    double small = 1e-10;
-    float64x2 a = { 1.0 + small, 2.0 + small};
+    double small_value = 1e-10;
+    float64x2 a = { 1.0 + small_value, 2.0 + small_value};
     float64x2 b = {1.0, 2.0};
 
     float64x2 diff = sub(a, b);
@@ -777,8 +854,8 @@ TEST(SIMD_float64x2, SmallNumbers) {
     double out[2];
     store(out, diff);
 
-    EXPECT_NEAR(out[0], small, EPSILON_F64);
-    EXPECT_NEAR(out[1], small, EPSILON_F64);
+    EXPECT_NEAR(out[0], small_value, EPSILON_F64);
+    EXPECT_NEAR(out[1], small_value, EPSILON_F64);
 }
 
 TEST(SIMD_float64x2, LargeNumbers)
@@ -1687,7 +1764,7 @@ TEST(SIMD_Alignment, UnalignedAdd) {
 }
 
 TEST(SIMD_Alignment, PrologueOnly) {
-    // Array size smaller than alignment requirement
+    // Array size small_valueer than alignment requirement
     constexpr std::size_t N = 3;
     float dst[N] = {1.0f, 2.0f, 3.0f};
     float src[N] = {10.0f, 20.0f, 30.0f};
@@ -1764,10 +1841,10 @@ TEST(SIMD_EdgeCases, LargeArray) {
     ops::scale(data.data(), N, 0.5f);
 
     float sum = ops::sum(data.data(), N);
-    EXPECT_NEAR(sum, 5000.0f, 0.1f);  // Allow small accumulated error
+    EXPECT_NEAR(sum, 5000.0f, 0.1f);  // Allow small_value accumulated error
 }
 
-TEST(SIMD_EdgeCases, VerySmallValues) {
+TEST(SIMD_EdgeCases, Verysmall_valueValues) {
     constexpr std::size_t N = 16;
     double data[N];
 
@@ -1836,7 +1913,7 @@ TEST(SIMD_Performance, ReductionAccuracy) {
         scalar_sum = t;
     }
 
-    // Should be very close (allowing for small FP differences)
+    // Should be very close (allowing for small_value FP differences)
     EXPECT_NEAR(simd_sum, scalar_sum, std::abs(scalar_sum) * 0.001f);
 }
 
