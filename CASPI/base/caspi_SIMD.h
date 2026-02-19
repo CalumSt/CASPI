@@ -331,12 +331,18 @@ namespace CASPI
             template <std::size_t Alignment, typename T>
             inline std::size_t samples_to_alignment (const T* ptr) noexcept
             {
-                const auto addr                   = reinterpret_cast<std::uintptr_t> (ptr);
+                const auto addr = reinterpret_cast<std::uintptr_t>(ptr);
                 const std::uintptr_t misalignment = addr % Alignment;
+
                 if (misalignment == 0)
+                {
                     return 0;
+                }
+
                 const std::uintptr_t bytes_to_align = Alignment - misalignment;
-                return bytes_to_align / sizeof (T);
+
+                // ceil(bytes / sizeof(T))
+                return (bytes_to_align + sizeof(T) - 1) / sizeof(T);
             }
 
             /**
