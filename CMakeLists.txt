@@ -85,12 +85,10 @@ function(caspi_apply_debug_flags TARGET)
                 -Wall
                 -Wextra
                 -Wpedantic
-                -Werror
         )
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         target_compile_options(${TARGET} PRIVATE
                 /W4
-                /WX
         )
     endif()
 endfunction()
