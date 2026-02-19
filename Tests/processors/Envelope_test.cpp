@@ -134,7 +134,6 @@ TEST(AdsrTests, Sustain_test) {
 
         // Act
         ADSR.noteOn();
-        auto output = 0.0f;
         // Get a lot of samples
         const int numberOfSamples = static_cast<int> (4.0f * 46000.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
@@ -157,7 +156,6 @@ TEST(AdsrTests, Release_test) {
 
         // Act
         ADSR.noteOn();
-        auto output = 0.0f;
         // Get a lot of samples
         int numberOfSamples = static_cast<int> (44100.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
