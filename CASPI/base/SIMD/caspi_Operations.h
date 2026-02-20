@@ -131,25 +131,6 @@ namespace CASPI
 #endif
         }
 
-#if defined(CASPI_HAS_AVX)
-        /**
-         * @brief Broadcast a scalar value to all lanes of a 256-bit vector (AVX).
-         *
-         * Creates a 256-bit vector where all lanes contain the same value.
-         * Available only when AVX is enabled.
-         *
-         * @param x         Value to broadcast (float or double)
-         * @return          Vector with all lanes set to x
-         *
-         * @note Named set1_256 to avoid conflicting with the 128-bit set1<T> template.
-         *
-         * @code
-         * float32x8 eight = set1_256(8.0f);  // [8,8,8,8,8,8,8,8]
-         * @endcode
-         */
-        inline float32x8 set1_256 (float x) { return _mm256_set1_ps (x); }
-        inline float64x4 set1_256 (double x) { return _mm256_set1_pd (x); }
-#endif
 
         /**
          * @brief Per-lane addition: result[i] = a[i] + b[i]
@@ -339,17 +320,6 @@ namespace CASPI
 #endif
         }
 
-#if defined(CASPI_HAS_AVX)
-        inline float32x8 add (float32x8 a, float32x8 b) { return _mm256_add_ps (a, b); }
-        inline float32x8 sub (float32x8 a, float32x8 b) { return _mm256_sub_ps (a, b); }
-        inline float32x8 mul (float32x8 a, float32x8 b) { return _mm256_mul_ps (a, b); }
-        inline float32x8 div (float32x8 a, float32x8 b) { return _mm256_div_ps (a, b); }
-        inline float64x4 add (float64x4 a, float64x4 b) { return _mm256_add_pd (a, b); }
-        inline float64x4 sub (float64x4 a, float64x4 b) { return _mm256_sub_pd (a, b); }
-        inline float64x4 mul (float64x4 a, float64x4 b) { return _mm256_mul_pd (a, b); }
-        inline float64x4 div (float64x4 a, float64x4 b) { return _mm256_div_pd (a, b); }
-#endif
-
         /**
          * @brief Fused multiply-add: result[i] = a[i] * b[i] + c[i]
          *
@@ -398,25 +368,6 @@ namespace CASPI
 #endif
         }
 
-#if defined(CASPI_HAS_AVX)
-        inline float32x8 mul_add (float32x8 a, float32x8 b, float32x8 c)
-        {
-#if defined(CASPI_HAS_FMA)
-            return _mm256_fmadd_ps (a, b, c);
-#else
-            return add (mul (a, b), c);
-#endif
-        }
-
-        inline float64x4 mul_add (float64x4 a, float64x4 b, float64x4 c)
-        {
-#if defined(CASPI_HAS_FMA)
-            return _mm256_fmadd_pd (a, b, c);
-#else
-            return add (mul (a, b), c);
-#endif
-        }
-#endif
 
         /**
          * @brief Fast approximate reciprocal (1/x).
@@ -699,12 +650,6 @@ namespace CASPI
 #endif
         }
 
-#if defined(CASPI_HAS_AVX)
-        inline float32x8 min (float32x8 a, float32x8 b) { return _mm256_min_ps (a, b); }
-        inline float32x8 max (float32x8 a, float32x8 b) { return _mm256_max_ps (a, b); }
-        inline float64x4 min (float64x4 a, float64x4 b) { return _mm256_min_pd (a, b); }
-        inline float64x4 max (float64x4 a, float64x4 b) { return _mm256_max_pd (a, b); }
-#endif
 
         /**
          * @brief Sum all lanes of a float32x4 vector.
@@ -760,21 +705,6 @@ namespace CASPI
 #endif
         }
 
-#if defined(CASPI_HAS_AVX)
-        inline float hsum (float32x8 v)
-        {
-            __m128 lo = _mm256_castps256_ps128 (v);
-            __m128 hi = _mm256_extractf128_ps (v, 1);
-            return hsum (add (lo, hi));
-        }
-
-        inline double hsum (float64x4 v)
-        {
-            __m128d lo = _mm256_castpd256_pd128 (v);
-            __m128d hi = _mm256_extractf128_pd (v, 1);
-            return hsum (add (lo, hi));
-        }
-#endif
 
         /**
          * @brief Maximum of all lanes in a float32x4 vector.
