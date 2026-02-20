@@ -231,53 +231,6 @@ namespace CASPI
                                                        : load_unaligned<T> (p);
         }
 
-#if defined(CASPI_HAS_AVX)
-        /**
-         * @brief Load a 256-bit float vector from aligned memory (AVX).
-         *
-         * @param p          Pointer to 32-byte aligned memory
-         * @return           Loaded 8-lane float vector
-         */
-        template <>
-        inline float32x8 load_aligned<float> (const float* p)
-        {
-            return _mm256_load_ps (p);
-        }
-        /**
-         * @brief Load a 256-bit float vector from unaligned memory (AVX).
-         *
-         * @param p          Pointer to memory (any alignment)
-         * @return           Loaded 8-lane float vector
-         */
-        template <>
-        inline float32x8 load_unaligned<float> (const float* p)
-        {
-            return _mm256_loadu_ps (p);
-        }
-        /**
-         * @brief Load a 256-bit double vector from aligned memory (AVX).
-         *
-         * @param p          Pointer to 32-byte aligned memory
-         * @return           Loaded 4-lane double vector
-         */
-        template <>
-        inline float64x4 load_aligned<double> (const double* p)
-        {
-            return _mm256_load_pd (p);
-        }
-        /**
-         * @brief Load a 256-bit double vector from unaligned memory (AVX).
-         *
-         * @param p          Pointer to memory (any alignment)
-         * @return           Loaded 4-lane double vector
-         */
-        template <>
-        inline float64x4 load_unaligned<double> (const double* p)
-        {
-            return _mm256_loadu_pd (p);
-        }
-#endif
-
         /**
          * @brief Store a 128-bit float vector to aligned memory.
          *
@@ -388,57 +341,6 @@ namespace CASPI
                 : store_unaligned (p, v);
         }
 
-#if defined(CASPI_HAS_AVX)
-        /**
-         * @brief Store a 256-bit float vector to aligned memory (AVX).
-         *
-         * @param p          Pointer to 32-byte aligned memory
-         * @param v          Vector to store
-         */
-        inline void store_aligned (float* p, float32x8 v) { _mm256_store_ps (p, v); }
-        /**
-         * @brief Store a 256-bit float vector to unaligned memory (AVX).
-         *
-         * @param p          Pointer to memory (any alignment)
-         * @param v          Vector to store
-         */
-        inline void store_unaligned (float* p, float32x8 v) { _mm256_storeu_ps (p, v); }
-        /**
-         * @brief Store a 256-bit double vector to aligned memory (AVX).
-         *
-         * @param p          Pointer to 32-byte aligned memory
-         * @param v          Vector to store
-         */
-        inline void store_aligned (double* p, float64x4 v) { _mm256_store_pd (p, v); }
-        /**
-         * @brief Store a 256-bit double vector to unaligned memory (AVX).
-         *
-         * @param p          Pointer to memory (any alignment)
-         * @param v          Vector to store
-         */
-        inline void store_unaligned (double* p, float64x4 v) { _mm256_storeu_pd (p, v); }
-
-        /**
-         * @brief Store 256-bit float vector with auto detection (AVX).
-         */
-        inline void store (float* p, float32x8 v)
-        {
-            Strategy::is_aligned<Strategy::simd_alignment<float>()> (p)
-                ? store_aligned (p, v)
-                : store_unaligned (p, v);
-        }
-
-        /**
-         * @brief Store 256-bit double vector with auto detection (AVX).
-         */
-        inline void store (double* p, float64x4 v)
-        {
-            Strategy::is_aligned<Strategy::simd_alignment<double>()> (p)
-                ? store_aligned (p, v)
-                : store_unaligned (p, v);
-        }
-#endif
-
         /**
          * @brief Non-temporal (streaming) store for 128-bit float vector.
          *
@@ -481,30 +383,6 @@ namespace CASPI
             store_aligned (p, v);
 #endif
         }
-
-#if defined(CASPI_HAS_AVX)
-        /**
-         * @brief Non-temporal store for 256-bit float vector (AVX).
-         *
-         * @param p          Pointer to 32-byte aligned memory
-         * @param v          Vector to store
-         */
-        inline void stream_store (float* p, float32x8 v) noexcept
-        {
-            _mm256_stream_ps (p, v);
-        }
-
-        /**
-         * @brief Non-temporal store for 256-bit double vector (AVX).
-         *
-         * @param p          Pointer to 32-byte aligned memory
-         * @param v          Vector to store
-         */
-        inline void stream_store (double* p, float64x4 v) noexcept
-        {
-            _mm256_stream_pd (p, v);
-        }
-#endif
 
         /**
          * @brief Store fence - ensures all prior non-temporal stores are visible.
