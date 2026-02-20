@@ -7,8 +7,10 @@
 #include "base/caspi_Features.h"
 #include "base/caspi_Platform.h"
 #include "base/caspi_Traits.h"
+#include "base/caspi_SIMD.h"
 
 // Core
+#include "core/caspi_Span.h"
 #include "core/caspi_AudioBuffer.h"
 #include "core/caspi_Core.h"
 #include "core/caspi_Expected.h"
