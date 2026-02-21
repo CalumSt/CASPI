@@ -192,17 +192,14 @@ Y88b  d88P 888  888      X88 888 d88P 888
 // SSE support (x86/x86_64 only)
 #if defined(__SSE__)
     #define CASPI_HAS_SSE1
-    #include <xmmintrin.h>
 #endif
 
 #if defined(__SSE2__) || (_M_X64) || (_M_IX86 >= 600)
     #define CASPI_HAS_SSE2
-    #include <emmintrin.h>
 #endif
 
 #if defined(__SSE3__)
     #define CASPI_HAS_SSE3
-    #include <pmmintrin.h>
 #endif
 
 #if defined(__SSSE3__)

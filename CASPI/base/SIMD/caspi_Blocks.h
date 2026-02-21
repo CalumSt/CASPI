@@ -80,6 +80,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #define CASPI_BLOCKS_H
 
 #include <cmath>
+#include <iostream>
 
 #include "caspi_Intrinsics.h"
 #include "caspi_LoadStore.h"
@@ -261,13 +262,26 @@ namespace CASPI
             {
                 return;
             }
+
             constexpr std::size_t Width     = Strategy::min_simd_width<T>::value;
             constexpr std::size_t Alignment = Strategy::simd_alignment<T>();
             std::size_t i                   = 0;
 
+            if (count < Width)
+            {
+                for (std::size_t i = 0; i < count; ++i)
+                {
+                    dst[i] = kernel(dst[i], src[i]);
+                }
+                return;
+            }
+
             const std::size_t prologue_count = std::min (Strategy::samples_to_alignment<Alignment> (dst), count);
             for (; i < prologue_count; ++i)
                 dst[i] = kernel (dst[i], src[i]);
+
+            std::cout << "dst addr = " << static_cast<void*>(dst)
+                << ", Alignment = " << Strategy::simd_alignment<float>() << "\n";
 
             const std::size_t simd_end = i + ((count - i) / Width) * Width;
             const bool dst_aligned     = Strategy::is_aligned<Alignment> (dst + i);

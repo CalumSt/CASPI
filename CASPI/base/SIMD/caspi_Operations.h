@@ -418,12 +418,15 @@ namespace CASPI
          * float32x4 rsqrt_result = rsqrt(v);  // ~[0.5, 0.5, 0.5, 0.5] = 1/sqrt(4)
          * @endcode
          */
-        inline float32x4 rsqrt (float32x4 x)
+        inline float32x4 rsqrt (float32x4 x)\
         {
 #if defined(CASPI_HAS_SSE)
             return _mm_rsqrt_ps (x);
 #elif defined(CASPI_HAS_NEON)
-            return vrsqrteq_f32 (x);
+            float32x4 y = vrsqrteq_f32 (x);
+
+            // y = y * vrsqrtsq(x * y, y)
+            y = vmulq_f32 (y, vrsqrtsq_f32 (vmulq_f32 (x, y), y));
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_div (wasm_f32x4_splat (1.0f), wasm_f32x4_sqrt (x));
 #else

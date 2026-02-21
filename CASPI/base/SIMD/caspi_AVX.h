@@ -50,13 +50,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #define CASPI_AVX_H
 
 #include "base/caspi_Platform.h"
-
-#include "caspi_Assert.h"
+#include "base/caspi_Assert.h"
 
 #include <cmath>
 #include <cstring>
-
-#include "caspi_Features.h"
 
 #if defined(CASPI_HAS_SSE2) || defined(CASPI_HAS_AVX)
 #include <immintrin.h>
