@@ -18,15 +18,15 @@ include(GoogleTest)
 # ============================================================
 
 set(SOURCES
-        base/Phase_test.cpp
-        base/Expected_test.cpp
-        base/AudioBuffer_test.cpp
-        base/DelayLine_test.cpp
-        base/BaseClass_test.cpp
+        base/SIMD_test.cpp
+        core/Phase_test.cpp
+        core/Expected_test.cpp
+        core/AudioBuffer_test.cpp
+        core/DelayLine_test.cpp
+        core/BaseClass_test.cpp
         base/Utilities_test.cpp
         sources/Oscillator_test.cpp
         sources/Operator_test.cpp
-        base/SIMD_test.cpp
         processors/Filter_test.cpp
         processors/Envelope_test.cpp
         processors/Gain_test.cpp
