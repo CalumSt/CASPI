@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#if defined(CASPI_DEBUG)  // entire file is a no-op in release
+
 #if defined(_WIN32)
 #define NOMINMAX
 // Work around Windows SDK C++20 bug
@@ -86,5 +88,5 @@ namespace CASPI
             return frames;
         }
     } // namespace Unwind
-
+#endif
 } // namespace CASPI
