@@ -282,17 +282,56 @@ namespace CASPI
          */
         inline float64x2 complex_mul (const float64x2 a, const float64x2 b)
         {
+            // t1 = [ar*br, ar*bi]
+            // t2 = [ai*bi, ai*br]
+            // result = [t1[0]-t2[0], t1[1]+t2[1]]
+            //        = [ar*br - ai*bi, ar*bi + ai*br]
             const float64x2 t1 = mul (broadcast_lo (a), b);
             const float64x2 t2 = mul (broadcast_hi (a), swap_lanes (b));
-#if defined(CASPI_HAS_SSE2) && defined(__SSE3__)
+
+        #if defined(CASPI_HAS_SSE3)
+            // addsub: result[i] = t1[i] + ((-1)^i * t2[i])
+            // lane 0: t1[0] - t2[0]
+            // lane 1: t1[1] + t2[1]
             return _mm_addsub_pd (t1, t2);
-#elif defined(CASPI_HAS_SSE2)
+
+        #elif defined(CASPI_HAS_SSE2)
+            // Replicate addsub with sub + add + shuffle.
+            // s = t1 - t2 = [ar*br - ai*bi,  ar*bi - ai*br]  ← need lane 0 from here
+            // d = t1 + t2 = [ar*br + ai*bi,  ar*bi + ai*br]  ← need lane 1 from here
+            // _MM_SHUFFLE2(1, 0): dst[0] = s[0], dst[1] = d[1]
             const float64x2 s = sub (t1, t2);
             const float64x2 d = add (t1, t2);
             return _mm_shuffle_pd (s, d, _MM_SHUFFLE2 (1, 0));
-#else
-            return add (t1, negate_imag (t2));
-#endif
+
+        #elif defined(CASPI_HAS_NEON64)
+            // vzip1q picks lane 0 from each: [s[0], d[0]] — wrong, need [s[0], d[1]]
+            // Use vcombine: take low lane of s, high lane of d.
+            // vget_low_f64(s)  = s[0] = ar*br - ai*bi  (a 64-bit scalar register)
+            // vget_high_f64(d) = d[1] = ar*bi + ai*br  (a 64-bit scalar register)
+            const float64x2 s = sub (t1, t2);
+            const float64x2 d = add (t1, t2);
+            return vcombine_f64 (vget_low_f64 (s), vget_high_f64 (d));
+
+        #elif defined(CASPI_HAS_WASM_SIMD)
+            // wasm_i64x2_shuffle(a, b, l0, l1):
+            //   lane indices 0-1 refer to a, 2-3 refer to b.
+            // We want [s[0], d[1]] → s=a, d=b → indices [0, 3].
+            const float64x2 s = sub (t1, t2);
+            const float64x2 d = add (t1, t2);
+            return wasm_i64x2_shuffle (s, d, 0, 3);
+
+        #else
+            // Scalar fallback: direct lane arithmetic, no helper dependencies.
+            double buf_t1[2], buf_t2[2], res[2];
+            std::memcpy (buf_t1, &t1, sizeof (buf_t1));
+            std::memcpy (buf_t2, &t2, sizeof (buf_t2));
+            res[0] = buf_t1[0] - buf_t2[0];  // ar*br - ai*bi
+            res[1] = buf_t1[1] + buf_t2[1];  // ar*bi + ai*br
+            float64x2 r;
+            std::memcpy (&r, res, sizeof (r));
+            return r;
+        #endif
         }
     } // namespace SIMD
 } // namespace CASPI

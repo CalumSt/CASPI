@@ -427,6 +427,7 @@ namespace CASPI
 
             // y = y * vrsqrtsq(x * y, y)
             y = vmulq_f32 (y, vrsqrtsq_f32 (vmulq_f32 (x, y), y));
+            return y;
 #elif defined(CASPI_HAS_WASM_SIMD)
             return wasm_f32x4_div (wasm_f32x4_splat (1.0f), wasm_f32x4_sqrt (x));
 #else
