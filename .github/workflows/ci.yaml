@@ -30,7 +30,7 @@ jobs:
             build_type: Release
             c_compiler: gcc
             cpp_compiler: g++
-          - os: ubuntu-latest
+          - os: macos-latest
             build_type: Debug
             c_compiler: clang
             cpp_compiler: clang++
