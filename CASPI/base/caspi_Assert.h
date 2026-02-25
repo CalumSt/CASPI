@@ -162,7 +162,9 @@
 #include <cstdio>
 #include <cstdlib>
 
+#if defined(CASPI_DEBUG)
 #include "caspi_Backtrace.h"
+#endif
 
 namespace CASPI
 {
