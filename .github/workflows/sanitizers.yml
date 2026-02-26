@@ -61,6 +61,7 @@ jobs:
 
       - name: Configure
         run: |
+          rm -rf ${{ env.BUILD_DIR }}
           cmake -S . -B ${{ env.BUILD_DIR }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCASPI_BUILD_TESTING=ON \
