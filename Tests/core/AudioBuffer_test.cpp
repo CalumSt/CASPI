@@ -29,9 +29,11 @@ Unit Tests Plan
    - Increase/decrease channels and frames, verify sizes and sample access.
 */
 
+#include "base/caspi_RealtimeContext.h"
+
+#include <cstddef>
 #include <gtest/gtest.h>
 #include <vector>
-#include <cstddef>
 
 #include "core/caspi_AudioBuffer.h"
 #include "core/caspi_Core.h"
@@ -399,7 +401,10 @@ TEST(BlockOperationsTest, AddEntireBuffer) {
 
     CASPI::block::fill(dst, 1.0f);
     CASPI::block::fill(src, 2.0f);
-    CASPI::block::add(dst, src);
+    {
+        CASPI::ScopedRealtimeThread rt;
+        CASPI::block::add(dst, src);
+    }
 
     for (size_t ch = 0; ch < dst.numChannels(); ++ch)
         for (size_t fr = 0; fr < dst.numFrames(); ++fr)
