@@ -58,6 +58,37 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include <cstddef>
 #include <cstdint>
 
+#if defined(CASPI_PLATFORM_WINDOWS)
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+#ifndef NOMINMAX
+    #define NOMINMAX
+#endif
+  #include <windows.h>
+#endif
+
+#if defined(CASPI_PLATFORM_APPLE)
+  #include <sys/sysctl.h>
+#endif
+
+#if defined(CASPI_PLATFORM_LINUX)
+  #include <cstdio>
+#endif
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+  #define CASPI_PLATFORM_X86 1
+  #if defined(_MSC_VER)
+    #include <intrin.h>
+  #else
+    #include <cpuid.h>
+  #endif
+#endif
+
+#ifndef CASPI_L1_CACHE_BYTES
+  #define CASPI_L1_CACHE_BYTES 32768
+#endif
+
 namespace CASPI
 {
     namespace SIMD
@@ -282,6 +313,255 @@ namespace CASPI
             {
                 return (2 * L1_CACHE_BYTES) / sizeof (T);
             }
+
+            namespace detail
+{
+
+// ---------------------------------------------------------------------------
+// x86 CPUID helpers
+// ---------------------------------------------------------------------------
+
+#if defined(CASPI_PLATFORM_X86)
+
+inline void cpuid (uint32_t leaf, uint32_t subleaf,
+                   uint32_t& eax, uint32_t& ebx,
+                   uint32_t& ecx, uint32_t& edx) noexcept
+{
+#if defined(_MSC_VER)
+    int regs[4];
+    __cpuidex (regs, static_cast<int> (leaf), static_cast<int> (subleaf));
+    eax = static_cast<uint32_t> (regs[0]);
+    ebx = static_cast<uint32_t> (regs[1]);
+    ecx = static_cast<uint32_t> (regs[2]);
+    edx = static_cast<uint32_t> (regs[3]);
+#else
+    __cpuid_count (leaf, subleaf, eax, ebx, ecx, edx);
+#endif
+}
+
+/// Query L1 data cache size via CPUID leaf 4 (Intel) / leaf 8000001Dh (AMD).
+/// Returns 0 if the information cannot be determined.
+inline std::size_t query_x86_l1d() noexcept
+{
+    uint32_t eax, ebx, ecx, edx;
+
+    // Check max leaf
+    cpuid (0, 0, eax, ebx, ecx, edx);
+    const uint32_t max_leaf = eax;
+
+    if (max_leaf >= 4)
+    {
+        // Leaf 4: iterate sub-leaves until EAX[4:0] == 0
+        for (uint32_t sub = 0; ; ++sub)
+        {
+            cpuid (4, sub, eax, ebx, ecx, edx);
+            const uint32_t cache_type = eax & 0x1F;
+            if (cache_type == 0) break;         // no more caches
+            const uint32_t cache_level = (eax >> 5) & 0x7;
+            // cache_type 1 = data, 3 = unified; level 1 = L1
+            if (cache_level == 1 && (cache_type == 1 || cache_type == 3))
+            {
+                const uint32_t line_size   = (ebx & 0xFFF) + 1;
+                const uint32_t partitions  = ((ebx >> 12) & 0x3FF) + 1;
+                const uint32_t assoc       = ((ebx >> 22) & 0x3FF) + 1;
+                const uint32_t sets        = ecx + 1;
+                return static_cast<std::size_t> (line_size * partitions * assoc * sets);
+            }
+        }
+    }
+
+    // AMD extended leaf fallback
+    cpuid (0x80000000u, 0, eax, ebx, ecx, edx);
+    if (eax >= 0x80000005u)
+    {
+        cpuid (0x80000005u, 0, eax, ebx, ecx, edx);
+        // ECX[23:16] = L1 data cache size in KB
+        const uint32_t kb = (ecx >> 16) & 0xFF;
+        if (kb > 0)
+            return static_cast<std::size_t> (kb) * 1024u;
+    }
+
+    return 0;
+}
+
+#endif // CASPI_PLATFORM_X86
+
+// ---------------------------------------------------------------------------
+// Apple sysctl helper
+// ---------------------------------------------------------------------------
+
+#if defined(CASPI_PLATFORM_APPLE)
+
+inline std::size_t query_apple_l1d() noexcept
+{
+    std::size_t size  = 0;
+    std::size_t len   = sizeof (size);
+    if (::sysctlbyname ("hw.l1dcachesize", &size, &len, nullptr, 0) == 0)
+        return size;
+    return 0;
+}
+
+#endif
+
+// ---------------------------------------------------------------------------
+// Linux sysfs helper
+// ---------------------------------------------------------------------------
+
+#if defined(CASPI_PLATFORM_LINUX)
+
+inline std::size_t query_linux_l1d() noexcept
+{
+    // index0 = L1 data cache on all Linux platforms (ARM, x86, RISC-V, etc.)
+    // The file contains a string like "32K" or "192K".
+    FILE* f = std::fopen (
+        "/sys/devices/system/cpu/cpu0/cache/index0/size", "r");
+    if (!f) return 0;
+
+    char buf[32] = {};
+    if (std::fgets (buf, sizeof (buf), f) == nullptr)
+    {
+        std::fclose (f);
+        return 0;
+    }
+    std::fclose (f);
+
+    unsigned long val  = 0;
+    char          unit = 0;
+    if (std::sscanf (buf, "%lu%c", &val, &unit) >= 1)
+    {
+        if (unit == 'K' || unit == 'k') return static_cast<std::size_t> (val) * 1024u;
+        if (unit == 'M' || unit == 'm') return static_cast<std::size_t> (val) * 1024u * 1024u;
+        return static_cast<std::size_t> (val);
+    }
+    return 0;
+}
+
+#endif
+
+// ---------------------------------------------------------------------------
+// Windows GLPI helper
+// ---------------------------------------------------------------------------
+
+#if defined(CASPI_PLATFORM_WINDOWS)
+
+inline std::size_t query_windows_l1d() noexcept
+{
+    DWORD len = 0;
+    GetLogicalProcessorInformation (nullptr, &len);
+    if (len == 0) return 0;
+
+    // len is now the required buffer size
+    SYSTEM_LOGICAL_PROCESSOR_INFORMATION* buf =
+        static_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION*> (
+            ::HeapAlloc (::GetProcessHeap(), 0, len));
+    if (!buf) return 0;
+
+    std::size_t result = 0;
+    if (GetLogicalProcessorInformation (buf, &len))
+    {
+        const std::size_t count = len / sizeof (*buf);
+        for (std::size_t i = 0; i < count; ++i)
+        {
+            if (buf[i].Relationship == RelationCache)
+            {
+                const CACHE_DESCRIPTOR& c = buf[i].Cache;
+                if (c.Level == 1 &&
+                    (c.Type == CacheData || c.Type == CacheUnified))
+                {
+                    result = static_cast<std::size_t> (c.Size);
+                    break;
+                }
+            }
+        }
+    }
+    ::HeapFree (::GetProcessHeap(), 0, buf);
+    return result;
+}
+
+#endif
+
+// ---------------------------------------------------------------------------
+// Master probe — tries each platform in priority order.
+// Called once; result is cached in a static local.
+// ---------------------------------------------------------------------------
+
+inline std::size_t probe_l1d() noexcept
+{
+    std::size_t result = 0;
+
+#if defined(CASPI_PLATFORM_APPLE)
+    result = query_apple_l1d();
+#endif
+
+    // On Linux/Apple-Silicon the sysfs/sysctl path is preferred over CPUID.
+    // On Linux x86 the sysfs path usually works too, but CPUID is available
+    // as a fallback if sysfs is absent (e.g. inside a container).
+#if defined(CASPI_PLATFORM_LINUX)
+    if (result == 0) result = query_linux_l1d();
+#endif
+
+#if defined(CASPI_PLATFORM_X86)
+    if (result == 0) result = query_x86_l1d();
+#endif
+
+#if defined(CASPI_PLATFORM_WINDOWS)
+    if (result == 0) result = query_windows_l1d();
+#endif
+
+    return (result > 0) ? result : static_cast<std::size_t> (CASPI_L1_CACHE_BYTES);
+}
+
+} // namespace detail
+
+// ============================================================================
+// Public API
+// ============================================================================
+
+/**
+ * @brief Returns the L1 data cache size in bytes at runtime.
+ *
+ * The first call probes the hardware (cheap: ~microsecond).
+ * All subsequent calls return the cached value at zero cost.
+ * Thread-safe under C++11 (static local init is atomic).
+ *
+ * @return L1 data cache size in bytes, or CASPI_L1_CACHE_BYTES if
+ *         the hardware query fails.
+ */
+inline std::size_t l1_data_bytes() noexcept
+{
+    static const std::size_t cached = detail::probe_l1d();
+    return cached;
+}
+
+/**
+ * @brief Compile-time L1 cache size constant.
+ *
+ * Used in template parameters and constexpr contexts.
+ * Override at build time with -DCASPI_L1_CACHE_BYTES=<bytes>.
+ *
+ * @return Compile-time constant; does NOT query hardware.
+ */
+constexpr std::size_t l1_data_bytes_compile_time() noexcept
+{
+    return static_cast<std::size_t> (CASPI_L1_CACHE_BYTES);
+}
+
+/**
+ * @brief Non-temporal store threshold in elements.
+ *
+ * NT stores are beneficial when the working set exceeds L1.
+ * Uses the runtime L1 size to adapt to the actual hardware.
+ *
+ * @tparam T  Element type.
+ * @return    Element count above which NT stores are preferred.
+ */
+template <typename T>
+inline std::size_t nt_store_threshold_runtime() noexcept
+{
+    return (2 * l1_data_bytes()) / sizeof (T);
+}
+
+
         } // namespace Strategy
     } // namespace SIMD
 } // namespace CASPI
