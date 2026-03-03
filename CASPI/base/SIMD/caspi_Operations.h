@@ -688,6 +688,18 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Per-lane less-than-or-equal: result[i] = a[i] <= b[i] (double precision)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] <= b[i], else all-zeros
+         *
+         * @example
+         * @code
+         * float64x2 mask = cmp_le(set1<double>(1.0), set1<double>(2.0)); // lanes = true
+         * @endcode
+         */
         inline float64x2 cmp_le (float64x2 a, float64x2 b)
         {
 #if defined(CASPI_HAS_SSE2)
@@ -707,6 +719,18 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Per-lane greater-than-or-equal: result[i] = a[i] >= b[i] (double precision)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] >= b[i], else all-zeros
+         *
+         * @example
+         * @code
+         * float64x2 mask = cmp_ge(set1<double>(3.0), set1<double>(2.0)); // lanes = true
+         * @endcode
+         */
         inline float64x2 cmp_ge (float64x2 a, float64x2 b)
         {
 #if defined(CASPI_HAS_SSE2)
@@ -1476,6 +1500,21 @@ namespace CASPI
         // FMA family — float64x2
         // ============================================================================
 
+        /**
+         * @brief Multiply-subtract: a*b - c (double precision).
+         *
+         * Uses FMA when available for single-round accuracy and improved performance.
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Subtrahend
+         * @return          Result vector with per-lane (a[i]*b[i] - c[i])
+         *
+         * @example
+         * @code
+         * float64x2 r = mul_sub(set1<double>(3.0), set1<double>(2.0), set1<double>(1.0)); // 6 - 1 = 5
+         * @endcode
+         */
         inline float64x2 mul_sub (float64x2 a, float64x2 b, float64x2 c)
         {
 #if defined(CASPI_HAS_FMA)
@@ -1485,6 +1524,16 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Negated multiply-add: -(a*b) + c = c - a*b (double precision).
+         *
+         * Uses FMA when available.
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Addend
+         * @return          Result vector with per-lane (c[i] - a[i]*b[i])
+         */
         inline float64x2 nmadd (float64x2 a, float64x2 b, float64x2 c)
         {
 #if defined(CASPI_HAS_FMA)
@@ -1494,6 +1543,16 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Negated multiply-subtract: -(a*b) - c (double precision).
+         *
+         * Uses FMA when available.
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Value to subtract
+         * @return          Result vector with per-lane ( -a[i]*b[i] - c[i] )
+         */
         inline float64x2 nmsub (float64x2 a, float64x2 b, float64x2 c)
         {
 #if defined(CASPI_HAS_FMA)
@@ -1511,6 +1570,23 @@ namespace CASPI
         // from zero. NEON and WASM have dedicated rounding instructions.
         // ============================================================================
 
+        /**
+         * @brief Per-lane floor: floor(a[i]) for float32x4.
+         *
+         * Rounds each lane toward negative infinity. Uses SSE4.1 intrinsic
+         * when available; falls back to portable implementations otherwise.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane floored values
+         *
+         * @note Behaviour for NaN/Inf follows the platform intrinsics semantics.
+         *
+         * @example
+         * @code
+         * float32x4 v = set1<float>(1.9f);
+         * float32x4 f = floor(v); // [1.0f, 1.0f, 1.0f, 1.0f]
+         * @endcode
+         */
         inline float32x4 floor (float32x4 a)
         {
 #if defined(CASPI_HAS_SSE4_1)
@@ -1534,6 +1610,21 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Per-lane ceil: ceil(a[i]) for float32x4.
+         *
+         * Rounds each lane toward positive infinity. Uses SSE4.1 intrinsic
+         * when available; falls back to portable implementations otherwise.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane ceiled values
+         *
+         * @example
+         * @code
+         * float32x4 v = set1<float>(1.1f);
+         * float32x4 c = ceil(v); // [2.0f, 2.0f, 2.0f, 2.0f]
+         * @endcode
+         */
         inline float32x4 ceil (float32x4 a)
         {
 #if defined(CASPI_HAS_SSE4_1)
@@ -1555,7 +1646,21 @@ namespace CASPI
 #endif
         }
 
-        /// Round to nearest, ties away from zero (matches std::round behaviour).
+        /**
+         * @brief Per-lane round-to-nearest (ties away from zero) for float32x4.
+         *
+         * Matches std::round semantics: round(x) returns nearest integer with
+         * ties away from zero.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane rounded values
+         *
+         * @example
+         * @code
+         * float32x4 v = set1<float>(1.6f);
+         * float32x4 r = round(v); // [2.0f, 2.0f, 2.0f, 2.0f]
+         * @endcode
+         */
         inline float32x4 round (float32x4 a)
         {
 #if defined(CASPI_HAS_SSE4_1)
@@ -1581,6 +1686,14 @@ namespace CASPI
         // Rounding — float64x2
         // ============================================================================
 
+        /**
+         * @brief Per-lane floor: floor(a[i]) for double precision (float64x2).
+         *
+         * Rounds each lane toward negative infinity.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane floored values
+         */
         inline float64x2 floor (float64x2 a)
         {
 #if defined(CASPI_HAS_SSE4_1)
@@ -1602,6 +1715,14 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Per-lane ceil: ceil(a[i]) for double precision (float64x2).
+         *
+         * Rounds each lane toward positive infinity.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane ceiled values
+         */
         inline float64x2 ceil (float64x2 a)
         {
 #if defined(CASPI_HAS_SSE4_1)
@@ -1623,6 +1744,14 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Per-lane round-to-nearest (ties away from zero) for double precision.
+         *
+         * Matches std::round semantics for each lane.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane rounded values
+         */
         inline float64x2 round (float64x2 a)
         {
 #if defined(CASPI_HAS_SSE4_1)
