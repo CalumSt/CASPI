@@ -72,7 +72,6 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #define CASPI_SIMDOPERATIONS_H
 
 #include "caspi_Strategy.h"
-
 #include <cstdint>
 
 namespace CASPI
@@ -130,7 +129,6 @@ namespace CASPI
             return v;
 #endif
         }
-
 
         /**
          * @brief Per-lane addition: result[i] = a[i] + b[i]
@@ -368,7 +366,6 @@ namespace CASPI
 #endif
         }
 
-
         /**
          * @brief Fast approximate reciprocal (1/x).
          *
@@ -402,6 +399,18 @@ namespace CASPI
 #endif
         }
 
+        // ============================================================================
+        // Reciprocal — float64x2
+        //
+        // No hardware fast-rcp exists for double. This is an exact divide.
+        // Named rcp for API symmetry; callers should be aware it is not approximate.
+        // ============================================================================
+
+        inline float64x2 rcp (float64x2 x)
+        {
+            return div (set1<double> (1.0), x);
+        }
+
         /**
          * @brief Fast approximate reciprocal square root (1/√x).
          *
@@ -418,7 +427,7 @@ namespace CASPI
          * float32x4 rsqrt_result = rsqrt(v);  // ~[0.5, 0.5, 0.5, 0.5] = 1/sqrt(4)
          * @endcode
          */
-        inline float32x4 rsqrt (float32x4 x)\
+        inline float32x4 rsqrt (float32x4 x)
         {
 #if defined(CASPI_HAS_SSE)
             return _mm_rsqrt_ps (x);
@@ -562,6 +571,131 @@ namespace CASPI
 #endif
         }
 
+        // ============================================================================
+        // Comparisons — float32x4
+        // ============================================================================
+
+        /// Per-lane greater-than: result[i] = a[i] > b[i]
+        inline float32x4 cmp_gt (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_cmpgt_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vcgtq_f32 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_gt (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t m = (a.data[i] > b.data[i]) ? 0xFFFFFFFFu : 0u;
+                std::memcpy (&r.data[i], &m, sizeof (float));
+            }
+            return r;
+#endif
+        }
+
+        /// Per-lane less-than-or-equal: result[i] = a[i] <= b[i]
+        inline float32x4 cmp_le (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_cmple_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vcleq_f32 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_le (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t m = (a.data[i] <= b.data[i]) ? 0xFFFFFFFFu : 0u;
+                std::memcpy (&r.data[i], &m, sizeof (float));
+            }
+            return r;
+#endif
+        }
+
+        /// Per-lane greater-than-or-equal: result[i] = a[i] >= b[i]
+        inline float32x4 cmp_ge (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_cmpge_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vcgeq_f32 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_ge (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t m = (a.data[i] >= b.data[i]) ? 0xFFFFFFFFu : 0u;
+                std::memcpy (&r.data[i], &m, sizeof (float));
+            }
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Comparisons — float64x2
+        // ============================================================================
+
+        inline float64x2 cmp_gt (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_cmpgt_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vcgtq_f64 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_gt (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t m = (a.data[i] > b.data[i]) ? 0xFFFFFFFFFFFFFFFFull : 0ull;
+                std::memcpy (&r.data[i], &m, sizeof (double));
+            }
+            return r;
+#endif
+        }
+
+        inline float64x2 cmp_le (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_cmple_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vcleq_f64 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_le (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t m = (a.data[i] <= b.data[i]) ? 0xFFFFFFFFFFFFFFFFull : 0ull;
+                std::memcpy (&r.data[i], &m, sizeof (double));
+            }
+            return r;
+#endif
+        }
+
+        inline float64x2 cmp_ge (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_cmpge_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vcgeq_f64 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_ge (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t m = (a.data[i] >= b.data[i]) ? 0xFFFFFFFFFFFFFFFFull : 0ull;
+                std::memcpy (&r.data[i], &m, sizeof (double));
+            }
+            return r;
+#endif
+        }
+
         /**
          * @brief Per-lane minimum: result[i] = min(a[i], b[i])
          *
@@ -654,7 +788,6 @@ namespace CASPI
 #endif
         }
 
-
         /**
          * @brief Sum all lanes of a float32x4 vector.
          *
@@ -708,7 +841,6 @@ namespace CASPI
             return tmp[0] + tmp[1];
 #endif
         }
-
 
         /**
          * @brief Maximum of all lanes in a float32x4 vector.
@@ -984,6 +1116,409 @@ namespace CASPI
             float64x2 r;
             r.data[0] = std::sqrt (a.data[0]);
             r.data[1] = std::sqrt (a.data[1]);
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Bitwise — float32x4
+        // These operate on the bit patterns; useful for sign manipulation and masking.
+        // ============================================================================
+
+        inline float32x4 and_vec (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_and_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vandq_u32 (vreinterpretq_u32_f32 (a),
+                                                     vreinterpretq_u32_f32 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_and (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 4);
+                std::memcpy (&vb, &b.data[i], 4);
+                vr = va & vb;
+                std::memcpy (&r.data[i], &vr, 4);
+            }
+            return r;
+#endif
+        }
+
+        inline float32x4 or_vec (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_or_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vorrq_u32 (vreinterpretq_u32_f32 (a),
+                                                     vreinterpretq_u32_f32 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_or (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 4);
+                std::memcpy (&vb, &b.data[i], 4);
+                vr = va | vb;
+                std::memcpy (&r.data[i], &vr, 4);
+            }
+            return r;
+#endif
+        }
+
+        inline float32x4 xor_vec (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_xor_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (veorq_u32 (vreinterpretq_u32_f32 (a),
+                                                     vreinterpretq_u32_f32 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_xor (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 4);
+                std::memcpy (&vb, &b.data[i], 4);
+                vr = va ^ vb;
+                std::memcpy (&r.data[i], &vr, 4);
+            }
+            return r;
+#endif
+        }
+
+        /// andnot_vec(a, b) = (~a) & b  — matches _mm_andnot_ps semantics
+        inline float32x4 andnot_vec (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_andnot_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vbicq_u32 (vreinterpretq_u32_f32 (b),
+                                                     vreinterpretq_u32_f32 (a)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_andnot (b, a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 4);
+                std::memcpy (&vb, &b.data[i], 4);
+                vr = (~va) & vb;
+                std::memcpy (&r.data[i], &vr, 4);
+            }
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Bitwise — float64x2
+        // ============================================================================
+
+        inline float64x2 and_vec (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_and_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vandq_u64 (vreinterpretq_u64_f64 (a),
+                                                     vreinterpretq_u64_f64 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_and (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 8);
+                std::memcpy (&vb, &b.data[i], 8);
+                vr = va & vb;
+                std::memcpy (&r.data[i], &vr, 8);
+            }
+            return r;
+#endif
+        }
+
+        inline float64x2 or_vec (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_or_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vorrq_u64 (vreinterpretq_u64_f64 (a),
+                                                     vreinterpretq_u64_f64 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_or (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 8);
+                std::memcpy (&vb, &b.data[i], 8);
+                vr = va | vb;
+                std::memcpy (&r.data[i], &vr, 8);
+            }
+            return r;
+#endif
+        }
+
+        inline float64x2 xor_vec (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_xor_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (veorq_u64 (vreinterpretq_u64_f64 (a),
+                                                     vreinterpretq_u64_f64 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_xor (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 8);
+                std::memcpy (&vb, &b.data[i], 8);
+                vr = va ^ vb;
+                std::memcpy (&r.data[i], &vr, 8);
+            }
+            return r;
+#endif
+        }
+
+        inline float64x2 andnot_vec (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_andnot_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vbicq_u64 (vreinterpretq_u64_f64 (b),
+                                                     vreinterpretq_u64_f64 (a)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_andnot (b, a);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 8);
+                std::memcpy (&vb, &b.data[i], 8);
+                vr = (~va) & vb;
+                std::memcpy (&r.data[i], &vr, 8);
+            }
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // FMA family — float32x4
+        //
+        // mul_sub  (a, b, c) = a*b - c
+        // nmadd    (a, b, c) = -(a*b) + c  = c - a*b
+        // nmsub    (a, b, c) = -(a*b) - c
+        //
+        // All fall back to the two-op form when FMA is unavailable.
+        // The fallback is numerically equivalent but slower and rounds twice.
+        // ============================================================================
+
+        inline float32x4 mul_sub (float32x4 a, float32x4 b, float32x4 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fmsub_ps (a, b, c);
+#else
+            return sub (mul (a, b), c);
+#endif
+        }
+
+        inline float32x4 nmadd (float32x4 a, float32x4 b, float32x4 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fnmadd_ps (a, b, c);
+#else
+            return sub (c, mul (a, b));
+#endif
+        }
+
+        inline float32x4 nmsub (float32x4 a, float32x4 b, float32x4 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fnmsub_ps (a, b, c);
+#else
+            return negate (add (mul (a, b), c));
+#endif
+        }
+
+        // ============================================================================
+        // FMA family — float64x2
+        // ============================================================================
+
+        inline float64x2 mul_sub (float64x2 a, float64x2 b, float64x2 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fmsub_pd (a, b, c);
+#else
+            return sub (mul (a, b), c);
+#endif
+        }
+
+        inline float64x2 nmadd (float64x2 a, float64x2 b, float64x2 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fnmadd_pd (a, b, c);
+#else
+            return sub (c, mul (a, b));
+#endif
+        }
+
+        inline float64x2 nmsub (float64x2 a, float64x2 b, float64x2 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fnmsub_pd (a, b, c);
+#else
+            return negate (add (mul (a, b), c));
+#endif
+        }
+
+        // ============================================================================
+        // Rounding — float32x4
+        //
+        // SSE4.1 is preferred (single instruction). SSE2-only fallback uses the
+        // truncation trick: (int)(x+0.5) cast back, which is correct for ties-away
+        // from zero. NEON and WASM have dedicated rounding instructions.
+        // ============================================================================
+
+        inline float32x4 floor (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_floor_ps (a);
+#elif defined(CASPI_HAS_SSE2)
+            // Convert to int (truncates toward zero), adjust if result > input
+            __m128i trunc = _mm_cvttps_epi32 (a);
+            __m128 ftrunc = _mm_cvtepi32_ps (trunc);
+            // Subtract 1 where ftrunc > a (i.e. truncation went the wrong way for negatives)
+            __m128 mask = _mm_cmpgt_ps (ftrunc, a);
+            return _mm_sub_ps (ftrunc, _mm_and_ps (mask, _mm_set1_ps (1.0f)));
+#elif defined(CASPI_HAS_NEON)
+            return vrndmq_f32 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_floor (a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+                r.data[i] = std::floor (a.data[i]);
+            return r;
+#endif
+        }
+
+        inline float32x4 ceil (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_ceil_ps (a);
+#elif defined(CASPI_HAS_SSE2)
+            __m128i trunc = _mm_cvttps_epi32 (a);
+            __m128 ftrunc = _mm_cvtepi32_ps (trunc);
+            __m128 mask   = _mm_cmplt_ps (ftrunc, a);
+            return _mm_add_ps (ftrunc, _mm_and_ps (mask, _mm_set1_ps (1.0f)));
+#elif defined(CASPI_HAS_NEON)
+            return vrndpq_f32 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_ceil (a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+                r.data[i] = std::ceil (a.data[i]);
+            return r;
+#endif
+        }
+
+        /// Round to nearest, ties away from zero (matches std::round behaviour).
+        inline float32x4 round (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_round_ps (a, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+#elif defined(CASPI_HAS_SSE2)
+            // Add 0.5 with the sign of a, then truncate
+            __m128 sign = _mm_and_ps (a, _mm_set1_ps (-0.0f));
+            __m128 half = _mm_or_ps (sign, _mm_set1_ps (0.5f));
+            return _mm_cvtepi32_ps (_mm_cvttps_epi32 (_mm_add_ps (a, half)));
+#elif defined(CASPI_HAS_NEON)
+            return vrndnq_f32 (a); // round-to-nearest-even; closest to std::round
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_nearest (a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+                r.data[i] = std::round (a.data[i]);
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Rounding — float64x2
+        // ============================================================================
+
+        inline float64x2 floor (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_floor_pd (a);
+#elif defined(CASPI_HAS_SSE2)
+            __m128i trunc  = _mm_cvttpd_epi32 (a);
+            __m128d ftrunc = _mm_cvtepi32_pd (trunc);
+            __m128d mask   = _mm_cmpgt_pd (ftrunc, a);
+            return _mm_sub_pd (ftrunc, _mm_and_pd (mask, _mm_set1_pd (1.0)));
+#elif defined(CASPI_HAS_NEON64)
+            return vrndmq_f64 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_floor (a);
+#else
+            float64x2 r;
+            r.data[0] = std::floor (a.data[0]);
+            r.data[1] = std::floor (a.data[1]);
+            return r;
+#endif
+        }
+
+        inline float64x2 ceil (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_ceil_pd (a);
+#elif defined(CASPI_HAS_SSE2)
+            __m128i trunc  = _mm_cvttpd_epi32 (a);
+            __m128d ftrunc = _mm_cvtepi32_pd (trunc);
+            __m128d mask   = _mm_cmplt_pd (ftrunc, a);
+            return _mm_add_pd (ftrunc, _mm_and_pd (mask, _mm_set1_pd (1.0)));
+#elif defined(CASPI_HAS_NEON64)
+            return vrndpq_f64 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_ceil (a);
+#else
+            float64x2 r;
+            r.data[0] = std::ceil (a.data[0]);
+            r.data[1] = std::ceil (a.data[1]);
+            return r;
+#endif
+        }
+
+        inline float64x2 round (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_round_pd (a, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+#elif defined(CASPI_HAS_SSE2)
+            __m128d sign = _mm_and_pd (a, _mm_set1_pd (-0.0));
+            __m128d half = _mm_or_pd (sign, _mm_set1_pd (0.5));
+            return _mm_cvtepi32_pd (_mm_cvttpd_epi32 (_mm_add_pd (a, half)));
+#elif defined(CASPI_HAS_NEON64)
+            return vrndnq_f64 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_nearest (a);
+#else
+            float64x2 r;
+            r.data[0] = std::round (a.data[0]);
+            r.data[1] = std::round (a.data[1]);
             return r;
 #endif
         }
