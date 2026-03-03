@@ -31,6 +31,7 @@ set(SOURCES
         base/Expected_bm.cpp
         base/SIMD_bm.cpp
         base/AudioBuffer_SIMD_bm.cpp
+        base/PolyKernel_bm.cpp
 )
 # --------------------------------------------------------------------------
 
