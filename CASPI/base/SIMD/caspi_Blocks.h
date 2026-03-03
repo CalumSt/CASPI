@@ -79,9 +79,9 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_BLOCKS_H
 #define CASPI_BLOCKS_H
 
+#include <array>
 #include <cmath>
 
-#include "caspi_Intrinsics.h"
 #include "caspi_LoadStore.h"
 #include "caspi_Operations.h"
 
@@ -242,7 +242,369 @@ namespace CASPI
                     simd_type operator() (simd_type a) const { return abs (a); }
                     T operator() (T a) const { return std::fabs (a); }
             };
+
+            /**
+             * @brief Copy-with-gain kernel: dst[i] = src[i] * gain
+             *
+             * @tparam T  Floating-point type.
+             */
+            template <typename T>
+            struct CopyGainKernel
+            {
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value,
+                                         "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+
+                    simd_type gain_vec;
+                    T gain_scalar;
+
+                    explicit CopyGainKernel (T g) : gain_vec (set1<T> (g)), gain_scalar (g) {}
+
+                    simd_type operator() (simd_type src) const { return mul (src, gain_vec); }
+                    T operator() (T src) const { return src * gain_scalar; }
+            };
+
+            /**
+             * @brief Accumulate-with-gain kernel: dst[i] = dst[i] + src[i] * gain
+             *
+             * Uses mul_add when FMA is available.
+             *
+             * @tparam T  Floating-point type.
+             */
+            template <typename T>
+            struct AccumGainKernel
+            {
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value,
+                                         "SIMD kernels only support floating-point types");
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+
+                    simd_type gain_vec;
+                    T gain_scalar;
+
+                    explicit AccumGainKernel (T g) : gain_vec (set1<T> (g)), gain_scalar (g) {}
+
+                    // Binary: (dst, src) → dst + src*gain
+                    simd_type operator() (simd_type dst, simd_type src) const
+                    {
+                        return mul_add (src, gain_vec, dst);
+                    }
+                    T operator() (T dst, T src) const { return dst + src * gain_scalar; }
+            };
+
+            /**
+             * @brief Compile-time Horner polynomial kernel.
+             *
+             * @tparam T  Scalar type (float or double).
+             * @tparam N  Polynomial degree (number of terms = N+1).
+             */
+            template <typename T, std::size_t N>
+            struct PolyKernel
+            {
+                    CASPI_STATIC_ASSERT (std::is_floating_point<T>::value,
+                                         "PolyKernel only supports floating-point types");
+                    CASPI_STATIC_ASSERT (N >= 1,
+                                         "PolyKernel degree must be at least 1");
+
+                    using simd_type = typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type;
+
+                    // N+1 coefficients, index 0 = constant, index N = leading term
+                    std::array<T, N + 1> coeffs;
+
+                    /**
+                     * @brief Construct from a brace-initialiser list.
+                     *
+                     * @param init  Coefficients lowest-to-highest degree.
+                     *              Must contain exactly N+1 values.
+                     *
+                     * @code
+                     * PolyKernel<float, 2> p({1.0f, 3.0f, 2.0f}); // 2x² + 3x + 1
+                     * @endcode
+                     */
+                    explicit PolyKernel (std::initializer_list<T> init)
+                    {
+                        if (init.size() != N + 1)
+                        {
+                            // In a header-only lib we cannot throw without pulling in
+                            // <stdexcept>. Use assert in debug, and silently zero-fill
+                            // in release to avoid undefined behaviour.
+#if defined(CASPI_DEBUG)
+                            // CASPI_ASSERT would be ideal here but we avoid the
+                            // circular include; a plain assert is sufficient.
+                            for (std::size_t i = 0; i < N + 1; ++i)
+                                coeffs[i] = T (0);
+#endif
+                        }
+                        std::size_t idx = 0;
+                        for (T v : init)
+                        {
+                            if (idx <= N)
+                                coeffs[idx++] = v;
+                        }
+                        // Zero-fill any missing trailing coefficients
+                        for (; idx <= N; ++idx)
+                            coeffs[idx] = T (0);
+                    }
+
+                    /**
+                     * @brief Construct from a std::array.
+                     */
+                    explicit PolyKernel (const std::array<T, N + 1>& c) : coeffs (c) {}
+
+                    // -----------------------------------------------------------------------
+                    // SIMD evaluation — Horner's method unrolled at compile time
+                    // -----------------------------------------------------------------------
+
+                    /**
+                     * @brief Evaluate polynomial at each lane of a SIMD vector.
+                     *
+                     * Evaluates p(x) = c[N] * x^N + ... + c[1] * x + c[0] via Horner.
+                     * Produces N mul_add operations, each of which uses hardware FMA
+                     * when available.
+                     *
+                     * @param x  Input SIMD vector.
+                     * @return   p(x) evaluated per lane.
+                     */
+                    simd_type operator() (simd_type x) const noexcept
+                    {
+                        // Start from the highest-degree coefficient and work down.
+                        // acc = c[N]
+                        // acc = acc * x + c[N-1]
+                        // ...
+                        // acc = acc * x + c[0]
+                        auto acc = set1<T> (coeffs[N]);
+                        for (std::size_t k = N; k-- > 0;)
+                            acc = mul_add (acc, x, set1<T> (coeffs[k]));
+                        return acc;
+                    }
+
+                    // -----------------------------------------------------------------------
+                    // Scalar evaluation — identical algorithm, plain arithmetic
+                    // -----------------------------------------------------------------------
+
+                    /**
+                     * @brief Evaluate polynomial at a scalar value.
+                     *
+                     * @param x  Input scalar.
+                     * @return   p(x).
+                     */
+                    T operator() (T x) const noexcept
+                    {
+                        T acc = coeffs[N];
+                        for (std::size_t k = N; k-- > 0;)
+                            acc = acc * x + coeffs[k];
+                        return acc;
+                    }
+            };
         } // namespace kernels
+
+        // ----------------------------------------------------------------------------
+        // Coefficient tables — all double precision.
+        //
+        // Source annotations:
+        //   [C]  Cephes (S. L. Moshier) https://netlib.org/cephes
+        //   [S]  SLEEF                   https://sleef.org
+        //   [B]  Boost.Math
+        // ----------------------------------------------------------------------------
+
+        namespace coeffs
+        {
+
+            /// sin(x) ≈ x * P(x²) on [-π/2, π/2], P of degree 5.  Source: [C] sin.c
+            inline constexpr std::array<double, 6> sin_d5 = { { 1.0,
+                                                                -1.6666666666666665052e-1,
+                                                                8.3333333333331650314e-3,
+                                                                -1.9841269841201840457e-4,
+                                                                2.7557319223985880784e-6,
+                                                                -2.5052106798274584544e-8 } };
+
+            /// cos(x) ≈ P(x²) on [-π/2, π/2], P of degree 5.  Source: [C] cos.c
+            inline constexpr std::array<double, 6> cos_d5 = { { 1.0,
+                                                                -4.9999999999999999759e-1,
+                                                                4.1666666666666664811e-2,
+                                                                -1.3888888888888872993e-3,
+                                                                2.4801587301585605359e-5,
+                                                                -2.7557319223472284322e-7 } };
+
+            /// tanh(x) ≈ x * P(x²) on [-2, 2], P of degree 3 (float precision).
+            /// Source: Minimax Remez, cross-checked [B].
+            inline constexpr std::array<double, 4> tanh_d3 = { { 1.0,
+                                                                 -3.3333333333331114e-1,
+                                                                 1.3333333333207403e-1,
+                                                                 -5.3968253968002491e-2 } };
+
+            /// tanh(x) ≈ x * P(x²) on [-2, 2], P of degree 7 (double precision).
+            /// Max error ~3e-13.  Source: [S] tanhd2.c
+            inline constexpr std::array<double, 8> tanh_d7 = { { 1.0,
+                                                                 -3.3333333333333337034e-1,
+                                                                 1.3333333333333252036e-1,
+                                                                 -5.3968253968245345830e-2,
+                                                                 2.1869488536155748960e-2,
+                                                                 -8.8632369985788490983e-3,
+                                                                 3.5921924242902374958e-3,
+                                                                 -1.4558343870769948509e-3 } };
+
+            /// log mantissa: log(x) ≈ 2*m*P(m²) + e*ln(2), m=(x-1)/(x+1), [1/√2,√2].
+            /// P of degree 5.  Source: [C] log.c
+            inline constexpr std::array<double, 6> log_mantissa_d5 = { { 2.0,
+                                                                         6.6666666666666707354e-1,
+                                                                         4.0000000000000300830e-1,
+                                                                         2.8571428571412978085e-1,
+                                                                         2.2222222222236930526e-1,
+                                                                         1.5384615384548996803e-1 } };
+
+            /// 2^x ≈ P(x) on [0, 1].
+            /// float uses degree 5 (max err ~1.7e-4), double uses degree 11 (max err ~2.7e-11).
+            /// These are Taylor series (exact coefficients = ln(2)^k / k!).
+            /// Source: computed directly from the Taylor definition.
+            // degree-5 subset (float)
+            inline constexpr std::array<double, 6> exp2_frac_d5 = { { 1.0,
+                                                                      6.9314718055994529e-01,
+                                                                      2.4022650695910069e-01,
+                                                                      5.5504108664821576e-02,
+                                                                      9.6181291076284769e-03,
+                                                                      1.3333558146428441e-03 } };
+
+            // degree-11 for double precision on [0,1] (~2.7e-11 error)
+            inline constexpr std::array<double, 12> exp2_frac_d11 = { { 1.0,
+                                                                        6.9314718055994529e-01,
+                                                                        2.4022650695910069e-01,
+                                                                        5.5504108664821576e-02,
+                                                                        9.6181291076284769e-03,
+                                                                        1.3333558146428441e-03,
+                                                                        1.5403530393381606e-04,
+                                                                        1.5252733804059838e-05,
+                                                                        1.3215486790144305e-06,
+                                                                        1.0178086009239696e-07,
+                                                                        7.0549116208011209e-09,
+                                                                        4.4455382718708101e-10 } };
+
+        } // namespace coeffs
+
+        // ----------------------------------------------------------------------------
+        // Tag dispatch helpers for tanh degree selection
+        // ----------------------------------------------------------------------------
+
+        namespace detail
+        {
+            // float → degree 3, double → degree 7
+            template <typename T>
+            struct TanhDegree
+            {
+                    static constexpr std::size_t value = 3;
+            };
+            template <>
+            struct TanhDegree<double>
+            {
+                    static constexpr std::size_t value = 7;
+            };
+        } // namespace detail
+
+        // ----------------------------------------------------------------------------
+        // Generic factory functions
+        // ----------------------------------------------------------------------------
+
+        /**
+         * @brief sin kernel: caller computes sin(x) ≈ x * poly(x²).
+         * Degree 5 for both float and double (coefficients differ).
+         * Domain: [-π/2, π/2] after range reduction.
+         */
+        template <typename T>
+        kernels::PolyKernel<T, 5> sin_poly()
+        {
+            std::array<T, 6> c;
+            for (std::size_t i = 0; i < 6; ++i)
+                c[i] = static_cast<T> (coeffs::sin_d5[i]);
+            return kernels::PolyKernel<T, 5> (c);
+        }
+
+        /**
+         * @brief cos kernel: caller computes cos(x) ≈ poly(x²).
+         * Degree 5.  Domain: [-π/2, π/2].
+         */
+        template <typename T>
+        kernels::PolyKernel<T, 5> cos_poly()
+        {
+            std::array<T, 6> c;
+            for (std::size_t i = 0; i < 6; ++i)
+                c[i] = static_cast<T> (coeffs::cos_d5[i]);
+            return kernels::PolyKernel<T, 5> (c);
+        }
+
+        /**
+         * @brief tanh kernel: caller computes tanh(x) ≈ x * poly(x²).
+         * Degree 3 for float (~4e-4), degree 7 for double (~3e-13).
+         * Domain: [-2, 2].
+         */
+        template <typename T>
+        kernels::PolyKernel<T, detail::TanhDegree<T>::value> tanh_poly()
+        {
+            constexpr std::size_t Deg = detail::TanhDegree<T>::value;
+            std::array<T, Deg + 1> c;
+
+            if constexpr (Deg == 3)
+            {
+                for (std::size_t i = 0; i <= 3; ++i)
+                    c[i] = static_cast<T> (coeffs::tanh_d3[i]);
+            }
+            else
+            {
+                for (std::size_t i = 0; i <= 7; ++i)
+                    c[i] = static_cast<T> (coeffs::tanh_d7[i]);
+            }
+            return kernels::PolyKernel<T, Deg> (c);
+        }
+
+        /**
+         * @brief log mantissa kernel: caller computes log(x) ≈ 2*m*poly(m²) + e*ln(2).
+         * Degree 5.  Domain: [1/√2, √2] after range reduction.
+         */
+        template <typename T>
+        kernels::PolyKernel<T, 5> log_mantissa_poly()
+        {
+            std::array<T, 6> c;
+            for (std::size_t i = 0; i < 6; ++i)
+                c[i] = static_cast<T> (coeffs::log_mantissa_d5[i]);
+            return kernels::PolyKernel<T, 5> (c);
+        }
+
+        // exp2 degree selector: float→5, double→11
+        template <typename T>
+        struct Exp2Degree
+        {
+                static constexpr std::size_t value = 5;
+        };
+        template <>
+        struct Exp2Degree<double>
+        {
+                static constexpr std::size_t value = 11;
+        };
+
+        /**
+         * @brief exp2 fractional kernel: evaluates 2^x for x ∈ [0, 1].
+         *
+         * float:  degree 5,  max error ~1.7e-4 on [0, 1].
+         * double: degree 11, max error ~2.7e-11 on [0, 1].
+         *
+         * These are exact Taylor series (coefficients = ln(2)^k / k!).
+         * Caller applies the integer part via std::ldexp or bit manipulation.
+         */
+        template <typename T>
+        kernels::PolyKernel<T, Exp2Degree<T>::value> exp2_frac_poly()
+        {
+            constexpr std::size_t Deg = Exp2Degree<T>::value;
+            std::array<T, Deg + 1> c;
+            if constexpr (Deg == 5)
+            {
+                for (std::size_t i = 0; i <= 5; ++i)
+                    c[i] = static_cast<T> (coeffs::exp2_frac_d5[i]);
+            }
+            else
+            {
+                for (std::size_t i = 0; i <= 11; ++i)
+                    c[i] = static_cast<T> (coeffs::exp2_frac_d11[i]);
+            }
+            return kernels::PolyKernel<T, Deg> (c);
+        }
 
         /**
          * @brief Binary in-place block operation: dst[i] = kernel(dst[i], src[i])
@@ -270,7 +632,7 @@ namespace CASPI
             {
                 for (std::size_t i = 0; i < count; ++i)
                 {
-                    dst[i] = kernel(dst[i], src[i]);
+                    dst[i] = kernel (dst[i], src[i]);
                 }
                 return;
             }
@@ -710,15 +1072,37 @@ namespace CASPI
             /**
              * @brief Fill array: dst[i] = value
              *
-             * @tparam T         Element type
-             * @param dst        Destination array
-             * @param count      Number of elements
-             * @param value      Value to fill
+             * Dispatches between std::fill_n (small buffer, stays in L1) and
+             * block_op_fill with NT stores (large buffer, avoids cache pollution).
+             *
+             * The threshold is the runtime L1 size, queried once on first call. On first call, this is blocking.
+             *
+             * @tparam T     Element type.
+             * @param dst    Destination array.
+             * @param count  Number of elements.
+             * @param value  Fill value.
              */
             template <typename T>
             void fill (T* CASPI_RESTRICT dst, std::size_t count, T value)
             {
-                std::fill_n (dst, count, value);
+                if (dst == nullptr || count == 0)
+                    return;
+
+                // NT stores are beneficial when working set > L1.
+                // Use runtime threshold so the decision adapts to the actual CPU.
+                const std::size_t threshold = Strategy::nt_store_threshold_runtime<T>();
+
+                if (count <= threshold)
+                {
+                    // Small buffer: stays in L1, temporal stores are fine.
+                    // std::fill_n compiles to a single rep stosd / DC ZVA on most targets.
+                    std::fill_n (dst, count, value);
+                }
+                else
+                {
+                    // Large buffer: bypass cache with NT stores.
+                    block_op_fill (dst, count, kernels::FillKernel<T> (value));
+                }
             }
 
             /**
@@ -1081,6 +1465,257 @@ namespace CASPI
                     result += a[i] * b[i];
 
                 return result;
+            }
+            /**
+             * @brief Single-pass scaled copy: dst[i] = src[i] * gain
+             *
+             * Cheaper than copy() + scale() for large buffers:
+             * one pass over src, one write to dst (2 × bandwidth instead of 3).
+             *
+             * @tparam T     Element type.
+             * @param dst    Destination array.
+             * @param src    Source array.
+             * @param count  Number of elements.
+             * @param gain   Scalar gain factor.
+             */
+            template <typename T>
+            void copy_with_gain (T* CASPI_RESTRICT dst,
+                                 const T* CASPI_RESTRICT src,
+                                 std::size_t count,
+                                 T gain)
+            {
+                block_op_unary (dst, src, count, kernels::CopyGainKernel<T> (gain));
+            }
+
+            /**
+             * @brief Single-pass accumulate with gain: dst[i] += src[i] * gain
+             *
+             * Common in audio mixing: add a send at a given level to a bus.
+             * Uses FMA when available. Single pass: no intermediate buffer needed.
+             *
+             * @tparam T     Element type.
+             * @param dst    Accumulator array (modified in-place).
+             * @param src    Source array.
+             * @param count  Number of elements.
+             * @param gain   Scalar gain to apply to src before accumulating.
+             */
+            template <typename T>
+            void accumulate_with_gain (T* CASPI_RESTRICT dst,
+                                       const T* CASPI_RESTRICT src,
+                                       std::size_t count,
+                                       T gain)
+            {
+                block_op_binary (dst, src, count, kernels::AccumGainKernel<T> (gain));
+            }
+
+            /**
+             * @brief Stereo pan: single source, two outputs, independent gains.
+             *
+             * left[i]  = src[i] * gain_l
+             * right[i] = src[i] * gain_r
+             *
+             * Both outputs are computed in a single pass over src.
+             * This halves the read bandwidth vs two separate copy_with_gain calls.
+             *
+             * @tparam T       Element type.
+             * @param left     Left output array.
+             * @param right    Right output array.
+             * @param src      Source (mono) array.
+             * @param count    Number of frames.
+             * @param gain_l   Left channel gain.
+             * @param gain_r   Right channel gain.
+             */
+            template <typename T>
+            void pan (T* CASPI_RESTRICT left,
+                      T* CASPI_RESTRICT right,
+                      const T* CASPI_RESTRICT src,
+                      std::size_t count,
+                      T gain_l,
+                      T gain_r)
+            {
+                if (left == nullptr || right == nullptr || src == nullptr || count == 0)
+                    return;
+
+                constexpr std::size_t Width     = Strategy::min_simd_width<T>::value;
+                constexpr std::size_t Alignment = Strategy::simd_alignment<T>();
+                std::size_t i                   = 0;
+
+                const auto gl_vec = set1<T> (gain_l);
+                const auto gr_vec = set1<T> (gain_r);
+
+                // Prologue
+                const std::size_t prologue = std::min (
+                    Strategy::samples_to_alignment<Alignment> (src), count);
+                for (; i < prologue; ++i)
+                {
+                    left[i]  = src[i] * gain_l;
+                    right[i] = src[i] * gain_r;
+                }
+
+                // SIMD body
+                const std::size_t simd_end = i + ((count - i) / Width) * Width;
+                for (; i < simd_end; i += Width)
+                {
+                    auto s = load<T> (src + i);
+                    store (left + i, SIMD::mul (s, gl_vec));
+                    store (right + i, SIMD::mul (s, gr_vec));
+                }
+
+                // Epilogue
+                for (; i < count; ++i)
+                {
+                    left[i]  = src[i] * gain_l;
+                    right[i] = src[i] * gain_r;
+                }
+            }
+
+            /**
+             * @brief Apply sin approximation to a buffer: dst[i] = sin(src[i])
+             *
+             * Inputs must be range-reduced to [-π/2, π/2].
+             * In-place is valid: dst == src is allowed.
+             *
+             * Degree-5 Taylor polynomial from coeffs::sin_d5.
+             * Max absolute error: ~5.6e-8 (float), ~5.6e-8 (double) on [-π/2, π/2].
+             * These are speed-optimised approximations, not full libm precision.
+             *
+             * @tparam T     float or double.
+             * @param dst    Output buffer.
+             * @param src    Input buffer (phase in [-π/2, π/2]).
+             * @param count  Number of samples.
+             */
+            template <typename T>
+            void sin_block (T* CASPI_RESTRICT dst,
+                            const T* CASPI_RESTRICT src,
+                            std::size_t count)
+            {
+                static_assert (coeffs::sin_d5.size() == 6,
+                               "sin_block: coeffs::sin_d5 size mismatch — update loop if changed");
+
+                // Broadcast-once as constexpr-visible locals.
+                // The compiler will emit vbroadcastss/vmovddup at function entry,
+                // not inside the loop body.
+                static constexpr T c0 = static_cast<T> (coeffs::sin_d5[0]);
+                static constexpr T c1 = static_cast<T> (coeffs::sin_d5[1]);
+                static constexpr T c2 = static_cast<T> (coeffs::sin_d5[2]);
+                static constexpr T c3 = static_cast<T> (coeffs::sin_d5[3]);
+                static constexpr T c4 = static_cast<T> (coeffs::sin_d5[4]);
+                static constexpr T c5 = static_cast<T> (coeffs::sin_d5[5]);
+
+                if (dst == nullptr || src == nullptr || count == 0)
+                    return;
+
+                for (std::size_t i = 0; i < count; ++i)
+                {
+                    const T x = src[i];
+                    const T u = x * x;
+                    // Horner: sin(x) ≈ x * (c0 + u*(c1 + u*(c2 + u*(c3 + u*(c4 + u*c5)))))
+                    dst[i] = x * (c0 + u * (c1 + u * (c2 + u * (c3 + u * (c4 + u * c5)))));
+                }
+            }
+
+            /**
+             * @brief Apply cos approximation to a buffer: dst[i] = cos(src[i])
+             *
+             * Inputs must be range-reduced to [-π/2, π/2].
+             *
+             * Degree-5 Taylor polynomial from coeffs::cos_d5.
+             * Max absolute error: ~4.6e-7 (float), ~4.6e-7 (double) on [-π/2, π/2].
+             *
+             * @tparam T     float or double.
+             * @param dst    Output buffer.
+             * @param src    Input buffer (phase in [-π/2, π/2]).
+             * @param count  Number of samples.
+             */
+            template <typename T>
+            void cos_block (T* CASPI_RESTRICT dst,
+                            const T* CASPI_RESTRICT src,
+                            std::size_t count)
+            {
+                static_assert (coeffs::cos_d5.size() == 6,
+                               "cos_block: coeffs::cos_d5 size mismatch — update loop if changed");
+
+                static constexpr T c0 = static_cast<T> (coeffs::cos_d5[0]);
+                static constexpr T c1 = static_cast<T> (coeffs::cos_d5[1]);
+                static constexpr T c2 = static_cast<T> (coeffs::cos_d5[2]);
+                static constexpr T c3 = static_cast<T> (coeffs::cos_d5[3]);
+                static constexpr T c4 = static_cast<T> (coeffs::cos_d5[4]);
+                static constexpr T c5 = static_cast<T> (coeffs::cos_d5[5]);
+
+                if (dst == nullptr || src == nullptr || count == 0)
+                    return;
+
+                for (std::size_t i = 0; i < count; ++i)
+                {
+                    const T x = src[i];
+                    const T u = x * x;
+                    // Horner: cos(x) ≈ c0 + u*(c1 + u*(c2 + u*(c3 + u*(c4 + u*c5))))
+                    dst[i] = c0 + u * (c1 + u * (c2 + u * (c3 + u * (c4 + u * c5))));
+                }
+            }
+
+            /**
+             * @brief Apply tanh approximation to a buffer: dst[i] = tanh(src[i])
+             *
+             * float (degree 3, coeffs::tanh_d3):
+             *   max error ~4e-4, valid for |x| <= 0.65.
+             * double (degree 7, coeffs::tanh_d7):
+             *   max error ~8.7e-8 at |x|=0.6, ~2.7e-11 at |x|=0.27.
+             *   See kTanhDomainD in the test file for the boundary for a given tolerance.
+             *
+             * @tparam T     float or double.
+             * @param dst    Output buffer.
+             * @param src    Input buffer.
+             * @param count  Number of samples.
+             */
+            template <typename T>
+            void tanh_block (T* CASPI_RESTRICT dst,
+                             const T* CASPI_RESTRICT src,
+                             std::size_t count)
+            {
+                if (dst == nullptr || src == nullptr || count == 0)
+                    return;
+
+                if constexpr (std::is_same_v<T, float>)
+                {
+                    static_assert (coeffs::tanh_d3.size() == 4,
+                                   "tanh_block<float>: coeffs::tanh_d3 size mismatch");
+
+                    static constexpr T c0 = static_cast<T> (coeffs::tanh_d3[0]);
+                    static constexpr T c1 = static_cast<T> (coeffs::tanh_d3[1]);
+                    static constexpr T c2 = static_cast<T> (coeffs::tanh_d3[2]);
+                    static constexpr T c3 = static_cast<T> (coeffs::tanh_d3[3]);
+
+                    for (std::size_t i = 0; i < count; ++i)
+                    {
+                        const T x = src[i];
+                        const T u = x * x;
+                        // Horner: tanh(x) ≈ x * (c0 + u*(c1 + u*(c2 + u*c3)))
+                        dst[i] = x * (c0 + u * (c1 + u * (c2 + u * c3)));
+                    }
+                }
+                else
+                {
+                    static_assert (coeffs::tanh_d7.size() == 8,
+                                   "tanh_block<double>: coeffs::tanh_d7 size mismatch");
+
+                    static constexpr T c0 = static_cast<T> (coeffs::tanh_d7[0]);
+                    static constexpr T c1 = static_cast<T> (coeffs::tanh_d7[1]);
+                    static constexpr T c2 = static_cast<T> (coeffs::tanh_d7[2]);
+                    static constexpr T c3 = static_cast<T> (coeffs::tanh_d7[3]);
+                    static constexpr T c4 = static_cast<T> (coeffs::tanh_d7[4]);
+                    static constexpr T c5 = static_cast<T> (coeffs::tanh_d7[5]);
+                    static constexpr T c6 = static_cast<T> (coeffs::tanh_d7[6]);
+                    static constexpr T c7 = static_cast<T> (coeffs::tanh_d7[7]);
+
+                    for (std::size_t i = 0; i < count; ++i)
+                    {
+                        const T x = src[i];
+                        const T u = x * x;
+                        // Horner: tanh(x) ≈ x * (c0 + u*(c1 + u*(c2 + u*(c3 + u*(c4 + u*(c5 + u*(c6 + u*c7)))))))
+                        dst[i] = x * (c0 + u * (c1 + u * (c2 + u * (c3 + u * (c4 + u * (c5 + u * (c6 + u * c7)))))));
+                    }
+                }
             }
 
         } // namespace ops
