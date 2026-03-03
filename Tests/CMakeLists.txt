@@ -20,6 +20,11 @@ include(GoogleTest)
 set(SOURCES
         base/SIMD_test.cpp
         base/SIMD/SIMD_complex_test.cpp
+        base/SIMD/SIMD_operations_test.cpp
+        base/SIMD/SIMD_block_test.cpp
+        base/SIMD/SIMD_LoadStore_test.cpp
+        base/SIMD/SIMD_PolyKernel_test.cpp
+        base/SIMD/SIMD_strategy_test.cpp
         core/Phase_test.cpp
         core/Expected_test.cpp
         core/AudioBuffer_test.cpp
