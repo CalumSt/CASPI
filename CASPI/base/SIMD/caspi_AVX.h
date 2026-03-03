@@ -339,3 +339,4 @@ namespace CASPI
 } // namespace CASPI
 
 #endif // CASPI_AVX_H
+

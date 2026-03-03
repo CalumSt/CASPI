@@ -609,12 +609,32 @@ namespace CASPI
         /**
          * @brief Binary in-place block operation: dst[i] = kernel(dst[i], src[i])
          *
-         * @tparam T         Element type
-         * @tparam Kernel    Operation kernel
+         * Generic prologue/SIMD/epilogue driver for two-operand in-place ops.
+         *
+         * @tparam T         Element type (floating point)
+         * @tparam Kernel    Kernel type providing:
+         *                   - simd_type operator()(simd_type a, simd_type b) const
+         *                   - T operator()(T a, T b) const
          * @param dst        Destination array (modified in-place)
-         * @param src        Source array
-         * @param count      Number of elements
-         * @param kernel     Operation kernel
+         * @param src        Source array (read-only)
+         * @param count      Number of elements to process
+         * @param kernel     Kernel instance encapsulating SIMD and scalar logic
+         *
+         * @details
+         * The function:
+         *  1) Processes a scalar prologue up to the SIMD alignment boundary.
+         *  2) Executes a SIMD main loop using aligned or unaligned loads/stores
+         *     with 4x unrolling where possible.
+         *  3) Finishes with a scalar epilogue for the remaining elements.
+         *
+         * @note If either pointer is null or count == 0 the function returns
+         *       without side effects.
+         *
+         * @example
+         * @code
+         * SIMD::block_op_binary<float>(dst, src, n, SIMD::kernels::AddKernel<float>());
+         * // equivalent to: for (i) dst[i] = dst[i] + src[i];
+         * @endcode
          */
         template <typename T, typename Kernel>
         void block_op_binary (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT src, std::size_t count, const Kernel& kernel)
@@ -675,12 +695,25 @@ namespace CASPI
         /**
          * @brief Unary block operation: dst[i] = kernel(src[i])
          *
-         * @tparam T         Element type
-         * @tparam Kernel    Operation kernel
-         * @param dst        Destination array
-         * @param src        Source array
-         * @param count      Number of elements
-         * @param kernel     Operation kernel
+         * Driver for producing an output buffer from a single input buffer.
+         *
+         * @tparam T         Element type (floating point)
+         * @tparam Kernel    Kernel type providing:
+         *                   - simd_type operator()(simd_type a) const
+         *                   - T operator()(T a) const
+         * @param dst        Destination array (write-only)
+         * @param src        Source array (read-only)
+         * @param count      Number of elements to process
+         * @param kernel     Kernel instance encapsulating SIMD and scalar logic
+         *
+         * @note dst and src may alias if the kernel supports in-place operation;
+         *       otherwise they must be distinct.
+         *
+         * @example
+         * @code
+         * SIMD::block_op_unary<float>(dst, src, n, SIMD::kernels::CopyGainKernel<float>(gain));
+         * // Produces dst[i] = src[i] * gain;
+         * @endcode
          */
         template <typename T, typename Kernel>
         void block_op_unary (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT src, std::size_t count, const Kernel& kernel)
@@ -735,11 +768,23 @@ namespace CASPI
         /**
          * @brief In-place unary block operation: data[i] = kernel(data[i])
          *
-         * @tparam T         Element type
-         * @tparam Kernel    Operation kernel
-         * @param data       Data array (modified in-place)
-         * @param count      Number of elements
-         * @param kernel     Operation kernel
+         * Applies a unary kernel in-place with the same prologue/SIMD/epilogue flow.
+         *
+         * @tparam T         Element type (floating point)
+         * @tparam Kernel    Kernel type providing:
+         *                   - simd_type operator()(simd_type a) const
+         *                   - T operator()(T a) const
+         * @param data       Data array to be modified in-place
+         * @param count      Number of elements to process
+         * @param kernel     Kernel instance
+         *
+         * @note Returns immediately if data == nullptr or count == 0.
+         *
+         * @example
+         * @code
+         * SIMD::block_op_inplace<float>(samples, n, SIMD::kernels::ScaleKernel<float>(0.5f));
+         * // scales samples in-place by 0.5
+         * @endcode
          */
         template <typename T, typename Kernel>
         void block_op_inplace (T* CASPI_RESTRICT data, std::size_t count, const Kernel& kernel)
@@ -792,13 +837,25 @@ namespace CASPI
         /**
          * @brief Fill block operation: dst[i] = kernel.scalar_value()
          *
-         * Uses non-temporal stores for large aligned buffers.
+         * Optimised fill routine that can use non-temporal (NT) stores for large,
+         * aligned buffers to avoid polluting caches. Handles prologue and epilogue.
          *
-         * @tparam T         Element type
-         * @tparam Kernel    Fill kernel (must provide scalar_value() and simd_value())
-         * @param dst        Destination array
-         * @param count      Number of elements
-         * @param kernel     Fill kernel
+         * @tparam T         Element type (floating point)
+         * @tparam Kernel    Fill kernel type providing:
+         *                   - simd_type simd_value() const
+         *                   - T scalar_value() const
+         * @param dst        Destination array to fill
+         * @param count      Number of elements to write
+         * @param kernel     Kernel instance containing the fill value
+         *
+         * @note If the buffer is aligned and sufficiently large (Strategy::nt_store_threshold),
+         *       NT stores (stream_store) are used with a final store_fence() call.
+         * @note If dst == nullptr or count == 0 nothing happens.
+         *
+         * @example
+         * @code
+         * SIMD::block_op_fill<float>(buffer, n, SIMD::kernels::FillKernel<float>(0.0f));
+         * @endcode
          */
         template <typename T, typename Kernel>
         inline void block_op_fill (T* CASPI_RESTRICT dst, std::size_t count, const Kernel& kernel)
@@ -876,13 +933,26 @@ namespace CASPI
         /**
          * @brief Ternary block operation: dst[i] = kernel(dst[i], src1[i], src2[i])
          *
-         * @tparam T         Element type
-         * @tparam Kernel    Operation kernel
-         * @param dst        Destination array (also used as first input)
+         * Driver for operations requiring three inputs where the first is also the
+         * destination (e.g., multiply-accumulate).
+         *
+         * @tparam T         Element type (floating point)
+         * @tparam Kernel    Kernel type providing:
+         *                   - simd_type operator()(simd_type acc, simd_type a, simd_type b) const
+         *                   - T operator()(T acc, T a, T b) const
+         * @param dst        Destination array (also used as first operand)
          * @param src1       First source array
          * @param src2       Second source array
-         * @param count      Number of elements
-         * @param kernel     Operation kernel
+         * @param count      Number of elements to process
+         * @param kernel     Kernel instance
+         *
+         * @note All alignment logic mirrors the binary/inplace drivers.
+         *
+         * @example
+         * @code
+         * SIMD::block_op_ternary<float>(dst, a, b, n, SIMD::kernels::MACKernel<float>());
+         * // equivalent to: for i: dst[i] += a[i] * b[i];
+         * @endcode
          */
         template <typename T, typename Kernel>
         inline void block_op_ternary (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT src1, const T* CASPI_RESTRICT src2, std::size_t count, const Kernel& kernel)
@@ -934,13 +1004,26 @@ namespace CASPI
         /**
          * @brief Binary output block operation: dst[i] = kernel(a[i], b[i])
          *
-         * @tparam T         Element type
-         * @tparam Kernel    Operation kernel
-         * @param dst        Destination array
+         * Driver for operations producing an output buffer from two input buffers.
+         *
+         * @tparam T         Element type (floating point)
+         * @tparam Kernel    Kernel type providing:
+         *                   - simd_type operator()(simd_type a, simd_type b) const
+         *                   - T operator()(T a, T b) const
+         * @param dst        Destination array (write-only)
          * @param a          First source array
          * @param b          Second source array
-         * @param count      Number of elements
-         * @param kernel     Operation kernel
+         * @param count      Number of elements to process
+         * @param kernel     Kernel instance
+         *
+         * @note The function is null-safe: returns immediately when any input is null
+         *       or count == 0.
+         *
+         * @example
+         * @code
+         * SIMD::block_op_binary_out<float>(dst, a, b, n, SIMD::kernels::AddKernel<float>());
+         * // produces dst[i] = a[i] + b[i];
+         * @endcode
          */
         template <typename T, typename Kernel>
         inline void block_op_binary_out (T* CASPI_RESTRICT dst, const T* CASPI_RESTRICT a, const T* CASPI_RESTRICT b, std::size_t count, const Kernel& kernel)

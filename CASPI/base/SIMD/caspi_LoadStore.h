@@ -260,6 +260,13 @@ namespace CASPI
          * @param v          Vector to store
          *
          * @warning Undefined behavior if pointer is not properly aligned.
+         *
+         * @example
+         * @code
+         * alignas(16) double buf[2];
+         * float64x2 v = set1<double>(1.234);
+         * store_aligned(buf, v);
+         * @endcode
          */
         inline void store_aligned (double* p, float64x2 v)
         {
@@ -280,6 +287,17 @@ namespace CASPI
          *
          * @param p          Pointer to memory (any alignment)
          * @param v          Vector to store
+         *
+         * @note This variant accepts any pointer alignment but may be slower
+         *       than the aligned version on platforms where unaligned accesses
+         *       are penalised.
+         *
+         * @example
+         * @code
+         * float tmp[4];
+         * float32x4 v = set1<float>(0.5f);
+         * store_unaligned(tmp + 1, v); // safe even if tmp+1 is unaligned
+         * @endcode
          */
         inline void store_unaligned (float* p, float32x4 v)
         {
@@ -300,6 +318,8 @@ namespace CASPI
          *
          * @param p          Pointer to memory (any alignment)
          * @param v          Vector to store
+         *
+         * @note Prefer store_aligned when you can guarantee alignment for best throughput.
          */
         inline void store_unaligned (double* p, float64x2 v)
         {
@@ -316,10 +336,15 @@ namespace CASPI
         }
 
         /**
-         * @brief Store vector with automatic alignment detection.
+         * @brief Store vector with automatic alignment detection (float).
+         *
+         * Chooses store_aligned or store_unaligned based on pointer alignment.
          *
          * @param p          Pointer to memory
          * @param v          Vector to store
+         *
+         * @note For repeated hot-path stores prefer explicitly using aligned
+         *       APIs and ensuring buffer alignment instead of relying on this helper.
          */
         inline void store (float* p, float32x4 v)
         {
@@ -372,8 +397,22 @@ namespace CASPI
         /**
          * @brief Non-temporal (streaming) store for 128-bit double vector.
          *
+         * Bypasses the cache, writing directly to memory. Use for large buffers
+         * where the written data will not be reused soon.
+         *
          * @param p          Pointer to 16-byte aligned memory
          * @param v          Vector to store
+         *
+         * @note On platforms without non-temporal store intrinsics this falls back
+         *       to a normal aligned store.
+         *
+         * @example
+         * @code
+         * for (size_t i = 0; i < count; i += 2) {
+         *     stream_store(output + i, load_aligned<double>(input + i));
+         * }
+         * store_fence(); // make sure NT stores are globally visible
+         * @endcode
          */
         inline void stream_store (double* p, float64x2 v) noexcept
         {
@@ -390,15 +429,14 @@ namespace CASPI
          * Must be called after any sequence of stream_store() calls before
          * subsequent reads of the written region by any thread.
          *
-         * @note On non-SSE targets (NEON, WASM), no fence is needed since
-         *       there are no non-temporal stores.
+         * @note On non-SSE targets (NEON, WASM), this is a no-op.
          *
+         * @example
          * @code
-         * // Write large buffer with NT stores
-         * for (size_t i = 0; i < count; i += 4) {
-         *     stream_store(output + i, data);
-         * }
-         * store_fence();  // Ensure all writes complete before continuing
+         * stream_store(...);
+         * stream_store(...);
+         * store_fence();
+         * // Now safe to read the region from another thread
          * @endcode
          */
         inline void store_fence() noexcept

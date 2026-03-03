@@ -88,9 +88,13 @@ namespace CASPI
          * Used for processing audio samples with SIMD acceleration on SSE,
          * NEON, or WebAssembly targets.
          *
+         * @note Lane ordering is contiguous in memory: lane0..laneN-1 follow
+         *       C array layout. For scalar fallbacks the struct contains a
+         *       float data[4] array matching the same layout.
+         *
          * @code
-         * // Example: Creating and using float32x4
-         * float32x4 v = set1<float>(2.0f);  // Broadcast 2.0 to all lanes: [2,2,2,2]
+         * float tmp[4];
+         * store(tmp, v); // tmp[0] == lane0, tmp[1] == lane1, ...
          * @endcode
          */
 #if defined(CASPI_HAS_SSE)
@@ -113,10 +117,8 @@ namespace CASPI
          * Used for processing audio samples with higher precision or for
          * complex number operations on SSE2, NEON64, or WebAssembly targets.
          *
-         * @code
-         * // Example: Creating and using float64x2
-         * float64x2 v = set1<double>(1.5);  // Broadcast 1.5 to all lanes: [1.5,1.5]
-         * @endcode
+         * @note For scalar fallbacks the struct contains a double data[2]
+         *       following the same lane ordering semantics as the native types.
          */
 #if defined(CASPI_HAS_SSE2)
         using float64x2 = __m128d;

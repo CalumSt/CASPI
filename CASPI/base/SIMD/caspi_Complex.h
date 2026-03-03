@@ -205,11 +205,22 @@ namespace CASPI
         }
 
         /**
-         * @brief Interleave upper lanes: [a0,a1],[b0,b1] → [a1,b1]
+         * @brief Interleave upper lanes: [a0,a1],[b0,b1] → [a1, b1]
+         *
+         * Useful when constructing complex pairs from two lane-wise broadcasts.
          *
          * @param a         First vector [a0, a1]
          * @param b         Second vector [b0, b1]
          * @return          Interleaved result [a1, b1]
+         *
+         * @example
+         * @code
+         * // If a = [ar, ai], b = [br, bi]
+         * // interleave_hi(a, b) -> [ai, bi]
+         * float64x2 a = interleave_lo(set1<double>(3.0), set1<double>(2.0)); // [3,2]
+         * float64x2 b = interleave_lo(set1<double>(1.0), set1<double>(4.0)); // [1,4]
+         * float64x2 hi = interleave_hi(a, b); // [2,4]
+         * @endcode
          */
         inline float64x2 interleave_hi (const float64x2 a, const float64x2 b)
         {
@@ -230,17 +241,10 @@ namespace CASPI
         /**
          * @brief Negate imaginary component: [re,im] → [re,-im]
          *
-         * Used for complex conjugate (branchless). Essential for IFFT when
-         * converting forward twiddles to inverse twiddles.
-         *
          * @param v         Complex vector [real, imaginary]
          * @return          Complex vector with negated imaginary [real, -imag]
          *
-         * @code
-         * // Forward FFT twiddle: [wr, wi]
-         * // IFFT needs conjugate: [wr, -wi]
-         * float64x2 twiddle_ifft = negate_imag(twiddle_forward);
-         * @endcode
+         * @note Implementations use bitwise xor with a sign mask to avoid branches.
          */
         inline float64x2 negate_imag (const float64x2 v)
         {
@@ -266,15 +270,17 @@ namespace CASPI
         /**
          * @brief Complex multiplication: (ar+i*ai) * (br+i*bi)
          *
-         * Computes the complex product using the 3-multiply algorithm.
-         * Each register holds one complex number: lane0=real, lane1=imaginary.
-         *
          * @param a         First complex number [ar, ai]
          * @param b         Second complex number [br, bi]
          * @return          Complex product [(ar*br-ai*bi), (ar*bi+ai*br)]
          *
+         * @limitations
+         * - Uses platform intrinsics to optimize across SSE/NEON/WASM; behaviour
+         *   is numerically equivalent to scalar complex multiply.
+         *
+         * @example
          * @code
-         * // Complex multiplication: (3+2i) * (1+4i) = -5 + 14i
+         * // (3+2i)*(1+4i) = -5 + 14i
          * float64x2 a = interleave_lo(set1<double>(3.0), set1<double>(2.0)); // [3,2]
          * float64x2 b = interleave_lo(set1<double>(1.0), set1<double>(4.0)); // [1,4]
          * float64x2 product = complex_mul(a, b); // [-5, 14]
