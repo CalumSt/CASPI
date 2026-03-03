@@ -575,7 +575,18 @@ namespace CASPI
         // Comparisons — float32x4
         // ============================================================================
 
-        /// Per-lane greater-than: result[i] = a[i] > b[i]
+        /**
+         * @brief Per-lane greater-than: result[i] = a[i] > b[i] (float32x4)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] > b[i], else all-zeros
+         *
+         * @example
+         * @code
+         * float32x4 m = cmp_gt(set1<float>(2.0f), set1<float>(1.0f)); // all-ones
+         * @endcode
+         */
         inline float32x4 cmp_gt (float32x4 a, float32x4 b)
         {
 #if defined(CASPI_HAS_SSE)
@@ -595,7 +606,13 @@ namespace CASPI
 #endif
         }
 
-        /// Per-lane less-than-or-equal: result[i] = a[i] <= b[i]
+        /**
+         * @brief Per-lane less-than-or-equal: result[i] = a[i] <= b[i] (float32x4)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] <= b[i], else all-zeros
+         */
         inline float32x4 cmp_le (float32x4 a, float32x4 b)
         {
 #if defined(CASPI_HAS_SSE)
@@ -615,7 +632,13 @@ namespace CASPI
 #endif
         }
 
-        /// Per-lane greater-than-or-equal: result[i] = a[i] >= b[i]
+        /**
+         * @brief Per-lane greater-than-or-equal: result[i] = a[i] >= b[i] (float32x4)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] >= b[i], else all-zeros
+         */
         inline float32x4 cmp_ge (float32x4 a, float32x4 b)
         {
 #if defined(CASPI_HAS_SSE)
@@ -639,6 +662,13 @@ namespace CASPI
         // Comparisons — float64x2
         // ============================================================================
 
+        /**
+         * @brief Per-lane greater-than: result[i] = a[i] > b[i] (double precision)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector
+         */
         inline float64x2 cmp_gt (float64x2 a, float64x2 b)
         {
 #if defined(CASPI_HAS_SSE2)
@@ -1125,6 +1155,15 @@ namespace CASPI
         // These operate on the bit patterns; useful for sign manipulation and masking.
         // ============================================================================
 
+        /**
+         * @brief Bitwise AND on bit representations of float32x4 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise AND result
+         *
+         * @note Useful for masking operations; operates on bit patterns.
+         */
         inline float32x4 and_vec (float32x4 a, float32x4 b)
         {
 #if defined(CASPI_HAS_SSE)
@@ -1148,6 +1187,13 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Bitwise OR on bit representations of float32x4 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise OR result
+         */
         inline float32x4 or_vec (float32x4 a, float32x4 b)
         {
 #if defined(CASPI_HAS_SSE)
@@ -1171,6 +1217,13 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Bitwise XOR on bit representations of float32x4 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise XOR result
+         */
         inline float32x4 xor_vec (float32x4 a, float32x4 b)
         {
 #if defined(CASPI_HAS_SSE)
@@ -1194,7 +1247,15 @@ namespace CASPI
 #endif
         }
 
-        /// andnot_vec(a, b) = (~a) & b  — matches _mm_andnot_ps semantics
+        /**
+         * @brief Bitwise ANDNOT: (~a) & b (float32x4)
+         *
+         * Matches _mm_andnot_ps semantics.
+         *
+         * @param a         Mask to invert
+         * @param b         Value vector
+         * @return          Resulting vector
+         */
         inline float32x4 andnot_vec (float32x4 a, float32x4 b)
         {
 #if defined(CASPI_HAS_SSE)
@@ -1222,6 +1283,13 @@ namespace CASPI
         // Bitwise — float64x2
         // ============================================================================
 
+        /**
+         * @brief Bitwise AND on bit representations of float64x2 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise AND result
+         */
         inline float64x2 and_vec (float64x2 a, float64x2 b)
         {
 #if defined(CASPI_HAS_SSE2)
@@ -1245,6 +1313,13 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Bitwise OR on bit representations of float64x2 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise OR result
+         */
         inline float64x2 or_vec (float64x2 a, float64x2 b)
         {
 #if defined(CASPI_HAS_SSE2)
@@ -1268,6 +1343,13 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Bitwise XOR on bit representations of float64x2 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise XOR result
+         */
         inline float64x2 xor_vec (float64x2 a, float64x2 b)
         {
 #if defined(CASPI_HAS_SSE2)
@@ -1291,6 +1373,13 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Bitwise ANDNOT: (~a) & b (float64x2)
+         *
+         * @param a         Mask to invert
+         * @param b         Value vector
+         * @return          Resulting vector
+         */
         inline float64x2 andnot_vec (float64x2 a, float64x2 b)
         {
 #if defined(CASPI_HAS_SSE2)
@@ -1325,6 +1414,21 @@ namespace CASPI
         // The fallback is numerically equivalent but slower and rounds twice.
         // ============================================================================
 
+        /**
+         * @brief Multiply-subtract: a*b - c (float32x4).
+         *
+         * Uses FMA when available.
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Subtrahend
+         * @return          Result vector
+         *
+         * @example
+         * @code
+         * float32x4 r = mul_sub(set1<float>(3.0f), set1<float>(2.0f), set1<float>(1.0f)); // 6 - 1 = 5
+         * @endcode
+         */
         inline float32x4 mul_sub (float32x4 a, float32x4 b, float32x4 c)
         {
 #if defined(CASPI_HAS_FMA)
@@ -1334,6 +1438,14 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Negated multiply-add: -(a*b) + c = c - a*b (float32x4).
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Addend
+         * @return          Result vector
+         */
         inline float32x4 nmadd (float32x4 a, float32x4 b, float32x4 c)
         {
 #if defined(CASPI_HAS_FMA)
@@ -1343,6 +1455,14 @@ namespace CASPI
 #endif
         }
 
+        /**
+         * @brief Negated multiply-subtract: -(a*b) - c (float32x4).
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Value to subtract
+         * @return          Result vector
+         */
         inline float32x4 nmsub (float32x4 a, float32x4 b, float32x4 c)
         {
 #if defined(CASPI_HAS_FMA)

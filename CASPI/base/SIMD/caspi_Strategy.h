@@ -323,6 +323,11 @@ namespace CASPI
 
 #if defined(CASPI_PLATFORM_X86)
 
+/// @brief Execute CPUID for the given leaf/subleaf and return registers.
+///
+/// @param leaf      CPUID leaf
+/// @param subleaf   CPUID subleaf (usually 0)
+/// @param eax,ebx,ecx,edx Returned registers (output)
 inline void cpuid (uint32_t leaf, uint32_t subleaf,
                    uint32_t& eax, uint32_t& ebx,
                    uint32_t& ecx, uint32_t& edx) noexcept
@@ -339,8 +344,9 @@ inline void cpuid (uint32_t leaf, uint32_t subleaf,
 #endif
 }
 
-/// Query L1 data cache size via CPUID leaf 4 (Intel) / leaf 8000001Dh (AMD).
-/// Returns 0 if the information cannot be determined.
+/// @brief Query L1 data cache size via CPUID (Intel/AMD) on x86.
+///
+/// @return L1 data cache size in bytes, or 0 if CPUID does not expose the info.
 inline std::size_t query_x86_l1d() noexcept
 {
     uint32_t eax, ebx, ecx, edx;
@@ -392,6 +398,9 @@ inline std::size_t query_x86_l1d() noexcept
 
 #if defined(CASPI_PLATFORM_APPLE)
 
+/// @brief Query L1 data cache size via sysctl on Apple platforms.
+///
+/// @return L1 data cache size in bytes, or 0 on failure.
 inline std::size_t query_apple_l1d() noexcept
 {
     std::size_t size  = 0;
@@ -409,6 +418,9 @@ inline std::size_t query_apple_l1d() noexcept
 
 #if defined(CASPI_PLATFORM_LINUX)
 
+/// @brief Query L1 data cache size via Linux sysfs (/sys/devices/.../size).
+///
+/// @return L1 data cache size in bytes, or 0 on failure.
 inline std::size_t query_linux_l1d() noexcept
 {
     // index0 = L1 data cache on all Linux platforms (ARM, x86, RISC-V, etc.)
@@ -444,6 +456,9 @@ inline std::size_t query_linux_l1d() noexcept
 
 #if defined(CASPI_PLATFORM_WINDOWS)
 
+/// @brief Query L1 data cache size via Windows GetLogicalProcessorInformation.
+///
+/// @return L1 data cache size in bytes, or 0 on failure.
 inline std::size_t query_windows_l1d() noexcept
 {
     DWORD len = 0;
@@ -482,9 +497,14 @@ inline std::size_t query_windows_l1d() noexcept
 
 // ---------------------------------------------------------------------------
 // Master probe — tries each platform in priority order.
-// Called once; result is cached in a static local.
 // ---------------------------------------------------------------------------
 
+/// @brief Probe the system to obtain the runtime L1 data cache size.
+///
+/// Tries platform-specific queries in a sensible order and falls back to the
+/// compile-time default if probing fails.
+///
+/// @return L1 data cache size in bytes (guaranteed > 0).
 inline std::size_t probe_l1d() noexcept
 {
     std::size_t result = 0;
