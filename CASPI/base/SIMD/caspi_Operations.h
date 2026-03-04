@@ -1663,17 +1663,23 @@ namespace CASPI
          */
         inline float32x4 round (float32x4 a)
         {
-#if defined(CASPI_HAS_SSE4_1)
-            return _mm_round_ps (a, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-#elif defined(CASPI_HAS_SSE2)
-            // Add 0.5 with the sign of a, then truncate
+#if defined(CASPI_HAS_SSE2)
             __m128 sign = _mm_and_ps (a, _mm_set1_ps (-0.0f));
             __m128 half = _mm_or_ps (sign, _mm_set1_ps (0.5f));
             return _mm_cvtepi32_ps (_mm_cvttps_epi32 (_mm_add_ps (a, half)));
+
 #elif defined(CASPI_HAS_NEON)
-            return vrndnq_f32 (a); // round-to-nearest-even; closest to std::round
+            // vrndnq_f32 = roundTiesToEven, not ties-away. Manual implementation:
+            uint32x4_t sign  = vandq_u32 (vreinterpretq_u32_f32 (a), vdupq_n_u32 (0x80000000u));
+            float32x4_t half = vreinterpretq_f32_u32 (vorrq_u32 (sign, vreinterpretq_u32_f32 (vdupq_n_f32 (0.5f))));
+            return vcvtq_f32_s32 (vcvtq_s32_f32 (vaddq_f32 (a, half)));
+
 #elif defined(CASPI_HAS_WASM_SIMD)
-            return wasm_f32x4_nearest (a);
+            // wasm_f32x4_nearest = roundTiesToEven, not ties-away. Manual implementation:
+            v128_t sign = wasm_v128_and (a, wasm_f32x4_splat (-0.0f));
+            v128_t half = wasm_v128_or (sign, wasm_f32x4_splat (0.5f));
+            return wasm_f32x4_convert_i32x4 (wasm_i32x4_trunc_sat_f32x4 (wasm_f32x4_add (a, half)));
+
 #else
             float32x4 r;
             for (int i = 0; i < 4; ++i)
@@ -1754,16 +1760,23 @@ namespace CASPI
          */
         inline float64x2 round (float64x2 a)
         {
-#if defined(CASPI_HAS_SSE4_1)
-            return _mm_round_pd (a, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-#elif defined(CASPI_HAS_SSE2)
+#if defined(CASPI_HAS_SSE2)
             __m128d sign = _mm_and_pd (a, _mm_set1_pd (-0.0));
             __m128d half = _mm_or_pd (sign, _mm_set1_pd (0.5));
             return _mm_cvtepi32_pd (_mm_cvttpd_epi32 (_mm_add_pd (a, half)));
+
 #elif defined(CASPI_HAS_NEON64)
-            return vrndnq_f64 (a);
+            // vrndnq_f64 = roundTiesToEven. Manual implementation:
+            uint64x2_t sign  = vandq_u64 (vreinterpretq_u64_f64 (a), vdupq_n_u64 (0x8000000000000000ull));
+            float64x2_t half = vreinterpretq_f64_u64 (vorrq_u64 (sign, vreinterpretq_u64_f64 (vdupq_n_f64 (0.5))));
+            return vcvtq_f64_s64 (vcvtq_s64_f64 (vaddq_f64 (a, half)));
+
 #elif defined(CASPI_HAS_WASM_SIMD)
-            return wasm_f64x2_nearest (a);
+            // wasm_f64x2_nearest = roundTiesToEven. Manual implementation:
+            v128_t sign = wasm_v128_and (a, wasm_f64x2_splat (-0.0));
+            v128_t half = wasm_v128_or (sign, wasm_f64x2_splat (0.5));
+            return wasm_f64x2_convert_low_i32x4 (wasm_i32x4_trunc_sat_f64x2_zero (wasm_f64x2_add (a, half)));
+
 #else
             float64x2 r;
             r.data[0] = std::round (a.data[0]);
