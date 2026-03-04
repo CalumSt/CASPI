@@ -537,6 +537,8 @@ inline std::size_t probe_l1d() noexcept
     return (result > 0) ? result : static_cast<std::size_t> (CASPI_L1_CACHE_BYTES);
 }
 
+inline const std::size_t _caspi_kL1DBytes = probe_l1d();
+
 } // namespace detail
 
 // ============================================================================
@@ -555,8 +557,7 @@ inline std::size_t probe_l1d() noexcept
  */
 inline std::size_t l1_data_bytes() noexcept
 {
-    static const std::size_t cached = detail::probe_l1d();
-    return cached;
+    return detail::_caspi_kL1DBytes;
 }
 
 /**
