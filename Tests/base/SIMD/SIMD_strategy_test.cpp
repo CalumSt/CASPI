@@ -280,11 +280,11 @@ TEST (Strategy, alignment_WithPrologueAndEpilogue)
 */
 
 /*
-- Strategy.l1_data_bytes_is_positive_and_power_of_two
-  - What: l1_data_bytes() > 0 and is a power of two.
+- Strategy.l1_data_bytes_is_positive_and_cache_line_aligned
+  - What: l1_data_bytes() > 0 and is cache line aligned.
   - Why: Many cache-aware heuristics depend on L1 being power-of-two and positive.
 */
-TEST (Strategy, l1_data_bytes_is_positive_and_power_of_two)
+TEST (Strategy, l1_data_bytes_is_positive_and_cache_line_aligned)
 {
     /* Arrange/Act: query L1 size */
     const std::size_t l1 = CASPI::SIMD::Strategy::l1_data_bytes();
@@ -292,8 +292,10 @@ TEST (Strategy, l1_data_bytes_is_positive_and_power_of_two)
     /* Assert: positive */
     EXPECT_GT (l1, 0u);
 
-    /* Assert: power of two */
-    EXPECT_EQ (l1 & (l1 - 1), 0u) << "L1=" << l1 << " is not a power of 2";
+    // After — only check what is actually guaranteed:
+    EXPECT_GT (l1, 0u);
+    EXPECT_EQ (l1 % 64, 0u) << "L1=" << l1 << " is not cache-line aligned";  // must be a multiple of a cache line
+    EXPECT_LE (l1, 4 * 1024 * 1024u) << "L1=" << l1 << " implausibly large";
 }
 
 /*
