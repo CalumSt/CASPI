@@ -31,6 +31,7 @@ set(SOURCES
         core/DelayLine_test.cpp
         core/BaseClass_test.cpp
         base/Utilities_test.cpp
+        controls/Envelope_test.cpp
         sources/Oscillator_test.cpp
         sources/Operator_test.cpp
         processors/Filter_test.cpp
