@@ -68,11 +68,8 @@ struct SampleRates
 template <typename FloatType>
     constexpr FloatType DEFAULT_SAMPLE_RATE = SampleRates<FloatType>::AUDIO_RATE_44100;
 
-        template <typename FloatType>
-            constexpr FloatType DEFAULT_SAMPLE_RATE = static_cast<FloatType>(44100.0);
-
-        template <typename FloatType>
-            constexpr FloatType MINUS_INF_DBFS = static_cast<FloatType>(-100.0);
+template <typename FloatType>
+    constexpr FloatType MINUS_INF_DBFS = static_cast<FloatType>(-100.0);
 
         constexpr std::size_t DEFAULT_MAX_BUFFER_SIZE = 4096;
     };

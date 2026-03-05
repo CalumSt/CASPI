@@ -76,8 +76,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
   #include <cstdio>
 #endif
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
-  #define CASPI_PLATFORM_X86 1
+#if defined(CASPI_ARCH_X86_64) || defined(CASPI_ARCH_X86_32)
+  #define CASPI_ARCH_X86
   #if defined(_MSC_VER)
     #include <intrin.h>
   #else
@@ -321,7 +321,7 @@ namespace CASPI
 // x86 CPUID helpers
 // ---------------------------------------------------------------------------
 
-#if defined(CASPI_PLATFORM_X86)
+#if defined(CASPI_ARCH_X86)
 
 /* @brief Execute CPUID for the given leaf/subleaf and return registers.
  *
@@ -392,7 +392,7 @@ inline std::size_t query_x86_l1d() noexcept
     return 0;
 }
 
-#endif // CASPI_PLATFORM_X86
+#endif //  CASPI_ARCH_X86
 
 // ---------------------------------------------------------------------------
 // Apple sysctl helper
@@ -425,29 +425,28 @@ inline std::size_t query_apple_l1d() noexcept
  *
  * @return L1 data cache size in bytes, or 0 on failure.
  */
-inline std::size_t query_linux_l1d() noexcept
+inline std::size_t query_posix_l1d() noexcept
 {
-    // index0 = L1 data cache on all Linux platforms (ARM, x86, RISC-V, etc.)
-    // The file contains a string like "32K" or "192K".
-    FILE* f = std::fopen (
-        "/sys/devices/system/cpu/cpu0/cache/index0/size", "r");
+#if defined(_SC_LEVEL1_DCACHE_SIZE)
+    long sz = ::sysconf(_SC_LEVEL1_DCACHE_SIZE);
+    if (sz > 0) return static_cast<std::size_t>(sz);
+#endif
+
+    // Linux fallback: /sys/devices/.../size
+    FILE* f = std::fopen("/sys/devices/system/cpu/cpu0/cache/index0/size", "r");
     if (!f) return 0;
 
     char buf[32] = {};
-    if (std::fgets (buf, sizeof (buf), f) == nullptr)
-    {
-        std::fclose (f);
-        return 0;
-    }
-    std::fclose (f);
+    if (!std::fgets(buf, sizeof(buf), f)) { std::fclose(f); return 0; }
+    std::fclose(f);
 
-    unsigned long val  = 0;
-    char          unit = 0;
-    if (std::sscanf (buf, "%lu%c", &val, &unit) >= 1)
+    unsigned long val = 0;
+    char unit = 0;
+    if (std::sscanf(buf, "%lu%c", &val, &unit) >= 1)
     {
-        if (unit == 'K' || unit == 'k') return static_cast<std::size_t> (val) * 1024u;
-        if (unit == 'M' || unit == 'm') return static_cast<std::size_t> (val) * 1024u * 1024u;
-        return static_cast<std::size_t> (val);
+        if (unit == 'K' || unit == 'k') return val * 1024UL;
+        if (unit == 'M' || unit == 'm') return val * 1024UL * 1024UL;
+        return val;
     }
     return 0;
 }
@@ -464,37 +463,42 @@ inline std::size_t query_linux_l1d() noexcept
  *
  * @return L1 data cache size in bytes, or 0 on failure.
  */
-inline std::size_t query_windows_l1d() noexcept
+                inline std::size_t query_windows_l1d() noexcept
 {
     DWORD len = 0;
-    GetLogicalProcessorInformation (nullptr, &len);
+    // Get buffer size
+    GetLogicalProcessorInformationEx(RelationCache, nullptr, &len);
     if (len == 0) return 0;
 
-    // len is now the required buffer size
-    SYSTEM_LOGICAL_PROCESSOR_INFORMATION* buf =
-        static_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION*> (
-            ::HeapAlloc (::GetProcessHeap(), 0, len));
+    auto* buf = reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*>(
+        std::malloc(len));
     if (!buf) return 0;
 
     std::size_t result = 0;
-    if (GetLogicalProcessorInformation (buf, &len))
+    if (GetLogicalProcessorInformationEx(RelationCache, buf, &len))
     {
-        const std::size_t count = len / sizeof (*buf);
-        for (std::size_t i = 0; i < count; ++i)
+        char* ptr = reinterpret_cast<char*>(buf);
+        char* end = ptr + len;
+
+        while (ptr < end)
         {
-            if (buf[i].Relationship == RelationCache)
+            auto* info =
+                reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*>(ptr);
+
+            if (info->Relationship == RelationCache)
             {
-                const CACHE_DESCRIPTOR& c = buf[i].Cache;
-                if (c.Level == 1 &&
-                    (c.Type == CacheData || c.Type == CacheUnified))
+                const CACHE_RELATIONSHIP& c = info->Cache;
+                if (c.Level == 1 && c.Type == CacheData)
                 {
-                    result = static_cast<std::size_t> (c.Size);
+                    result = c.CacheSize;
                     break;
                 }
             }
+            ptr += info->Size;
         }
     }
-    ::HeapFree (::GetProcessHeap(), 0, buf);
+
+    std::free(buf);
     return result;
 }
 
@@ -511,30 +515,32 @@ inline std::size_t query_windows_l1d() noexcept
  *
  * @return L1 data cache size in bytes (guaranteed > 0).
  */
-inline std::size_t probe_l1d() noexcept
+                inline std::size_t probe_l1d() noexcept
 {
     std::size_t result = 0;
 
-#if defined(CASPI_PLATFORM_APPLE)
-    result = query_apple_l1d();
-#endif
-
-    // On Linux/Apple-Silicon the sysfs/sysctl path is preferred over CPUID.
-    // On Linux x86 the sysfs path usually works too, but CPUID is available
-    // as a fallback if sysfs is absent (e.g. inside a container).
-#if defined(CASPI_PLATFORM_LINUX)
-    if (result == 0) result = query_linux_l1d();
-#endif
-
-#if defined(CASPI_PLATFORM_X86)
-    if (result == 0) result = query_x86_l1d();
-#endif
-
 #if defined(CASPI_PLATFORM_WINDOWS)
-    if (result == 0) result = query_windows_l1d();
+    result = query_windows_l1d();
+    if (result == 0)
+    {
+#if defined(CASPI_ARCH_X86_64) || defined(CASPI_ARCH_X86_32)
+        result = query_x86_l1d();
+#endif
+    }
+#elif defined(CASPI_PLATFORM_APPLE)
+    result = query_apple_l1d();
+#elif defined(CASPI_PLATFORM_LINUX) || defined(CASPI_PLATFORM_FREEBSD) || defined(CASPI_PLATFORM_UNIX)
+    result = query_posix_l1d();
 #endif
 
-    return (result > 0) ? result : static_cast<std::size_t> (CASPI_L1_CACHE_BYTES);
+    if (result == 0)
+    {
+#if defined(CASPI_ARCH_X86_64) || defined(CASPI_ARCH_X86_32)
+        result = query_x86_l1d();
+#endif
+    }
+
+    return (result > 0) ? result : static_cast<std::size_t>(CASPI_L1_CACHE_BYTES);
 }
 
 inline const std::size_t _caspi_kL1DBytes = probe_l1d();
