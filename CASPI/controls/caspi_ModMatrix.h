@@ -565,7 +565,7 @@ namespace CASPI
                 {
                     auto r  = routing;
                     r.depth = Maths::clamp (r.depth, FloatType (-1), FloatType (1));
-                    pendingCommands.enqueue ({ CommandType::AddRouting, r, 0, false });
+                    pendingCommands.enqueue (producerToken,{ CommandType::AddRouting, r, 0, false });
                 }
 
                 /**
@@ -591,7 +591,7 @@ namespace CASPI
                 {
                     constexpr CommandType t =
                         detail::IsLinearCurve<Curve>::value ? CommandType::RemoveLinear : CommandType::RemoveNonLinear;
-                    pendingCommands.enqueue ({ t, {}, index, false });
+                    pendingCommands.enqueue (producerToken,{ t, {}, index, false });
                 }
 
                 /**
@@ -602,7 +602,7 @@ namespace CASPI
                  */
                 void clearRoutings() CASPI_NON_BLOCKING
                 {
-                    pendingCommands.enqueue ({ CommandType::ClearRoutings, {}, 0, false });
+                    pendingCommands.enqueue (producerToken,{ CommandType::ClearRoutings, {}, 0, false });
                 }
 
                 /**
@@ -625,7 +625,7 @@ namespace CASPI
                 {
                     constexpr CommandType t = detail::IsLinearCurve<Curve>::value ? CommandType::SetEnabledLinear
                                                                                   : CommandType::SetEnabledNonLinear;
-                    pendingCommands.enqueue ({ t, {}, index, enabled });
+                    pendingCommands.enqueue (producerToken,{ t, {}, index, enabled });
                 }
 
                 /*==============================================================
@@ -957,6 +957,8 @@ namespace CASPI
                  * Consumer:  audio thread inside drainCommands().
                  */
                 CASPI::external::ConcurrentQueue<Command> pendingCommands { 2048 };
+
+                CASPI::external::ProducerToken producerToken { pendingCommands };
 
                 /**
                  * @brief Source values written by the audio thread each block.
