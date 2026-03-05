@@ -28,6 +28,7 @@
 // Includes - Project
 //------------------------------------------------------------------------------
 #include "base/caspi_Assert.h"
+#include "caspi_Core.h"
 #include "maths/caspi_Maths.h"
 
 //------------------------------------------------------------------------------
@@ -68,7 +69,7 @@ namespace CASPI
                 // Construction
                 // ====================================================================
 
-                CASPI_NON_BLOCKING Parameter() noexcept
+                Parameter() noexcept
                     : baseNormalized (FloatType (0))
                     , smoothedBase (FloatType (0))
                     , smoothingCoeff (FloatType (1))
@@ -76,9 +77,12 @@ namespace CASPI
                     , maxValue (FloatType (1))
                     , scale (ParameterScale::Linear)
                 {
+                    // In Parameter constructor or as static_assert at class scope:
+                    CASPI_STATIC_ASSERT(std::atomic<FloatType>::is_always_lock_free,
+                        "FloatType atomic must be lock-free for RT safety");
                 }
 
-                CASPI_NON_BLOCKING explicit Parameter (FloatType initialNormalized) noexcept
+                explicit Parameter (FloatType initialNormalized) noexcept
                     : baseNormalized (Maths::clamp (initialNormalized, FloatType (0), FloatType (1)))
                     , smoothedBase (initialNormalized)
                     , smoothingCoeff (FloatType (1))
@@ -88,7 +92,7 @@ namespace CASPI
                 {
                 }
 
-                CASPI_NON_BLOCKING Parameter (FloatType min,
+                Parameter (FloatType min,
                                               FloatType max,
                                               FloatType defaultNormalized = FloatType (0)) noexcept
                     : baseNormalized (Maths::clamp (defaultNormalized, FloatType (0), FloatType (1)))
@@ -108,7 +112,7 @@ namespace CASPI
                  * @brief Set base normalized value (GUI/control thread)
                  * @param input Normalized value [0, 1]
                  */
-                CASPI_NON_BLOCKING void setBaseNormalized (FloatType input) noexcept
+                void setBaseNormalized (FloatType input) noexcept CASPI_NON_BLOCKING
                 {
                     const FloatType clamped = Maths::clamp (input, FloatType (0), FloatType (1));
                     baseNormalized.store (clamped, std::memory_order_relaxed);
@@ -118,7 +122,7 @@ namespace CASPI
                  * @brief Get base normalized value (any thread)
                  * @return Current base normalized value [0, 1]
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD FloatType getBaseNormalized() const noexcept
+                CASPI_NO_DISCARD FloatType getBaseNormalized() const noexcept CASPI_NON_BLOCKING
                 {
                     return baseNormalized.load (std::memory_order_relaxed);
                 }
@@ -133,7 +137,7 @@ namespace CASPI
                  * calculated to reach ~99% of the target value in the specified
                  * time.
                  */
-                CASPI_NON_BLOCKING void setSmoothingTime (FloatType timeSeconds, FloatType sampleRate) noexcept
+                void setSmoothingTime (FloatType timeSeconds, FloatType sampleRate) noexcept CASPI_NON_BLOCKING
                 {
                     if (timeSeconds <= FloatType (0))
                     {
@@ -156,12 +160,15 @@ namespace CASPI
                  * @param max Maximum value
                  * @param scalingMode How to map normalized to actual values
                  */
-                CASPI_NON_BLOCKING void setRange (FloatType min,
+                void setRange (FloatType min,
                                                   FloatType max,
-                                                  const ParameterScale scalingMode = ParameterScale::Linear) noexcept
+                                                  const ParameterScale scalingMode = ParameterScale::Linear) noexcept CASPI_NON_BLOCKING
                 {
-                    CASPI_EXPECT (max > min, "Max must be greater than min");
-
+                    CASPI_EXPECT(max > min, "Max must be greater than min");
+                    if (scalingMode == ParameterScale::Logarithmic) {
+                        CASPI_EXPECT(min > FloatType(0), "Log scale requires min > 0");
+                        CASPI_EXPECT(max > FloatType(0), "Log scale requires max > 0");
+                    }
                     minValue = min;
                     maxValue = max;
                     scale    = scalingMode;
@@ -170,7 +177,7 @@ namespace CASPI
                 /**
                  * @brief Get minimum value
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD FloatType getMinValue() const noexcept
+                CASPI_NO_DISCARD FloatType getMinValue() const noexcept CASPI_NON_BLOCKING
                 {
                     return minValue;
                 }
@@ -178,7 +185,7 @@ namespace CASPI
                 /**
                  * @brief Get maximum value
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD FloatType getMaxValue() const noexcept
+                CASPI_NO_DISCARD FloatType getMaxValue() const noexcept CASPI_NON_BLOCKING
                 {
                     return maxValue;
                 }
@@ -186,7 +193,7 @@ namespace CASPI
                 /**
                  * @brief Get current scaling mode
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD ParameterScale getScale() const noexcept
+                CASPI_NO_DISCARD ParameterScale getScale() const noexcept CASPI_NON_BLOCKING
                 {
                     return scale;
                 }
@@ -199,18 +206,32 @@ namespace CASPI
                  * @brief Process smoothing (call once per sample in audio
                  * thread)
                  */
-                CASPI_NON_BLOCKING void process() noexcept
+                void process() noexcept CASPI_NON_BLOCKING
                 {
+                    ScopedFlushDenormals flush; // Avoid denormals in smoothing calculations
+
                     const FloatType target = baseNormalized.load (std::memory_order_relaxed);
 
                     smoothedBase += (target - smoothedBase) * smoothingCoeff;
+                }
+
+                // Advance N samples without reading value — skips hot loop cost
+                void skip(int numSamples) noexcept CASPI_NON_BLOCKING
+                {
+                    const FloatType target = baseNormalized.load(std::memory_order_relaxed);
+                    // Coefficient for N steps: coeff_N = 1 - (1 - coeff)^N
+                    const FloatType remaining = std::pow(FloatType(1) - smoothingCoeff,
+                                                          FloatType(numSamples));
+                    smoothedBase = target + (smoothedBase - target) * remaining;
+                    if (std::abs(target - smoothedBase) < FloatType(1e-15))
+                        smoothedBase = target;
                 }
 
                 /**
                  * @brief Get smoothed normalized value [0, 1]
                  * @return Smoothed normalized value (audio thread only)
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD FloatType valueNormalized() const noexcept
+                CASPI_NO_DISCARD FloatType valueNormalized() const noexcept CASPI_NON_BLOCKING
                 {
                     return Maths::clamp (smoothedBase, FloatType (0), FloatType (1));
                 }
@@ -219,7 +240,7 @@ namespace CASPI
                  * @brief Get scaled/mapped value
                  * @return Value mapped according to range and scale mode
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD FloatType value() const noexcept
+                CASPI_NO_DISCARD FloatType value() const noexcept CASPI_NON_BLOCKING
                 {
                     return mapNormalizedToScaled (valueNormalized());
                 }
@@ -227,7 +248,7 @@ namespace CASPI
                 /**
                  * @brief Convenience conversion operator
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD explicit operator FloatType() const noexcept
+                CASPI_NO_DISCARD explicit operator FloatType() const noexcept CASPI_NON_BLOCKING
                 {
                     return value();
                 }
@@ -236,8 +257,8 @@ namespace CASPI
                 /**
                  * @brief Map normalized [0, 1] to scaled value
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD FloatType
-                mapNormalizedToScaled (FloatType normalized) const noexcept
+                CASPI_NO_DISCARD FloatType
+                mapNormalizedToScaled (FloatType normalized) const noexcept CASPI_NON_BLOCKING
                 {
                     switch (scale)
                     {
@@ -246,8 +267,6 @@ namespace CASPI
 
                         case ParameterScale::Logarithmic:
                         {
-                            CASPI_RT_ASSERT (minValue > FloatType (0));
-                            CASPI_RT_ASSERT (maxValue > FloatType (0));
 
                             const FloatType logMin   = std::log (minValue);
                             const FloatType logMax   = std::log (maxValue);
@@ -258,9 +277,10 @@ namespace CASPI
                         case ParameterScale::Bipolar:
                         {
                             // Map [0, 1] to [-range, +range]
-                            const FloatType range   = (maxValue - minValue) / FloatType (2);
-                            const FloatType bipolar = normalized * FloatType (2) - FloatType (1);
-                            return bipolar * range;
+                            const FloatType centre  = (minValue + maxValue) / FloatType(2);
+                            const FloatType range   = (maxValue - minValue) / FloatType(2);
+                            const FloatType bipolar = normalized * FloatType(2) - FloatType(1);
+                            return centre + bipolar * range;
                         }
 
                         default:
@@ -296,19 +316,19 @@ namespace CASPI
             public:
                 using Parameter<FloatType>::Parameter;
 
-                CASPI_NON_BLOCKING ModulatableParameter() noexcept
+                ModulatableParameter() noexcept
                     : Parameter<FloatType>()
                     , modulationAccum (FloatType (0))
                 {
                 }
 
-                CASPI_NON_BLOCKING explicit ModulatableParameter (FloatType initialNormalized) noexcept
+                explicit ModulatableParameter (FloatType initialNormalized) noexcept
                     : Parameter<FloatType> (initialNormalized)
                     , modulationAccum (FloatType (0))
                 {
                 }
 
-                CASPI_NON_BLOCKING ModulatableParameter (FloatType min,
+                ModulatableParameter (FloatType min,
                                                          FloatType max,
                                                          FloatType defaultNormalized = FloatType (0)) noexcept
                     : Parameter<FloatType> (min, max, defaultNormalized)
@@ -324,7 +344,7 @@ namespace CASPI
                  * @brief Clear modulation accumulation (call at start of audio
                  * block)
                  */
-                CASPI_NON_BLOCKING void clearModulation() noexcept
+                void clearModulation() noexcept CASPI_NON_BLOCKING
                 {
                     modulationAccum = FloatType (0);
                 }
@@ -333,7 +353,7 @@ namespace CASPI
                  * @brief Add modulation amount (normalized)
                  * @param mod Modulation to add (can be negative)
                  */
-                CASPI_NON_BLOCKING void addModulation (FloatType mod) noexcept
+                void addModulation (FloatType mod) noexcept CASPI_NON_BLOCKING
                 {
                     modulationAccum += mod;
                 }
@@ -342,7 +362,7 @@ namespace CASPI
                  * @brief Get current modulation amount
                  * @return Accumulated modulation value
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD FloatType getModulationAmount() const noexcept
+                CASPI_NO_DISCARD FloatType getModulationAmount() const noexcept CASPI_NON_BLOCKING
                 {
                     return modulationAccum;
                 }
@@ -351,7 +371,7 @@ namespace CASPI
                  * @brief Get smoothed + modulated normalized value [0, 1]
                  * @return Final normalized value with modulation applied
                  */
-                CASPI_NON_BLOCKING CASPI_NO_DISCARD FloatType valueNormalized() const noexcept
+                CASPI_NO_DISCARD FloatType valueNormalized() const noexcept CASPI_NON_BLOCKING
                 {
                     const FloatType modulated = this->smoothedBase + modulationAccum;
                     return Maths::clamp (modulated, FloatType (0), FloatType (1));
