@@ -30,13 +30,14 @@ set(SOURCES
         core/AudioBuffer_test.cpp
         core/DelayLine_test.cpp
         core/BaseClass_test.cpp
+        core/Parameter_test.cpp
         base/Utilities_test.cpp
         base/Parameter_test.cpp
         controls/Envelope_test.cpp
+        controls/ModMatrix_test.cpp
         sources/Oscillator_test.cpp
         sources/Operator_test.cpp
         processors/Filter_test.cpp
-        processors/Envelope_test.cpp
         processors/Gain_test.cpp
         synthesizers/FMGraph_test.cpp
         maths/Spectral_test.cpp
