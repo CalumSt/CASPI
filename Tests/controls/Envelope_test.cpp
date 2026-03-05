@@ -1,7 +1,7 @@
 
 #include "../test_helpers.h"
 
-#include "envelopes/caspi_Envelope.h"
+#include "controls/caspi_Envelope.h"
 #include <include/gtest/gtest.h>
 #include <string>
 
