@@ -94,6 +94,8 @@ namespace CASPI
         // Alias only — do NOT include inside here
         template <typename T>
         using ConcurrentQueue = moodycamel::ConcurrentQueue<T>;
+
+        using ProducerToken = moodycamel::ProducerToken;
     }
 }
 
