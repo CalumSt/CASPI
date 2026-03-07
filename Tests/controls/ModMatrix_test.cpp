@@ -15,7 +15,7 @@
  * process() before asserting on routing state or parameter values.
  *
  * Parameters must have their smoother converged (via process()) before
- * modulation tests, otherwise smoothedBase lags behind baseNormalized.
+ * modulation tests, otherwise smoothedBase lags behind baseNormalised.
  *
  * All tests follow Arrange / Act / Assert.
  *
@@ -115,7 +115,7 @@
  * -----------------------------------------------------------------------
  *
  * 5.1  ProcessAppliesDepthScaledModulationToParameter
- *      source=1, depth=0.2, base=0.5 -> valueNormalized() == 0.7.
+ *      source=1, depth=0.2, base=0.5 -> valueNormalised() == 0.7.
  *      Core arithmetic: output = smoothedBase + source * depth.
  *
  * 5.2  ZeroSourceProducesNoModulation
@@ -123,7 +123,7 @@
  *      Ensures the accumulation loop is not adding a constant offset.
  *
  * 5.3  NegativeSourceAppliesNegativeModulation
- *      source=-1, depth=0.3, base=0.5 -> valueNormalized() == 0.2.
+ *      source=-1, depth=0.3, base=0.5 -> valueNormalised() == 0.2.
  *
  * 5.4  MultipleRoutingsAccumulateOnSameParameter
  *      Two routings, each depth=0.1, source=1 -> total modulation 0.2
@@ -166,7 +166,7 @@
  *
  * 6.1  ExponentialRoutingAppliesCurveBeforeDepth
  *      source=0.5, depth=1.0, curve=Exponential -> accum = 0.25.
- *      base=0 -> valueNormalized() == 0.25.
+ *      base=0 -> valueNormalised() == 0.25.
  *
  * 6.2  LinearAndNonLinearRoutingsAccumulateIntoSameParameter
  *      Linear routing (src0, depth=0.1) and Exponential routing
@@ -259,7 +259,7 @@
  *
  * 11.2 ModulationIsStableAcross100Blocks
  *      Same routing and source value, process() called 100 times.
- *      valueNormalized() must be the same on every call (no drift).
+ *      valueNormalised() must be the same on every call (no drift).
  *
  ************************************************************************/
 
@@ -740,7 +740,7 @@ TEST_F (ModMatrixFixture, SourceValuesDefaultToZero)
 /*
  * 5.1 ProcessAppliesDepthScaledModulationToParameter
  *
- * source=1, depth=0.2, base=0.5 -> valueNormalized() == 0.7.
+ * source=1, depth=0.2, base=0.5 -> valueNormalised() == 0.7.
  * Core arithmetic: output = smoothedBase + source * depth.
  */
 TEST_F (ModMatrixFixture, ProcessAppliesDepthScaledModulationToParameter)
@@ -754,7 +754,7 @@ TEST_F (ModMatrixFixture, ProcessAppliesDepthScaledModulationToParameter)
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.7f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.7f, 1e-5f);
 }
 
 /*
@@ -774,13 +774,13 @@ TEST_F (ModMatrixFixture, ZeroSourceProducesNoModulation)
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.5f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.5f, 1e-5f);
 }
 
 /*
  * 5.3 NegativeSourceAppliesNegativeModulation
  *
- * source=-1, depth=0.3, base=0.5 -> valueNormalized() == 0.2.
+ * source=-1, depth=0.3, base=0.5 -> valueNormalised() == 0.2.
  */
 TEST_F (ModMatrixFixture, NegativeSourceAppliesNegativeModulation)
 {
@@ -793,7 +793,7 @@ TEST_F (ModMatrixFixture, NegativeSourceAppliesNegativeModulation)
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.2f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.2f, 1e-5f);
 }
 
 /*
@@ -816,7 +816,7 @@ TEST_F (ModMatrixFixture, MultipleRoutingsAccumulateOnSameParameter)
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.7f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.7f, 1e-5f);
 }
 
 /*
@@ -838,8 +838,8 @@ TEST_F (ModMatrixFixture, RoutingsOnDifferentParametersAreIndependent)
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.7f, 1e-5f);
-    EXPECT_NEAR (paramB.valueNormalized(), 0.5f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.7f, 1e-5f);
+    EXPECT_NEAR (paramB.valueNormalised(), 0.5f, 1e-5f);
 }
 
 /*
@@ -861,7 +861,7 @@ TEST_F (ModMatrixFixture, ModulationIsResetEachProcessBlock)
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.5f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.5f, 1e-5f);
 }
 
 /*
@@ -880,7 +880,7 @@ TEST_F (ModMatrixFixture, ModulationClampsAtUpperNormalisedBoundary)
     matrix.process();
 
     /* Assert */
-    EXPECT_FLOAT_EQ (paramA.valueNormalized(), 1.f);
+    EXPECT_FLOAT_EQ (paramA.valueNormalised(), 1.f);
 }
 
 /*
@@ -902,7 +902,7 @@ TEST_F (ModMatrixFixture, ModulationClampsAtLowerNormalisedBoundary)
     matrix.process();
 
     /* Assert: paramA.base=0.5, mod=-1 (clamped), result clamped to [0,1] */
-    EXPECT_FLOAT_EQ (paramA.valueNormalized(), 0.f);
+    EXPECT_FLOAT_EQ (paramA.valueNormalised(), 0.f);
 }
 
 /*
@@ -967,7 +967,7 @@ TEST_F (ModMatrixFixture, AddRoutingWithOutOfRangeDestinationIdIsDropped)
 
     /* Assert */
     EXPECT_EQ (matrix.getNumRoutings(), 0u);
-    EXPECT_NEAR (paramA.valueNormalized(), 0.5f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.5f, 1e-5f);
 }
 
 /*======================================================================
@@ -979,7 +979,7 @@ TEST_F (ModMatrixFixture, AddRoutingWithOutOfRangeDestinationIdIsDropped)
  *
  * source=0.5, depth=1.0, curve=Exponential.
  * Curve: 0.5^2 = 0.25. After depth scaling: 0.25 * 1.0 = 0.25.
- * paramB.base = 0 -> valueNormalized() == 0.25.
+ * paramB.base = 0 -> valueNormalised() == 0.25.
  */
 TEST_F (ModMatrixFixture, ExponentialRoutingAppliesCurveBeforeDepth)
 {
@@ -993,7 +993,7 @@ TEST_F (ModMatrixFixture, ExponentialRoutingAppliesCurveBeforeDepth)
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramB.valueNormalized(), 0.25f, 1e-5f);
+    EXPECT_NEAR (paramB.valueNormalised(), 0.25f, 1e-5f);
 }
 
 /*
@@ -1019,7 +1019,7 @@ TEST_F (ModMatrixFixture, LinearAndNonLinearRoutingsAccumulateIntoSameParameter)
     matrix.process();
 
     /* Assert: 0 + 0.1 + 0.25 = 0.35 */
-    EXPECT_NEAR (paramB.valueNormalized(), 0.35f, 1e-5f);
+    EXPECT_NEAR (paramB.valueNormalised(), 0.35f, 1e-5f);
 }
 
 /*
@@ -1071,7 +1071,7 @@ TEST_F (ModMatrixFixture, DisabledRoutingContributesNoModulation)
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.5f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.5f, 1e-5f);
 }
 
 /*
@@ -1088,14 +1088,14 @@ TEST_F (ModMatrixFixture, ReenablingLinearRoutingRestoresModulation)
     r.enabled = false;
     matrix.addRouting (r);
     matrix.process();
-    ASSERT_NEAR (paramA.valueNormalized(), 0.5f, 1e-5f);
+    ASSERT_NEAR (paramA.valueNormalised(), 0.5f, 1e-5f);
 
     /* Act */
     matrix.setRoutingEnabled (0, true);
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.7f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.7f, 1e-5f);
 }
 
 /*
@@ -1111,14 +1111,14 @@ TEST_F (ModMatrixFixture, DisablingLinearRoutingMidSessionSuppressesModulation)
     ModulationRouting<float> r (0, destA, 0.2f);
     matrix.addRouting (r);
     matrix.process();
-    ASSERT_NEAR (paramA.valueNormalized(), 0.7f, 1e-5f);
+    ASSERT_NEAR (paramA.valueNormalised(), 0.7f, 1e-5f);
 
     /* Act */
     matrix.setRoutingEnabled (0, false);
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.5f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.5f, 1e-5f);
 }
 
 /*
@@ -1138,14 +1138,14 @@ TEST_F (ModMatrixFixture, ReenablingNonLinearRoutingRestoresModulation)
     r.enabled = false;
     matrix.addRouting (r);
     matrix.process();
-    ASSERT_NEAR (paramB.valueNormalized(), 0.f, 1e-5f);
+    ASSERT_NEAR (paramB.valueNormalised(), 0.f, 1e-5f);
 
     /* Act */
     matrix.setRoutingEnabled<ModulationCurve::Exponential> (0, true);
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramB.valueNormalized(), 0.25f, 1e-5f);
+    EXPECT_NEAR (paramB.valueNormalised(), 0.25f, 1e-5f);
 }
 
 /*======================================================================
@@ -1187,14 +1187,14 @@ TEST_F (ModMatrixFixture, RemovedLinearRoutingNoLongerModulatesParameter)
     ModulationRouting<float> r (0, destA, 0.3f);
     matrix.addRouting (r);
     matrix.process();
-    ASSERT_NEAR (paramA.valueNormalized(), 0.8f, 1e-5f);
+    ASSERT_NEAR (paramA.valueNormalised(), 0.8f, 1e-5f);
 
     /* Act */
     matrix.removeRouting (0);
     matrix.process();
 
     /* Assert */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.5f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.5f, 1e-5f);
 }
 
 /*
@@ -1265,8 +1265,8 @@ TEST_F (ModMatrixFixture, ClearRoutingsRemovesBothLists)
 
     /* Assert */
     EXPECT_EQ (matrix.getNumRoutings(), 0u);
-    EXPECT_NEAR (paramA.valueNormalized(), 0.5f, 1e-5f);
-    EXPECT_NEAR (paramB.valueNormalized(), 0.f,  1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.5f, 1e-5f);
+    EXPECT_NEAR (paramB.valueNormalised(), 0.f,  1e-5f);
 }
 
 /*
@@ -1292,7 +1292,7 @@ TEST_F (ModMatrixFixture, RemainingRoutingStillFunctionsAfterRemovingFirst)
 
     /* Assert */
     ASSERT_EQ (matrix.getNumRoutings(), 1u);
-    EXPECT_NEAR (paramA.valueNormalized(), 0.6f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.6f, 1e-5f);
 }
 
 /*======================================================================
@@ -1318,7 +1318,7 @@ TEST_F (ModMatrixFixture, DepthAboveOneIsClampedAtEnqueue)
     matrix.process();
 
     /* Assert: depth clamped to 1.0; base=0.5 + 1.0 = 1.5 -> param clamped to 1.0 */
-    EXPECT_FLOAT_EQ (paramA.valueNormalized(), 1.f);
+    EXPECT_FLOAT_EQ (paramA.valueNormalised(), 1.f);
 }
 
 /*
@@ -1339,7 +1339,7 @@ TEST_F (ModMatrixFixture, DepthBelowNegativeOneIsClampedAtEnqueue)
     matrix.process();
 
     /* Assert: depth clamped to -1; 0.5 + (-1) = -0.5 -> param clamped to 0 */
-    EXPECT_FLOAT_EQ (paramA.valueNormalized(), 0.f);
+    EXPECT_FLOAT_EQ (paramA.valueNormalised(), 0.f);
 }
 
 /*======================================================================
@@ -1409,7 +1409,7 @@ TEST_F (ModMatrixFixture, ResetPreservesRoutings)
     matrix.process();
 
     /* Assert: routing still present and applied */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.7f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.7f, 1e-5f);
 }
 
 /*======================================================================
@@ -1436,14 +1436,14 @@ TEST_F (ModMatrixFixture, SourceValuePersistsAcrossBlocksWithoutBeingReset)
     matrix.process(); /* block 2 */
 
     /* Assert: 0.5 + 0.5*0.4 = 0.7 */
-    EXPECT_NEAR (paramA.valueNormalized(), 0.7f, 1e-5f);
+    EXPECT_NEAR (paramA.valueNormalised(), 0.7f, 1e-5f);
 }
 
 /*
  * 11.2 ModulationIsStableAcross100Blocks
  *
  * Same routing and source value. process() called 100 times.
- * valueNormalized() must be the same on every iteration.
+ * valueNormalised() must be the same on every iteration.
  * Detects accumulation bugs, floating-point drift, and state leakage.
  */
 TEST_F (ModMatrixFixture, ModulationIsStableAcross100Blocks)
@@ -1454,13 +1454,13 @@ TEST_F (ModMatrixFixture, ModulationIsStableAcross100Blocks)
     matrix.addRouting (r);
     matrix.process(); /* block 0: prime the routing */
 
-    const float expected = paramA.valueNormalized();
+    const float expected = paramA.valueNormalised();
 
     /* Act / Assert */
     for (int block = 1; block < 100; ++block)
     {
         matrix.process();
-        EXPECT_NEAR (paramA.valueNormalized(), expected, 1e-5f)
+        EXPECT_NEAR (paramA.valueNormalised(), expected, 1e-5f)
             << "Drift detected at block " << block;
     }
 }
