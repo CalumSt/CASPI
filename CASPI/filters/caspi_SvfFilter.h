@@ -90,7 +90,7 @@ public:
 
 private:
     FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>; ///< The sample rate of the filter
-    FloatType g = CASPI::Constants::zero<FloatType>; ///< The normalized angular frequency coefficient.
+    FloatType g = CASPI::Constants::zero<FloatType>; ///< The normalied angular frequency coefficient.
     FloatType k = CASPI::Constants::zero<FloatType>; ///< The damping coefficient, inversely related to the quality factor.
     FloatType a1 = CASPI::Constants::zero<FloatType>; ///< Coefficient a1 used in the filter difference equations.
     FloatType a2 = CASPI::Constants::zero<FloatType>; ///< Coefficient a2 used in the filter difference equations.
