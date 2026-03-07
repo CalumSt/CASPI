@@ -21,8 +21,10 @@ TEST(SvfFilterTests, Filter_test)
     filter.reset();
     filter.setSampleRate (44100.0f);
     filter.updateCoefficients(1000.0f,0.707f);
-    CASPI::Oscillators::BLEP::Saw<float> osc;
-    osc.setFrequency(1000.0f, 44100.0f);
+    CASPI::Oscillators::BlepOscillator<float> osc;
+    osc.setFrequency(1000.0f);
+    osc.setSampleRate(44100.0f);
+    osc.setShape (CASPI::Oscillators::WaveShape::Saw);
     int numberOfSamples = 44100; // 1 second of samples
     for (int i = 0; i < numberOfSamples; i++) {
         const float oscSample = osc.renderSample();
