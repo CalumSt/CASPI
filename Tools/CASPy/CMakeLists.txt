@@ -40,6 +40,9 @@ pybind11_add_module(caspy
         Source/Bindings/bind_adsr.cpp
         Source/Bindings/bind_operator.cpp
         Source/Bindings/bind_fmgraph.cpp
+        Source/Bindings/bind_modmatrix.cpp
+        Source/Bindings/bind_wavetable.cpp
+        Source/Bindings/bind_parameters.cpp
 )
 
 target_link_libraries(caspy PRIVATE CASPI)

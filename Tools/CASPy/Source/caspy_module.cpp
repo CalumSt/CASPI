@@ -10,6 +10,9 @@ void bind_oscillators (py::module_& m);
 void bind_adsr(py::module_& m);
 void bind_operator(py::module_& m);
 void bind_fmgraph(py::module_& m);
+void bind_parameters(py::module_& m);
+void bind_modmatrix(py::module_& m);
+void bind_wavetable(py::module_& m);
 
 
 PYBIND11_MODULE (caspy, m)
@@ -42,4 +45,7 @@ PYBIND11_MODULE (caspy, m)
     bind_adsr(m);
     bind_operator(m);
     bind_fmgraph(m);
+    bind_parameters(m);
+    bind_modmatrix(m);
+    bind_wavetable(m);
 }
