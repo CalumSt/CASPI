@@ -13,6 +13,8 @@ void bind_fmgraph(py::module_& m);
 void bind_parameters(py::module_& m);
 void bind_modmatrix(py::module_& m);
 void bind_wavetable(py::module_& m);
+void bind_noise(py::module_& m);
+void bind_lfo(py::module_& m);
 
 
 PYBIND11_MODULE (caspy, m)
@@ -48,4 +50,6 @@ PYBIND11_MODULE (caspy, m)
     bind_parameters(m);
     bind_modmatrix(m);
     bind_wavetable(m);
+    bind_noise(m);
+    bind_lfo(m);
 }
