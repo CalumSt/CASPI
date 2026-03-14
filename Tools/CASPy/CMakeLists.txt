@@ -43,6 +43,8 @@ pybind11_add_module(caspy
         Source/Bindings/bind_modmatrix.cpp
         Source/Bindings/bind_wavetable.cpp
         Source/Bindings/bind_parameters.cpp
+        Source/Bindings/bind_noise.cpp
+        Source/Bindings/bind_LFO.cpp
 )
 
 target_link_libraries(caspy PRIVATE CASPI)
