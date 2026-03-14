@@ -108,6 +108,11 @@ endif()
 
 if(CASPI_BUILD_PYTHON)
     add_subdirectory(Tools/CASPy)
+    add_custom_target(caspy_wheel
+            COMMAND uv build --wheel --out-dir dist
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/Tools/CASPy
+            COMMENT "Building CASPy wheel using uv"
+    )
 endif()
 
 # ============================================================
