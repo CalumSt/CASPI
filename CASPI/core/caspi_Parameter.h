@@ -377,6 +377,11 @@ namespace CASPI
                     return Maths::clamp (modulated, FloatType (0), FloatType (1));
                 }
 
+                CASPI_NO_DISCARD FloatType value() const noexcept CASPI_NON_BLOCKING
+                {
+                    return this->mapNormalisedToScaled(valueNormalised());  // calls ModulatableParameter::valueNormalised()
+                }
+
             private:
                 FloatType modulationAccum;
         };
