@@ -36,6 +36,8 @@ set(SOURCES
         controls/ModMatrix_test.cpp
         sources/BlepOscillator_test.cpp
         sources/Operator_test.cpp
+        sources/Noise_test.cpp
+        sources/LFO_test.cpp
         sources/WavetableOscillator_test.cpp
         processors/Filter_test.cpp
         processors/Gain_test.cpp
