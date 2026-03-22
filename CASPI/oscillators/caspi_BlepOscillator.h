@@ -306,7 +306,7 @@ public:
      *   osc.renderBlock(buf, 512);
      * @endcode
      */
-    BlepOscillator (WaveShape shape, FloatType sr, FloatType hz) CASPI_ALLOCATING
+    BlepOscillator (WaveShape shape, FloatType sr, FloatType hz)
     {
         initParameters();
         this->setSampleRate (sr);
@@ -434,7 +434,7 @@ public:
      *       recomputed from the current frequency.value(). Call
      *       setFrequency() again if the smoother has not yet converged.
      */
-    void setSampleRate (FloatType newRate) override CASPI_NON_BLOCKING
+    void setSampleRate (FloatType newRate) override
     {
         Core::SampleRateAware<FloatType>::setSampleRate (newRate);
         const FloatType hz = frequency.value();
@@ -574,7 +574,7 @@ public:
      *   osc.frequency.clearModulation();
      * @endcode
      */
-    FloatType renderSample() noexcept override CASPI_NON_BLOCKING
+    FloatType renderSample() noexcept CASPI_NON_BLOCKING override
     {
         amplitude.process();
         frequency.process();
