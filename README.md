@@ -1,4 +1,4 @@
-![Alt text](Docs/caspi.svg)
+![Alt text](Docs/assets/caspi.svg)
 
 ---
 
