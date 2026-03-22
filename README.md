@@ -1,6 +1,9 @@
-# CASPI
+![Alt text](Docs/caspi.svg)
+
+---
 
 [![CI](https://github.com/CalumSt/CASPI/actions/workflows/ci.yaml/badge.svg)](https://github.com/CalumSt/CASPI/actions/workflows/ci.yaml)
+
 
 **CASPI** (C++ Audio Synthesis and Processing Interface) is a header-only C++ library providing modular building blocks for constructing synthesisers, enabling a drag-and-drop architecture.
 
