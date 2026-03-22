@@ -13,6 +13,7 @@ INPUT                  = include src
 RECURSIVE              = YES
 FILE_PATTERNS          = *.h *.hpp *.cpp *.cc
 EXCLUDE_PATTERNS       = */build/* */test/* */third_party/*
+EXCLUDE                = README.md
 
 # ---------------------------------------------------------------------------
 # Extraction
