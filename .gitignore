@@ -9,5 +9,4 @@ cmake-build-release
 build
 dist
 .ipynb_checkpoints
-docs/*
 *~
