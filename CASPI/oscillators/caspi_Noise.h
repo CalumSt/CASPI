@@ -497,7 +497,7 @@ public:
      * @param nChannels  Number of channels (unused).
      */
     void prepareBlock (std::size_t /*nFrames*/,
-                       std::size_t /*nChannels*/) override CASPI_NON_BLOCKING
+                       std::size_t /*nChannels*/) CASPI_NON_BLOCKING override
     {
         amplitude.process();
     }
@@ -514,7 +514,7 @@ public:
      *
      * @return Noise sample scaled by amplitude.value().
      */
-    CASPI_NO_DISCARD FloatType renderSample() noexcept override CASPI_NON_BLOCKING
+    CASPI_NO_DISCARD FloatType renderSample() noexcept CASPI_NON_BLOCKING override
     {
         return engine.next() * amplitude.value();
     }
