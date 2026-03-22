@@ -409,7 +409,7 @@ public:
      *
      * @param newRate  Sample rate in Hz. Must be > 0.
      */
-    void setSampleRate (FloatType newRate) override CASPI_NON_BLOCKING
+    void setSampleRate (FloatType newRate) CASPI_NON_BLOCKING override
     {
         Core::SampleRateAware<FloatType>::setSampleRate (newRate);
         const FloatType hz = rate.value();
