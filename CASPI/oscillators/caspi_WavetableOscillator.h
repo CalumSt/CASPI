@@ -914,7 +914,7 @@ public:
      *       from the current frequency.value(). If the smoother has not yet
      *       converged, call setFrequency() again after setSampleRate().
      */
-    void setSampleRate (FloatType newRate) override CASPI_NON_BLOCKING
+    void setSampleRate (FloatType newRate) CASPI_NON_BLOCKING override
     {
         Core::SampleRateAware<FloatType>::setSampleRate (newRate);
         const FloatType hz = frequency.value();
@@ -1028,7 +1028,7 @@ public:
      * @endcode
      */
     CASPI_NO_DISCARD
-    FloatType renderSample() noexcept override CASPI_NON_BLOCKING
+    FloatType renderSample() noexcept CASPI_NON_BLOCKING override
     {
         amplitude.process();
         frequency.process();
