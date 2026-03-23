@@ -1,0 +1,1790 @@
+/************************************************************************
+ .d8888b.                             d8b
+d88P  Y88b                            Y8P
+888    888
+888         8888b.  .d8888b  88888b.  888
+888            "88b 88K      888 "88b 888
+888    888 .d888888 "Y8888b. 888  888 888
+Y88b  d88P 888  888      X88 888 d88P 888
+ "Y8888P"  "Y888888  88888P' 88888P"  888
+                             888
+                             888
+                             888
+
+* @file caspi_Operations.h
+* @author CS Islay
+* @brief Low-level SIMD arithmetic and math operations.
+*
+*
+* OVERVIEW
+*
+* Provides fundamental SIMD operations including:
+*   - Broadcast operations (set1)
+*   - Arithmetic (add, sub, mul, div)
+*   - Fused multiply-add (mul_add)
+*   - Fast approximations (rcp, rsqrt)
+*   - Comparisons (cmp_eq, cmp_lt)
+*   - Min/Max operations
+*   - Horizontal reductions (hsum, hmax, hmin)
+*   - Blend/Select operations
+*   - Math operations (abs, sqrt, negate)
+*
+* Each operation is implemented for:
+*   - float32x4 (4-lane float)
+*   - float64x2 (2-lane double)
+*   - float32x8 (8-lane float, AVX only)
+*   - float64x4 (4-lane double, AVX only)
+*
+*
+* USAGE EXAMPLES
+*
+* @code
+* // Basic arithmetic
+* float32x4 a = set1<float>(1.0f);
+* float32x4 b = set1<float>(2.0f);
+* float32x4 c = add(a, b);    // [3,3,3,3]
+* float32x4 d = mul(a, b);    // [2,2,2,2]
+*
+* // Fused multiply-add: a*b + c
+* float32x4 result = mul_add(a, b, set1<float>(1.0f));
+*
+* // Comparisons and blending
+* float32x4 mask = cmp_lt(a, b);  // [true,true,true,true]
+* float32x4 selected = blend(set1<float>(0.0f), set1<float>(1.0f), mask);
+*
+* // Horizontal reductions
+* float32x4 v = load_aligned(data);
+* float total = hsum(v);  // Sum of all 4 lanes
+* float max_val = hmax(v); // Maximum of all 4 lanes
+* @endcode
+*
+*
+* PERFORMANCE NOTES
+*
+* - mul_add() is preferred over separate mul() + add() when FMA is available
+* - rcp() and rsqrt() provide ~4x and ~8x speedup respectively but have ~0.15% error
+* - Horizontal operations (hsum, hmax) are slower than lane-wise operations
+* - Use blend() instead of branches for conditional selection
+*
+ ************************************************************************/
+
+#ifndef CASPI_SIMDOPERATIONS_H
+#define CASPI_SIMDOPERATIONS_H
+
+#include "caspi_Strategy.h"
+#include <cstdint>
+
+namespace CASPI
+{
+    namespace SIMD
+    {
+        /**
+         * @brief Broadcast a scalar value to all lanes of a 128-bit vector.
+         *
+         * Creates a vector where all lanes contain the same value.
+         * Used for constants, scaling factors, and initialization.
+         *
+         * @tparam T        Scalar type (float or double)
+         * @param x         Value to broadcast
+         * @return           Vector with all lanes set to x
+         *
+         * @code
+         * float32x4 twos = set1<float>(2.0f);  // [2, 2, 2, 2]
+         * float64x2 ones = set1<double>(1.0);  // [1, 1]
+         * @endcode
+         */
+        template <typename T>
+        typename Strategy::simd_type<T, Strategy::min_simd_width<T>::value>::type set1 (T x);
+
+        template <>
+        inline float32x4 set1<float> (float x)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_set1_ps (x);
+#elif defined(CASPI_HAS_NEON)
+            return vdupq_n_f32 (x);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_splat (x);
+#else
+            float32x4 v;
+            for (int i = 0; i < 4; i++)
+                v.data[i] = x;
+            return v;
+#endif
+        }
+
+        template <>
+        inline float64x2 set1<double> (double x)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_set1_pd (x);
+#elif defined(CASPI_HAS_NEON64)
+            return vdupq_n_f64 (x);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_splat (x);
+#else
+            float64x2 v;
+            v.data[0] = x;
+            v.data[1] = x;
+            return v;
+#endif
+        }
+
+        /**
+         * @brief Per-lane addition: result[i] = a[i] + b[i]
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Vector with per-lane sums
+         */
+        inline float32x4 add (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_add_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vaddq_f32 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_add (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = a.data[i] + b.data[i];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane addition: result[i] = a[i] + b[i] (double precision)
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Vector with per-lane sums
+         */
+        inline float64x2 add (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_add_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vaddq_f64 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_add (a, b);
+#else
+            float64x2 r;
+            r.data[0] = a.data[0] + b.data[0];
+            r.data[1] = a.data[1] + b.data[1];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane subtraction: result[i] = a[i] - b[i]
+         *
+         * @param a         First input vector (minuend)
+         * @param b         Second input vector (subtrahend)
+         * @return          Vector with per-lane differences
+         */
+        inline float32x4 sub (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_sub_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vsubq_f32 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_sub (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = a.data[i] - b.data[i];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane subtraction: result[i] = a[i] - b[i] (double precision)
+         *
+         * @param a         First input vector (minuend)
+         * @param b         Second input vector (subtrahend)
+         * @return          Vector with per-lane differences
+         */
+        inline float64x2 sub (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_sub_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vsubq_f64 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_sub (a, b);
+#else
+            float64x2 r;
+            r.data[0] = a.data[0] - b.data[0];
+            r.data[1] = a.data[1] - b.data[1];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane multiplication: result[i] = a[i] * b[i]
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Vector with per-lane products
+         */
+        inline float32x4 mul (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_mul_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vmulq_f32 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_mul (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = a.data[i] * b.data[i];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane multiplication: result[i] = a[i] * b[i] (double precision)
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Vector with per-lane products
+         */
+        inline float64x2 mul (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_mul_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vmulq_f64 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_mul (a, b);
+#else
+            float64x2 r;
+            r.data[0] = a.data[0] * b.data[0];
+            r.data[1] = a.data[1] * b.data[1];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane division: result[i] = a[i] / b[i]
+         *
+         * @param a         Dividend vector
+         * @param b         Divisor vector
+         * @return          Vector with per-lane quotients
+         *
+         * @warning Division by zero produces platform-specific results (Inf or NaN).
+         */
+        inline float32x4 div (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_div_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vdivq_f32 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_div (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = a.data[i] / b.data[i];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane division: result[i] = a[i] / b[i] (double precision)
+         *
+         * @param a         Dividend vector
+         * @param b         Divisor vector
+         * @return          Vector with per-lane quotients
+         *
+         * @warning Division by zero produces platform-specific results (Inf or NaN).
+         */
+        inline float64x2 div (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_div_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vdivq_f64 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_div (a, b);
+#else
+            float64x2 r;
+            r.data[0] = a.data[0] / b.data[0];
+            r.data[1] = a.data[1] / b.data[1];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Fused multiply-add: result[i] = a[i] * b[i] + c[i]
+         *
+         * Computes the product of two vectors and adds a third vector in a single
+         * operation. Uses FMA instruction when available for better performance
+         * and accuracy (single rounding instead of two).
+         *
+         * @param a         First input vector (multiplicand)
+         * @param b         Second input vector (multiplicand)
+         * @param c         Vector to add
+         * @return          Vector with fused multiply-add results
+         *
+         * @note When CASPI_HAS_FMA is defined, uses hardware FMA instruction
+         *       which is typically faster and more accurate than separate mul+add.
+         *
+         * @code
+         * float32x4 a = set1<float>(2.0f);
+         * float32x4 b = set1<float>(3.0f);
+         * float32x4 c = set1<float>(1.0f);
+         * float32x4 result = mul_add(a, b, c);  // [7,7,7,7] = 2*3 + 1
+         * @endcode
+         */
+        inline float32x4 mul_add (float32x4 a, float32x4 b, float32x4 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fmadd_ps (a, b, c);
+#else
+            return add (mul (a, b), c);
+#endif
+        }
+
+        /**
+         * @brief Fused multiply-add: result[i] = a[i] * b[i] + c[i] (double precision)
+         *
+         * @param a         First input vector (multiplicand)
+         * @param b         Second input vector (multiplicand)
+         * @param c         Vector to add
+         * @return          Vector with fused multiply-add results
+         */
+        inline float64x2 mul_add (float64x2 a, float64x2 b, float64x2 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fmadd_pd (a, b, c);
+#else
+            return add (mul (a, b), c);
+#endif
+        }
+
+        /**
+         * @brief Fast approximate reciprocal (1/x).
+         *
+         * Provides approximately 4x speedup over division by 1.0.
+         * Uses hardware reciprocal instruction where available.
+         *
+         * @param x         Input vector
+         * @return          Approximate reciprocal vector
+         *
+         * @note Maximum relative error is approximately 0.15%.
+         * @warning Not suitable for precision-critical paths.
+         *
+         * @code
+         * float32x4 v = set1<float>(2.0f);
+         * float32x4 reciprocal = rcp(v);  // ~[0.5, 0.5, 0.5, 0.5]
+         * @endcode
+         */
+        inline float32x4 rcp (float32x4 x)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_rcp_ps (x);
+#elif defined(CASPI_HAS_NEON)
+            return vdivq_f32 (vdupq_n_f32 (1.0f), x);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_div (wasm_f32x4_splat (1.0f), x);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = 1.0f / x.data[i];
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Reciprocal — float64x2
+        //
+        // No hardware fast-rcp exists for double. This is an exact divide.
+        // Named rcp for API symmetry; callers should be aware it is not approximate.
+        // ============================================================================
+
+        inline float64x2 rcp (float64x2 x)
+        {
+            return div (set1<double> (1.0), x);
+        }
+
+        /**
+         * @brief Fast approximate reciprocal square root (1/√x).
+         *
+         * Provides approximately 8x speedup over computing sqrt explicitly.
+         *
+         * @param x         Input vector (must be positive)
+         * @return          Approximate reciprocal square root vector
+         *
+         * @note Maximum relative error is approximately 0.15%.
+         * @warning Results are undefined for x ≤ 0.
+         *
+         * @code
+         * float32x4 v = set1<float>(4.0f);
+         * float32x4 rsqrt_result = rsqrt(v);  // ~[0.5, 0.5, 0.5, 0.5] = 1/sqrt(4)
+         * @endcode
+         */
+        inline float32x4 rsqrt (float32x4 x)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_rsqrt_ps (x);
+#elif defined(CASPI_HAS_NEON)
+            float32x4 y = vrsqrteq_f32 (x);
+
+            // y = y * vrsqrtsq(x * y, y)
+            y = vmulq_f32 (y, vrsqrtsq_f32 (vmulq_f32 (x, y), y));
+            return y;
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_div (wasm_f32x4_splat (1.0f), wasm_f32x4_sqrt (x));
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = 1.0f / std::sqrt (x.data[i]);
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane equality comparison.
+         *
+         * Returns a mask vector where each lane is all-ones if the corresponding
+         * lanes of a and b are equal, or all-zeros otherwise.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Mask vector (0xFFFFFFFF if equal, 0x00000000 if not)
+         *
+         * @note Use with blend() for branchless conditional selection.
+         *
+         * @code
+         * float32x4 a = set1<float>(1.0f);
+         * float32x4 b = set1<float>(1.0f);
+         * float32x4 mask = cmp_eq(a, b);  // [true,true,true,true]
+         * @endcode
+         */
+        inline float32x4 cmp_eq (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_cmpeq_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vceqq_f32 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_eq (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+            {
+                uint32_t mask = (a.data[i] == b.data[i]) ? 0xFFFFFFFF : 0x00000000;
+                std::memcpy (&r.data[i], &mask, sizeof (float));
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane less-than comparison.
+         *
+         * Returns a mask vector where each lane is all-ones if the corresponding
+         * lane of a is less than b, or all-zeros otherwise.
+         *
+         * @param a         First input vector (left side of comparison)
+         * @param b         Second input vector (right side of comparison)
+         * @return          Mask vector (0xFFFFFFFF if a < b, 0x00000000 otherwise)
+         *
+         * @code
+         * float32x4 a = set1<float>(1.0f);
+         * float32x4 b = set1<float>(2.0f);
+         * float32x4 mask = cmp_lt(a, b);  // [true,true,true,true]
+         * @endcode
+         */
+        inline float32x4 cmp_lt (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_cmplt_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vcltq_f32 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_lt (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+            {
+                uint32_t mask = (a.data[i] < b.data[i]) ? 0xFFFFFFFF : 0x00000000;
+                std::memcpy (&r.data[i], &mask, sizeof (float));
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane equality comparison (double precision).
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Mask vector
+         */
+        inline float64x2 cmp_eq (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_cmpeq_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vceqq_f64 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_eq (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; i++)
+            {
+                uint64_t mask = (a.data[i] == b.data[i]) ? 0xFFFFFFFFFFFFFFFFULL : 0x0ULL;
+                std::memcpy (&r.data[i], &mask, sizeof (double));
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane less-than comparison (double precision).
+         *
+         * @param a         First input vector (left side of comparison)
+         * @param b         Second input vector (right side of comparison)
+         * @return          Mask vector
+         */
+        inline float64x2 cmp_lt (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_cmplt_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vcltq_f64 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_lt (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; i++)
+            {
+                uint64_t mask = (a.data[i] < b.data[i]) ? 0xFFFFFFFFFFFFFFFFULL : 0x0ULL;
+                std::memcpy (&r.data[i], &mask, sizeof (double));
+            }
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Comparisons — float32x4
+        // ============================================================================
+
+        /**
+         * @brief Per-lane greater-than: result[i] = a[i] > b[i] (float32x4)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] > b[i], else all-zeros
+         *
+         * @example
+         * @code
+         * float32x4 m = cmp_gt(set1<float>(2.0f), set1<float>(1.0f)); // all-ones
+         * @endcode
+         */
+        inline float32x4 cmp_gt (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_cmpgt_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vcgtq_f32 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_gt (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t m = (a.data[i] > b.data[i]) ? 0xFFFFFFFFu : 0u;
+                std::memcpy (&r.data[i], &m, sizeof (float));
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane less-than-or-equal: result[i] = a[i] <= b[i] (float32x4)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] <= b[i], else all-zeros
+         */
+        inline float32x4 cmp_le (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_cmple_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vcleq_f32 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_le (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t m = (a.data[i] <= b.data[i]) ? 0xFFFFFFFFu : 0u;
+                std::memcpy (&r.data[i], &m, sizeof (float));
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane greater-than-or-equal: result[i] = a[i] >= b[i] (float32x4)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] >= b[i], else all-zeros
+         */
+        inline float32x4 cmp_ge (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_cmpge_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vcgeq_f32 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_ge (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t m = (a.data[i] >= b.data[i]) ? 0xFFFFFFFFu : 0u;
+                std::memcpy (&r.data[i], &m, sizeof (float));
+            }
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Comparisons — float64x2
+        // ============================================================================
+
+        /**
+         * @brief Per-lane greater-than: result[i] = a[i] > b[i] (double precision)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector
+         */
+        inline float64x2 cmp_gt (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_cmpgt_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vcgtq_f64 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_gt (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t m = (a.data[i] > b.data[i]) ? 0xFFFFFFFFFFFFFFFFull : 0ull;
+                std::memcpy (&r.data[i], &m, sizeof (double));
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane less-than-or-equal: result[i] = a[i] <= b[i] (double precision)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] <= b[i], else all-zeros
+         *
+         * @example
+         * @code
+         * float64x2 mask = cmp_le(set1<double>(1.0), set1<double>(2.0)); // lanes = true
+         * @endcode
+         */
+        inline float64x2 cmp_le (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_cmple_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vcleq_f64 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_le (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t m = (a.data[i] <= b.data[i]) ? 0xFFFFFFFFFFFFFFFFull : 0ull;
+                std::memcpy (&r.data[i], &m, sizeof (double));
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane greater-than-or-equal: result[i] = a[i] >= b[i] (double precision)
+         *
+         * @param a         Left-hand input vector
+         * @param b         Right-hand input vector
+         * @return          Mask vector: all-ones where a[i] >= b[i], else all-zeros
+         *
+         * @example
+         * @code
+         * float64x2 mask = cmp_ge(set1<double>(3.0), set1<double>(2.0)); // lanes = true
+         * @endcode
+         */
+        inline float64x2 cmp_ge (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_cmpge_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vcgeq_f64 (a, b));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_ge (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t m = (a.data[i] >= b.data[i]) ? 0xFFFFFFFFFFFFFFFFull : 0ull;
+                std::memcpy (&r.data[i], &m, sizeof (double));
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane minimum: result[i] = min(a[i], b[i])
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Vector with per-lane minima
+         */
+        inline float32x4 min (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_min_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vminq_f32 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_min (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = (a.data[i] < b.data[i]) ? a.data[i] : b.data[i];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane maximum: result[i] = max(a[i], b[i])
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Vector with per-lane maxima
+         */
+        inline float32x4 max (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_max_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vmaxq_f32 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_max (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = (a.data[i] > b.data[i]) ? a.data[i] : b.data[i];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane minimum: result[i] = min(a[i], b[i]) (double precision)
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Vector with per-lane minima
+         */
+        inline float64x2 min (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_min_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vminq_f64 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_min (a, b);
+#else
+            float64x2 r;
+            r.data[0] = (a.data[0] < b.data[0]) ? a.data[0] : b.data[0];
+            r.data[1] = (a.data[1] < b.data[1]) ? a.data[1] : b.data[1];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane maximum: result[i] = max(a[i], b[i]) (double precision)
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Vector with per-lane maxima
+         */
+        inline float64x2 max (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_max_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vmaxq_f64 (a, b);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_max (a, b);
+#else
+            float64x2 r;
+            r.data[0] = (a.data[0] > b.data[0]) ? a.data[0] : b.data[0];
+            r.data[1] = (a.data[1] > b.data[1]) ? a.data[1] : b.data[1];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Sum all lanes of a float32x4 vector.
+         *
+         * Reduces a 4-lane vector to a scalar by adding all lanes together.
+         * Uses an efficient shuffle-based approach to avoid the slow hadd instruction.
+         *
+         * @param v         Input vector
+         * @return          Sum of all four lanes
+         *
+         * @code
+         * float32x4 v = load_aligned(data);
+         * float sum = hsum(v);  // v[0] + v[1] + v[2] + v[3]
+         * @endcode
+         */
+        inline float hsum (float32x4 v)
+        {
+#if defined(CASPI_HAS_SSE3)
+            __m128 shuf = _mm_movehdup_ps (v);
+            __m128 sums = _mm_add_ps (v, shuf);
+            shuf        = _mm_movehl_ps (shuf, sums);
+            sums        = _mm_add_ss (sums, shuf);
+            return _mm_cvtss_f32 (sums);
+#elif defined(CASPI_HAS_SSE)
+            __m128 shuf = _mm_shuffle_ps (v, v, _MM_SHUFFLE (2, 3, 0, 1));
+            __m128 sums = _mm_add_ps (v, shuf);
+            shuf        = _mm_movehl_ps (shuf, sums);
+            sums        = _mm_add_ss (sums, shuf);
+            return _mm_cvtss_f32 (sums);
+#else
+            float tmp[4];
+            store (tmp, v);
+            return tmp[0] + tmp[1] + tmp[2] + tmp[3];
+#endif
+        }
+
+        /**
+         * @brief Sum all lanes of a float64x2 vector.
+         *
+         * @param v         Input vector
+         * @return          Sum of both lanes
+         */
+        inline double hsum (float64x2 v)
+        {
+#if defined(CASPI_HAS_SSE2)
+            __m128d shuf = _mm_shuffle_pd (v, v, 1);
+            __m128d sums = _mm_add_sd (v, shuf);
+            return _mm_cvtsd_f64 (sums);
+#else
+            double tmp[2];
+            store (tmp, v);
+            return tmp[0] + tmp[1];
+#endif
+        }
+
+        /**
+         * @brief Maximum of all lanes in a float32x4 vector.
+         *
+         * @param v         Input vector
+         * @return          Maximum value across all four lanes
+         */
+        inline float hmax (float32x4 v)
+        {
+#if defined(CASPI_HAS_SSE)
+            __m128 t1 = _mm_max_ps (v, _mm_movehl_ps (v, v));
+            __m128 t2 = _mm_max_ss (t1, _mm_shuffle_ps (t1, t1, 1));
+            return _mm_cvtss_f32 (t2);
+#else
+            float tmp[4];
+            store (tmp, v);
+            float out = tmp[0];
+            for (int i = 1; i < 4; i++)
+                if (tmp[i] > out)
+                    out = tmp[i];
+            return out;
+#endif
+        }
+
+        /**
+         * @brief Maximum of all lanes in a float64x2 vector.
+         *
+         * @param v         Input vector
+         * @return          Maximum value across both lanes
+         */
+        inline double hmax (float64x2 v)
+        {
+#if defined(CASPI_HAS_SSE2)
+            __m128d t = _mm_max_sd (v, _mm_shuffle_pd (v, v, 1));
+            return _mm_cvtsd_f64 (t);
+#else
+            double tmp[2];
+            store (tmp, v);
+            return tmp[0] > tmp[1] ? tmp[0] : tmp[1];
+#endif
+        }
+
+        /**
+         * @brief Minimum of all lanes in a float32x4 vector.
+         *
+         * @param v         Input vector
+         * @return          Minimum value across all four lanes
+         */
+        inline float hmin (float32x4 v)
+        {
+#if defined(CASPI_HAS_SSE)
+            __m128 t1 = _mm_min_ps (v, _mm_movehl_ps (v, v));
+            __m128 t2 = _mm_min_ss (t1, _mm_shuffle_ps (t1, t1, 1));
+            return _mm_cvtss_f32 (t2);
+#else
+            float tmp[4];
+            store (tmp, v);
+            float out = tmp[0];
+            for (int i = 1; i < 4; i++)
+                if (tmp[i] < out)
+                    out = tmp[i];
+            return out;
+#endif
+        }
+
+        /**
+         * @brief Minimum of all lanes in a float64x2 vector.
+         *
+         * @param v         Input vector
+         * @return          Minimum value across both lanes
+         */
+        inline double hmin (float64x2 v)
+        {
+#if defined(CASPI_HAS_SSE2)
+            __m128d t = _mm_min_sd (v, _mm_shuffle_pd (v, v, 1));
+            return _mm_cvtsd_f64 (t);
+#else
+            double tmp[2];
+            store (tmp, v);
+            return tmp[0] < tmp[1] ? tmp[0] : tmp[1];
+#endif
+        }
+
+        /**
+         * @brief Conditional per-lane select (blend).
+         *
+         * For each lane i: result[i] = mask[i] ? b[i] : a[i].
+         * The mask must come from a comparison operation (all-zeros or all-ones per lane).
+         *
+         * @param a         Default value vector (used when mask lane is zero)
+         * @param b         Selected value vector (used when mask lane is all-ones)
+         * @param mask      Selection mask from comparison
+         * @return          Blended result vector
+         *
+         * @note Uses and/andnot rather than SSE4.1 blendv for broader compatibility.
+         *
+         * @code
+         * float32x4 a = set1<float>(0.0f);
+         * float32x4 b = set1<float>(1.0f);
+         * float32x4 mask = cmp_lt(a, b);  // All ones
+         * float32x4 result = blend(a, b, mask);  // [1,1,1,1]
+         * @endcode
+         */
+        inline float32x4 blend (float32x4 a, float32x4 b, float32x4 mask)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_or_ps (_mm_and_ps (mask, b), _mm_andnot_ps (mask, a));
+#elif defined(CASPI_HAS_NEON)
+            return vbslq_f32 (vreinterpretq_u32_f32 (mask), b, a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_bitselect (b, a, mask);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t m;
+                std::memcpy (&m, &mask.data[i], sizeof (m));
+                r.data[i] = (m != 0) ? b.data[i] : a.data[i];
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Conditional per-lane select (blend) for double precision.
+         *
+         * @param a         Default value vector (used when mask lane is zero)
+         * @param b         Selected value vector (used when mask lane is all-ones)
+         * @param mask      Selection mask from comparison
+         * @return          Blended result vector
+         */
+        inline float64x2 blend (float64x2 a, float64x2 b, float64x2 mask)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_or_pd (_mm_and_pd (mask, b), _mm_andnot_pd (mask, a));
+#elif defined(CASPI_HAS_NEON64)
+            return vbslq_f64 (vreinterpretq_u64_f64 (mask), b, a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_bitselect (b, a, mask);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t m;
+                std::memcpy (&m, &mask.data[i], sizeof (m));
+                r.data[i] = (m != 0) ? b.data[i] : a.data[i];
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane negation: result[i] = -a[i]
+         *
+         * @param a         Input vector
+         * @return          Vector with all lanes negated
+         */
+        inline float32x4 negate (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_sub_ps (_mm_setzero_ps(), a);
+#elif defined(CASPI_HAS_NEON)
+            return vnegq_f32 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_neg (a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = -a.data[i];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane negation: result[i] = -a[i] (double precision)
+         *
+         * @param a         Input vector
+         * @return          Vector with all lanes negated
+         */
+        inline float64x2 negate (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_sub_pd (_mm_setzero_pd(), a);
+#elif defined(CASPI_HAS_NEON64)
+            return vnegq_f64 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_neg (a);
+#else
+            float64x2 r;
+            r.data[0] = -a.data[0];
+            r.data[1] = -a.data[1];
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane absolute value: result[i] = |a[i]|
+         *
+         * @param a         Input vector
+         * @return          Vector with absolute values
+         */
+        inline float32x4 abs (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_andnot_ps (_mm_set1_ps (-0.f), a);
+#elif defined(CASPI_HAS_NEON)
+            return vabsq_f32 (a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = std::fabs (a.data[i]);
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane absolute value: result[i] = |a[i]| (double precision)
+         *
+         * @param a         Input vector
+         * @return          Vector with absolute values
+         */
+        inline float64x2 abs (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_andnot_pd (_mm_set1_pd (-0.0), a);
+#elif defined(CASPI_HAS_NEON64)
+            return vabsq_f64 (a);
+#else
+            float64x2 r;
+            r.data[0] = std::fabs (a.data[0]);
+            r.data[1] = std::fabs (a.data[1]);
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane square root: result[i] = √a[i]
+         *
+         * @param a         Input vector (all elements must be non-negative)
+         * @return          Vector with square roots
+         *
+         * @warning Results are undefined for negative inputs.
+         */
+        inline float32x4 sqrt (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_sqrt_ps (a);
+#elif defined(CASPI_HAS_NEON)
+            return vsqrtq_f32 (a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; i++)
+                r.data[i] = std::sqrt (a.data[i]);
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane square root: result[i] = √a[i] (double precision)
+         *
+         * @param a         Input vector (all elements must be non-negative)
+         * @return          Vector with square roots
+         *
+         * @warning Results are undefined for negative inputs.
+         */
+        inline float64x2 sqrt (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_sqrt_pd (a);
+#elif defined(CASPI_HAS_NEON64)
+            return vsqrtq_f64 (a);
+#else
+            float64x2 r;
+            r.data[0] = std::sqrt (a.data[0]);
+            r.data[1] = std::sqrt (a.data[1]);
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Bitwise — float32x4
+        // These operate on the bit patterns; useful for sign manipulation and masking.
+        // ============================================================================
+
+        /**
+         * @brief Bitwise AND on bit representations of float32x4 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise AND result
+         *
+         * @note Useful for masking operations; operates on bit patterns.
+         */
+        inline float32x4 and_vec (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_and_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vandq_u32 (vreinterpretq_u32_f32 (a),
+                                                     vreinterpretq_u32_f32 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_and (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 4);
+                std::memcpy (&vb, &b.data[i], 4);
+                vr = va & vb;
+                std::memcpy (&r.data[i], &vr, 4);
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Bitwise OR on bit representations of float32x4 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise OR result
+         */
+        inline float32x4 or_vec (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_or_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vorrq_u32 (vreinterpretq_u32_f32 (a),
+                                                     vreinterpretq_u32_f32 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_or (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 4);
+                std::memcpy (&vb, &b.data[i], 4);
+                vr = va | vb;
+                std::memcpy (&r.data[i], &vr, 4);
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Bitwise XOR on bit representations of float32x4 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise XOR result
+         */
+        inline float32x4 xor_vec (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_xor_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (veorq_u32 (vreinterpretq_u32_f32 (a),
+                                                     vreinterpretq_u32_f32 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_xor (a, b);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 4);
+                std::memcpy (&vb, &b.data[i], 4);
+                vr = va ^ vb;
+                std::memcpy (&r.data[i], &vr, 4);
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Bitwise ANDNOT: (~a) & b (float32x4)
+         *
+         * Matches _mm_andnot_ps semantics.
+         *
+         * @param a         Mask to invert
+         * @param b         Value vector
+         * @return          Resulting vector
+         */
+        inline float32x4 andnot_vec (float32x4 a, float32x4 b)
+        {
+#if defined(CASPI_HAS_SSE)
+            return _mm_andnot_ps (a, b);
+#elif defined(CASPI_HAS_NEON)
+            return vreinterpretq_f32_u32 (vbicq_u32 (vreinterpretq_u32_f32 (b),
+                                                     vreinterpretq_u32_f32 (a)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_andnot (b, a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+            {
+                uint32_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 4);
+                std::memcpy (&vb, &b.data[i], 4);
+                vr = (~va) & vb;
+                std::memcpy (&r.data[i], &vr, 4);
+            }
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Bitwise — float64x2
+        // ============================================================================
+
+        /**
+         * @brief Bitwise AND on bit representations of float64x2 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise AND result
+         */
+        inline float64x2 and_vec (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_and_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vandq_u64 (vreinterpretq_u64_f64 (a),
+                                                     vreinterpretq_u64_f64 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_and (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 8);
+                std::memcpy (&vb, &b.data[i], 8);
+                vr = va & vb;
+                std::memcpy (&r.data[i], &vr, 8);
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Bitwise OR on bit representations of float64x2 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise OR result
+         */
+        inline float64x2 or_vec (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_or_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vorrq_u64 (vreinterpretq_u64_f64 (a),
+                                                     vreinterpretq_u64_f64 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_or (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 8);
+                std::memcpy (&vb, &b.data[i], 8);
+                vr = va | vb;
+                std::memcpy (&r.data[i], &vr, 8);
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Bitwise XOR on bit representations of float64x2 vectors.
+         *
+         * @param a         First input vector
+         * @param b         Second input vector
+         * @return          Bitwise XOR result
+         */
+        inline float64x2 xor_vec (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_xor_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (veorq_u64 (vreinterpretq_u64_f64 (a),
+                                                     vreinterpretq_u64_f64 (b)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_xor (a, b);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 8);
+                std::memcpy (&vb, &b.data[i], 8);
+                vr = va ^ vb;
+                std::memcpy (&r.data[i], &vr, 8);
+            }
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Bitwise ANDNOT: (~a) & b (float64x2)
+         *
+         * @param a         Mask to invert
+         * @param b         Value vector
+         * @return          Resulting vector
+         */
+        inline float64x2 andnot_vec (float64x2 a, float64x2 b)
+        {
+#if defined(CASPI_HAS_SSE2)
+            return _mm_andnot_pd (a, b);
+#elif defined(CASPI_HAS_NEON64)
+            return vreinterpretq_f64_u64 (vbicq_u64 (vreinterpretq_u64_f64 (b),
+                                                     vreinterpretq_u64_f64 (a)));
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_v128_andnot (b, a);
+#else
+            float64x2 r;
+            for (int i = 0; i < 2; ++i)
+            {
+                uint64_t va, vb, vr;
+                std::memcpy (&va, &a.data[i], 8);
+                std::memcpy (&vb, &b.data[i], 8);
+                vr = (~va) & vb;
+                std::memcpy (&r.data[i], &vr, 8);
+            }
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // FMA family — float32x4
+        //
+        // mul_sub  (a, b, c) = a*b - c
+        // nmadd    (a, b, c) = -(a*b) + c  = c - a*b
+        // nmsub    (a, b, c) = -(a*b) - c
+        //
+        // All fall back to the two-op form when FMA is unavailable.
+        // The fallback is numerically equivalent but slower and rounds twice.
+        // ============================================================================
+
+        /**
+         * @brief Multiply-subtract: a*b - c (float32x4).
+         *
+         * Uses FMA when available.
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Subtrahend
+         * @return          Result vector
+         *
+         * @example
+         * @code
+         * float32x4 r = mul_sub(set1<float>(3.0f), set1<float>(2.0f), set1<float>(1.0f)); // 6 - 1 = 5
+         * @endcode
+         */
+        inline float32x4 mul_sub (float32x4 a, float32x4 b, float32x4 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fmsub_ps (a, b, c);
+#else
+            return sub (mul (a, b), c);
+#endif
+        }
+
+        /**
+         * @brief Negated multiply-add: -(a*b) + c = c - a*b (float32x4).
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Addend
+         * @return          Result vector
+         */
+        inline float32x4 nmadd (float32x4 a, float32x4 b, float32x4 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fnmadd_ps (a, b, c);
+#else
+            return sub (c, mul (a, b));
+#endif
+        }
+
+        /**
+         * @brief Negated multiply-subtract: -(a*b) - c (float32x4).
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Value to subtract
+         * @return          Result vector
+         */
+        inline float32x4 nmsub (float32x4 a, float32x4 b, float32x4 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fnmsub_ps (a, b, c);
+#else
+            return negate (add (mul (a, b), c));
+#endif
+        }
+
+        // ============================================================================
+        // FMA family — float64x2
+        // ============================================================================
+
+        /**
+         * @brief Multiply-subtract: a*b - c (double precision).
+         *
+         * Uses FMA when available for single-round accuracy and improved performance.
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Subtrahend
+         * @return          Result vector with per-lane (a[i]*b[i] - c[i])
+         *
+         * @example
+         * @code
+         * float64x2 r = mul_sub(set1<double>(3.0), set1<double>(2.0), set1<double>(1.0)); // 6 - 1 = 5
+         * @endcode
+         */
+        inline float64x2 mul_sub (float64x2 a, float64x2 b, float64x2 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fmsub_pd (a, b, c);
+#else
+            return sub (mul (a, b), c);
+#endif
+        }
+
+        /**
+         * @brief Negated multiply-add: -(a*b) + c = c - a*b (double precision).
+         *
+         * Uses FMA when available.
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Addend
+         * @return          Result vector with per-lane (c[i] - a[i]*b[i])
+         */
+        inline float64x2 nmadd (float64x2 a, float64x2 b, float64x2 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fnmadd_pd (a, b, c);
+#else
+            return sub (c, mul (a, b));
+#endif
+        }
+
+        /**
+         * @brief Negated multiply-subtract: -(a*b) - c (double precision).
+         *
+         * Uses FMA when available.
+         *
+         * @param a         Multiplicand
+         * @param b         Multiplier
+         * @param c         Value to subtract
+         * @return          Result vector with per-lane ( -a[i]*b[i] - c[i] )
+         */
+        inline float64x2 nmsub (float64x2 a, float64x2 b, float64x2 c)
+        {
+#if defined(CASPI_HAS_FMA)
+            return _mm_fnmsub_pd (a, b, c);
+#else
+            return negate (add (mul (a, b), c));
+#endif
+        }
+
+        // ============================================================================
+        // Rounding — float32x4
+        //
+        // SSE4.1 is preferred (single instruction). SSE2-only fallback uses the
+        // truncation trick: (int)(x+0.5) cast back, which is correct for ties-away
+        // from zero. NEON and WASM have dedicated rounding instructions.
+        // ============================================================================
+
+        /**
+         * @brief Per-lane floor: floor(a[i]) for float32x4.
+         *
+         * Rounds each lane toward negative infinity. Uses SSE4.1 intrinsic
+         * when available; falls back to portable implementations otherwise.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane floored values
+         *
+         * @note Behaviour for NaN/Inf follows the platform intrinsics semantics.
+         *
+         * @example
+         * @code
+         * float32x4 v = set1<float>(1.9f);
+         * float32x4 f = floor(v); // [1.0f, 1.0f, 1.0f, 1.0f]
+         * @endcode
+         */
+        inline float32x4 floor (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_floor_ps (a);
+#elif defined(CASPI_HAS_SSE2)
+            // Convert to int (truncates toward zero), adjust if result > input
+            __m128i trunc = _mm_cvttps_epi32 (a);
+            __m128 ftrunc = _mm_cvtepi32_ps (trunc);
+            // Subtract 1 where ftrunc > a (i.e. truncation went the wrong way for negatives)
+            __m128 mask = _mm_cmpgt_ps (ftrunc, a);
+            return _mm_sub_ps (ftrunc, _mm_and_ps (mask, _mm_set1_ps (1.0f)));
+#elif defined(CASPI_HAS_NEON)
+            return vrndmq_f32 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_floor (a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+                r.data[i] = std::floor (a.data[i]);
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane ceil: ceil(a[i]) for float32x4.
+         *
+         * Rounds each lane toward positive infinity. Uses SSE4.1 intrinsic
+         * when available; falls back to portable implementations otherwise.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane ceiled values
+         *
+         * @example
+         * @code
+         * float32x4 v = set1<float>(1.1f);
+         * float32x4 c = ceil(v); // [2.0f, 2.0f, 2.0f, 2.0f]
+         * @endcode
+         */
+        inline float32x4 ceil (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_ceil_ps (a);
+#elif defined(CASPI_HAS_SSE2)
+            __m128i trunc = _mm_cvttps_epi32 (a);
+            __m128 ftrunc = _mm_cvtepi32_ps (trunc);
+            __m128 mask   = _mm_cmplt_ps (ftrunc, a);
+            return _mm_add_ps (ftrunc, _mm_and_ps (mask, _mm_set1_ps (1.0f)));
+#elif defined(CASPI_HAS_NEON)
+            return vrndpq_f32 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f32x4_ceil (a);
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+                r.data[i] = std::ceil (a.data[i]);
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane round-to-nearest (ties away from zero) for float32x4.
+         *
+         * Matches std::round semantics: round(x) returns nearest integer with
+         * ties away from zero.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane rounded values
+         *
+         * @example
+         * @code
+         * float32x4 v = set1<float>(1.6f);
+         * float32x4 r = round(v); // [2.0f, 2.0f, 2.0f, 2.0f]
+         * @endcode
+         */
+        inline float32x4 round (float32x4 a)
+        {
+#if defined(CASPI_HAS_SSE2)
+            __m128 sign = _mm_and_ps (a, _mm_set1_ps (-0.0f));
+            __m128 half = _mm_or_ps (sign, _mm_set1_ps (0.5f));
+            return _mm_cvtepi32_ps (_mm_cvttps_epi32 (_mm_add_ps (a, half)));
+
+#elif defined(CASPI_HAS_NEON)
+            // vrndnq_f32 = roundTiesToEven, not ties-away. Manual implementation:
+            uint32x4_t sign  = vandq_u32 (vreinterpretq_u32_f32 (a), vdupq_n_u32 (0x80000000u));
+            float32x4_t half = vreinterpretq_f32_u32 (vorrq_u32 (sign, vreinterpretq_u32_f32 (vdupq_n_f32 (0.5f))));
+            return vcvtq_f32_s32 (vcvtq_s32_f32 (vaddq_f32 (a, half)));
+
+#elif defined(CASPI_HAS_WASM_SIMD)
+            // wasm_f32x4_nearest = roundTiesToEven, not ties-away. Manual implementation:
+            v128_t sign = wasm_v128_and (a, wasm_f32x4_splat (-0.0f));
+            v128_t half = wasm_v128_or (sign, wasm_f32x4_splat (0.5f));
+            return wasm_f32x4_convert_i32x4 (wasm_i32x4_trunc_sat_f32x4 (wasm_f32x4_add (a, half)));
+
+#else
+            float32x4 r;
+            for (int i = 0; i < 4; ++i)
+                r.data[i] = std::round (a.data[i]);
+            return r;
+#endif
+        }
+
+        // ============================================================================
+        // Rounding — float64x2
+        // ============================================================================
+
+        /**
+         * @brief Per-lane floor: floor(a[i]) for double precision (float64x2).
+         *
+         * Rounds each lane toward negative infinity.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane floored values
+         */
+        inline float64x2 floor (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_floor_pd (a);
+#elif defined(CASPI_HAS_SSE2)
+            __m128i trunc  = _mm_cvttpd_epi32 (a);
+            __m128d ftrunc = _mm_cvtepi32_pd (trunc);
+            __m128d mask   = _mm_cmpgt_pd (ftrunc, a);
+            return _mm_sub_pd (ftrunc, _mm_and_pd (mask, _mm_set1_pd (1.0)));
+#elif defined(CASPI_HAS_NEON64)
+            return vrndmq_f64 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_floor (a);
+#else
+            float64x2 r;
+            r.data[0] = std::floor (a.data[0]);
+            r.data[1] = std::floor (a.data[1]);
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane ceil: ceil(a[i]) for double precision (float64x2).
+         *
+         * Rounds each lane toward positive infinity.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane ceiled values
+         */
+        inline float64x2 ceil (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE4_1)
+            return _mm_ceil_pd (a);
+#elif defined(CASPI_HAS_SSE2)
+            __m128i trunc  = _mm_cvttpd_epi32 (a);
+            __m128d ftrunc = _mm_cvtepi32_pd (trunc);
+            __m128d mask   = _mm_cmplt_pd (ftrunc, a);
+            return _mm_add_pd (ftrunc, _mm_and_pd (mask, _mm_set1_pd (1.0)));
+#elif defined(CASPI_HAS_NEON64)
+            return vrndpq_f64 (a);
+#elif defined(CASPI_HAS_WASM_SIMD)
+            return wasm_f64x2_ceil (a);
+#else
+            float64x2 r;
+            r.data[0] = std::ceil (a.data[0]);
+            r.data[1] = std::ceil (a.data[1]);
+            return r;
+#endif
+        }
+
+        /**
+         * @brief Per-lane round-to-nearest (ties away from zero) for double precision.
+         *
+         * Matches std::round semantics for each lane.
+         *
+         * @param a         Input vector
+         * @return          Vector with per-lane rounded values
+         */
+        inline float64x2 round (float64x2 a)
+        {
+#if defined(CASPI_HAS_SSE2)
+            __m128d sign = _mm_and_pd (a, _mm_set1_pd (-0.0));
+            __m128d half = _mm_or_pd (sign, _mm_set1_pd (0.5));
+            return _mm_cvtepi32_pd (_mm_cvttpd_epi32 (_mm_add_pd (a, half)));
+
+#elif defined(CASPI_HAS_NEON64)
+            // vrndnq_f64 = roundTiesToEven. Manual implementation:
+            uint64x2_t sign  = vandq_u64 (vreinterpretq_u64_f64 (a), vdupq_n_u64 (0x8000000000000000ull));
+            float64x2_t half = vreinterpretq_f64_u64 (vorrq_u64 (sign, vreinterpretq_u64_f64 (vdupq_n_f64 (0.5))));
+            return vcvtq_f64_s64 (vcvtq_s64_f64 (vaddq_f64 (a, half)));
+
+#elif defined(CASPI_HAS_WASM_SIMD)
+            // wasm_f64x2_nearest = roundTiesToEven. Manual implementation:
+            v128_t sign = wasm_v128_and (a, wasm_f64x2_splat (-0.0));
+            v128_t half = wasm_v128_or (sign, wasm_f64x2_splat (0.5));
+            return wasm_f64x2_convert_low_i32x4 (wasm_i32x4_trunc_sat_f64x2_zero (wasm_f64x2_add (a, half)));
+
+#else
+            float64x2 r;
+            r.data[0] = std::round (a.data[0]);
+            r.data[1] = std::round (a.data[1]);
+            return r;
+#endif
+        }
+    } // namespace SIMD
+} // namespace CASPI
+
+#endif // CASPI_SIMDOPERATIONS_H

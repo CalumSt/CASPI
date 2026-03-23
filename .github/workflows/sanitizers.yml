@@ -1,0 +1,76 @@
+name: Sanitizers
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_DIR: build
+
+jobs:
+
+  # =========================================
+  # Address / Undefined / Thread
+  # =========================================
+  sanitize-test:
+    name: ${{ matrix.sanitizer }} (Debug)
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        sanitizer: [ Address, Undefined, Thread ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B ${{ env.BUILD_DIR }} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCASPI_BUILD_TESTING=ON \
+            -DCASPI_ENABLE_DEBUG=ON \
+            -DCASPI_SANITIZER=${{ matrix.sanitizer }}
+
+      - name: Build
+        run: cmake --build ${{ env.BUILD_DIR }} --config Debug --parallel
+
+      - name: Run Unit Tests
+        run: ctest --test-dir ${{ env.BUILD_DIR }}/Tests --output-on-failure
+
+  # =========================================
+  # Real-Time Sanitizer (RTSan, Clang only)
+  # =========================================
+  rtsan-test:
+    name: RTSan (Release)
+    runs-on: ubuntu-latest
+
+    container:
+      image: realtimesanitizer/rtsan-clang:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y cmake git
+
+      - name: Configure
+        run: |
+          rm -rf ${{ env.BUILD_DIR }}
+          cmake -S . -B ${{ env.BUILD_DIR }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCASPI_BUILD_TESTING=ON \
+            -DCASPI_SANITIZER=Realtime \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++
+
+      - name: Build
+        run: cmake --build ${{ env.BUILD_DIR }} --parallel
+
+      - name: Run tests
+        run: ctest --test-dir ${{ env.BUILD_DIR }}/Tests --output-on-failure

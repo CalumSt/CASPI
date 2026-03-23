@@ -55,15 +55,14 @@ public:
      */
     void reset()
     {
-    	auto zero = static_cast<FloatType>(0.0);
-        g = zero;
-        k = zero;
-        a1 = zero;
-        a2 = zero;
-        a3 = zero;
+        g = CASPI::Constants::zero<FloatType>;
+        k = CASPI::Constants::zero<FloatType>;
+        a1 = CASPI::Constants::zero<FloatType>;
+        a2 = CASPI::Constants::zero<FloatType>;
+        a3 = CASPI::Constants::zero<FloatType>;
 
-        ic1eq = zero;
-        ic2eq = zero;
+        ic1eq = CASPI::Constants::zero<FloatType>;
+        ic2eq = CASPI::Constants::zero<FloatType>;
     }
 
     /**
@@ -90,13 +89,12 @@ public:
 
 
 private:
-    FloatType sampleRate = static_cast<FloatType>(44100.0); ///< The sample rate of the filter
-    FloatType zero =  static_cast<FloatType>(0.0);
-    FloatType g = zero; ///< The normalized angular frequency coefficient.
-    FloatType k = zero; ///< The damping coefficient, inversely related to the quality factor.
-    FloatType a1 = zero; ///< Coefficient a1 used in the filter difference equations.
-    FloatType a2 = zero; ///< Coefficient a2 used in the filter difference equations.
-    FloatType a3 = zero; ///< Coefficient a3 used in the filter difference equations.
-    FloatType ic1eq = zero; ///< Internal state variable for the first integrator.
-    FloatType ic2eq = zero; ///< Internal state variable for the second integrator.
+    FloatType sampleRate = CASPI::Constants::DEFAULT_SAMPLE_RATE<FloatType>; ///< The sample rate of the filter
+    FloatType g = CASPI::Constants::zero<FloatType>; ///< The normalied angular frequency coefficient.
+    FloatType k = CASPI::Constants::zero<FloatType>; ///< The damping coefficient, inversely related to the quality factor.
+    FloatType a1 = CASPI::Constants::zero<FloatType>; ///< Coefficient a1 used in the filter difference equations.
+    FloatType a2 = CASPI::Constants::zero<FloatType>; ///< Coefficient a2 used in the filter difference equations.
+    FloatType a3 = CASPI::Constants::zero<FloatType>; ///< Coefficient a3 used in the filter difference equations.
+    FloatType ic1eq = CASPI::Constants::zero<FloatType>; ///< Internal state variable for the first integrator.
+    FloatType ic2eq = CASPI::Constants::zero<FloatType>; ///< Internal state variable for the second integrator.
 };

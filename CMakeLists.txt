@@ -1,102 +1,148 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_NAME "CASPI")
-message(STATUS "Configuring CASPI")
-# Detect if standalone build (top-level project)
-set(CASPI_IS_STANDALONE_BUILD OFF)
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(CASPI_IS_STANDALONE_BUILD ON)
-endif ()
+project(CASPI VERSION 0.1 LANGUAGES CXX)
 
-# Optionally allow SANITIZE to be empty or not set
-if (NOT DEFINED SANITIZE)
-    set(SANITIZE "")
-endif ()
+message(STATUS "Configuring ${PROJECT_NAME}")
 
-# Define options with default depending on standalone or not,
-# but only if the user hasn't set them already:
-if (NOT DEFINED CASPI_BUILD_TESTING)
-    set(CASPI_BUILD_TESTING ${CASPI_IS_STANDALONE_BUILD} CACHE BOOL "Build CASPI tests")
-endif ()
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-if (NOT DEFINED CASPI_BUILD_BENCHMARKS)
-    set(CASPI_BUILD_BENCHMARKS ${CASPI_IS_STANDALONE_BUILD} CACHE BOOL "Build CASPI benchmarks")
-endif ()
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 
-message(STATUS "Standalone build: ${CASPI_IS_STANDALONE_BUILD}")
-message(STATUS "Build testing: ${CASPI_BUILD_TESTING}")
-message(STATUS "Build benchmarks: ${CASPI_BUILD_BENCHMARKS}")
+# ============================================================
+# Options
+# ============================================================
 
-project(${PROJECT_NAME} LANGUAGES CXX VERSION 0.1)
+option(CASPI_ENABLE_DEBUG     "Enable debug features"    OFF)
+option(CASPI_BUILD_TESTING    "Build tests"              OFF)
+option(CASPI_BUILD_BENCHMARKS "Build benchmarks"         OFF)
+option(CASPI_BUILD_PYTHON     "Build Python bindings"    OFF)
 
-add_library(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h)
+set(CASPI_SANITIZER "None" CACHE STRING "Sanitizer (None, Address, Undefined, Thread, Realtime)")
+set_property(CACHE CASPI_SANITIZER PROPERTY STRINGS None Address Undefined Thread Realtime)
+
+message(STATUS "Sanitizer: ${CASPI_SANITIZER}")
+
+# ============================================================
+# Library (Header-only)
+# ============================================================
+
+add_library(${PROJECT_NAME} INTERFACE)
 
 target_include_directories(${PROJECT_NAME} INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/CASPI>
         $<INSTALL_INTERFACE:include>
 )
-# explicitly list the unified header for IDEs (has no build effect)
-target_sources(CASPI INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/CASPI/caspi.h
+
+target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_11)
+
+target_compile_definitions(${PROJECT_NAME} INTERFACE
+        $<$<BOOL:${CASPI_ENABLE_DEBUG}>:CASPI_DEBUG>
 )
 
-# Only do these if this is the main project, and not if it is included through add_subdirectory
-if (CASPI_IS_STANDALONE_BUILD)
+# ============================================================
+# Sanitizer Helper
+# ============================================================
 
-    # Let's ensure -std=c++xx instead of -std=g++xx
-    set(CMAKE_CXX_EXTENSIONS OFF)
-
-    # Let's nicely support folders in IDEs
-    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-    # Docs only available if this is the main app
-    find_package(Doxygen)
-    if(DOXYGEN_FOUND)
-        add_custom_target(doc_doxygen
-                COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                COMMENT "Generating documentation with Doxygen"
-                VERBATIM
-        )
-    else()
-        message(STATUS "Doxygen not found, not building docs")
+function(caspi_apply_sanitizer TARGET)
+    if(CASPI_SANITIZER STREQUAL "None")
+        return()
     endif()
 
-    if (SANITIZE STREQUAL "address")
-        message(STATUS "Enabling AddressSanitizer")
-        # Add AddressSanitizer flags for GCC/Clang
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-        set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
-    elseif (SANITIZE STREQUAL "undefined")
-        message(STATUS "Enabling UndefinedBehaviorSanitizer")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
-        set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=undefined")
-    elseif (SANITIZE STREQUAL "")
-        # No sanitizer: do nothing
-    else ()
-        message(FATAL_ERROR "Unknown sanitizer type: ${SANITIZE}")
-    endif ()
-endif()
+    if(CASPI_SANITIZER STREQUAL "Address")
+        set(_flags -fsanitize=address -fno-omit-frame-pointer)
+    elseif(CASPI_SANITIZER STREQUAL "Undefined")
+        set(_flags -fsanitize=undefined)
+    elseif(CASPI_SANITIZER STREQUAL "Thread")
+        if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            message(FATAL_ERROR "ThreadSanitizer requires GCC or Clang")
+        endif()
+        set(_flags -fsanitize=thread)
+    elseif(CASPI_SANITIZER STREQUAL "Realtime")
+        if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            message(FATAL_ERROR "RealtimeSanitizer requires Clang")
+        endif()
+        set(_flags -fsanitize=realtime)
+    else()
+        message(FATAL_ERROR "Unknown sanitizer: ${CASPI_SANITIZER}")
+    endif()
 
-# Testing only available if this is the main app
+    target_compile_options(${TARGET} PRIVATE ${_flags})
+    target_link_options(${TARGET} PRIVATE ${_flags})
+endfunction()
+
+# ============================================================
+# Extra flags for debug builds
+# ============================================================
+function(caspi_apply_debug_flags TARGET)
+    if(NOT CASPI_ENABLE_DEBUG)
+        return()
+    endif()
+
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(${TARGET} PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+        )
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        target_compile_options(${TARGET} PRIVATE
+                /W4
+        )
+    endif()
+endfunction()
+
+# ============================================================
+# Subdirectories
+# ============================================================
+
 if(CASPI_BUILD_TESTING)
+    enable_testing()
     add_subdirectory(Tests)
 endif()
 
-if (CASPI_BUILD_BENCHMARKS)
+if(CASPI_BUILD_BENCHMARKS)
     add_subdirectory(Benchmarks)
-endif ()
+endif()
+
+if(CASPI_BUILD_PYTHON)
+    add_subdirectory(Tools/CASPy)
+    add_custom_target(caspy_wheel
+            COMMAND uv build --wheel --out-dir dist
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/Tools/CASPy
+            COMMENT "Building CASPy wheel using uv"
+    )
+endif()
+
+# ============================================================
+# Installation
+# ============================================================
+
+include(CMakePackageConfigHelpers)
 
 install(TARGETS ${PROJECT_NAME}
-        EXPORT ${PROJECT_NAME}Targets)
+        EXPORT ${PROJECT_NAME}Targets
+)
 
-install(DIRECTORY Library/
+install(DIRECTORY CASPI/
         DESTINATION include
-        FILES_MATCHING PATTERN "*.h")
+        FILES_MATCHING PATTERN "*.h"
+)
 
+install(EXPORT ${PROJECT_NAME}Targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION lib/cmake/${PROJECT_NAME}
+)
 
+write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
 
-
-
+install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        DESTINATION lib/cmake/${PROJECT_NAME}
+)

@@ -1,0 +1,26 @@
+# Build artifacts
+build/
+dist/
+_skbuild/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Compiled extensions (only in development - wheels have them)
+caspy/*.pyd
+caspy/*.so
+caspy/*.dylib
