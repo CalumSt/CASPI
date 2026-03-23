@@ -3,12 +3,10 @@ name: Docs
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [develop]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write        # needed for benchmark-action to store history
   pages: write
   id-token: write
 
@@ -17,15 +15,56 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCASPI_BUILD_BENCHMARKS=ON
+
+      - name: Build
+        run: cmake --build build --target Benchmarks -j$(nproc)
+
+      - name: Run benchmarks
+        run: |
+          ./build/Benchmarks/Benchmarks \
+            --benchmark_format=json \
+            --benchmark_out=benchmark_result.json \
+            --benchmark_repetitions=5 \
+            --benchmark_report_aggregates_only=true
+
+      - name: Generate benchmark page
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: googlecpp
+          output-file-path: benchmark_result.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: false                   # don't push to gh-pages
+          save-data-file: true               # persist history in cache
+          alert-threshold: '150%'
+          comment-on-alert: true
+          fail-on-alert: false
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-html
+          path: dev/bench/                   # default output dir from the action
+          retention-days: 1
+
   build-and-deploy:
     runs-on: ubuntu-latest
+    needs: benchmark
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install Doxygen and Graphviz
         run: sudo apt-get install -y doxygen graphviz
@@ -40,6 +79,12 @@ jobs:
         run: |
           doxygen Doxyfile
           test -f Docs/html/index.html || (echo "Doxygen produced no output" && exit 1)
+
+      - name: Download benchmark artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-html
+          path: Docs/html/benchmarks/       # serves at /benchmarks/ under your Pages URL
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
