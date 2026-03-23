@@ -1,0 +1,74 @@
+# .github/workflows/benchmarks.yml
+name: Benchmarks
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCASPI_BUILD_BENCHMARKS=ON
+
+      - name: Build
+        run: cmake --build build --target Benchmarks -j$(nproc)
+
+      - name: Run
+        run: |
+          ./build/Benchmarks/Benchmarks \
+            --benchmark_format=json \
+            --benchmark_out=result_new.json \
+            --benchmark_repetitions=5 \
+            --benchmark_report_aggregates_only=true \
+            --benchmark_min_time=0.5s \
+            --benchmark_enable_random_interleaving=true
+
+      - name: Name result file
+        id: name
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          VERSION=${GITHUB_REF_NAME:-dev}
+          echo "filename=results-${DATE}-${VERSION}.json" >> $GITHUB_OUTPUT
+
+      - name: Check regression
+        id: regression
+        run: |
+          python .github/scripts/check_benchmark_regression.py \
+            Docs/bench/results/ \
+            result_new.json \
+            --warn 0.10 \
+            --fail 0.25
+        continue-on-error: true
+
+      - name: Commit results
+        run: |
+          mkdir -p Docs/bench/results
+          cp result_new.json Docs/bench/results/${{ steps.name.outputs.filename }}
+          python3 - <<'EOF'
+          import json, pathlib
+          files = sorted(p.name for p in pathlib.Path('Docs/bench/results').glob('results-*.json'))
+          pathlib.Path('Docs/bench/results/index.json').write_text(json.dumps(files, indent=2))
+          EOF
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add Docs/bench/results/${{ steps.name.outputs.filename }}
+          git add Docs/bench/results/index.json
+          git diff --cached --quiet || git commit -m "bench: ${{ steps.name.outputs.filename }}"
+          git push
+
+      - name: Fail on regression
+        if: steps.regression.outcome == 'failure'
+        run: exit 1
