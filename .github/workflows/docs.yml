@@ -2,38 +2,50 @@ name: Docs
 
 on:
   push:
-    branches: [ develop ]
+    branches: [main]
   pull_request:
-    branches: [ develop ]
+    branches: [develop]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Install dependencies
+      - name: Install Doxygen and Graphviz
         run: sudo apt-get install -y doxygen graphviz
 
       - name: Clone doxygen-awesome-css
         run: |
-          git clone --depth 1 https://github.com/jothepro/doxygen-awesome-css.git \
+          git clone --depth 1 \
+            https://github.com/jothepro/doxygen-awesome-css.git \
             docs/doxygen-awesome-css
 
       - name: Build docs
-        run: doxygen Doxyfile
+        run: |
+          doxygen Doxyfile
+          test -f docs/html/index.html || (echo "Doxygen produced no output" && exit 1)
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/html
-          force_orphan: true
+          path: docs/html
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
