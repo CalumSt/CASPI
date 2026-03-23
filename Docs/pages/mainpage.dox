@@ -1,0 +1,89 @@
+/**
+\mainpage CASPI
+
+\htmlonly
+<div style="text-align:center; margin: 1rem 0 2rem;">
+  <img src="caspi-logo.svg" alt="CASPI logo" style="max-width:200px;">
+</div>
+\endhtmlonly
+
+**CASPI** (C++ Audio Synthesis and Processing Interface) is a header-only C++ library
+providing modular building blocks for constructing synthesisers.
+
+Based on *The Computer Music Tutorial* (Roads) and Will Pirkle's books.
+No external runtime dependencies.
+
+---
+
+\section features Features
+
+\subsection oscillators Oscillators
+- **BlepOscillator** — Band-limited oscillator using PolyBLEP antialiasing; Sine, Saw, Square, Triangle, Pulse with hard sync
+- **Operator** — FM/PM operator with self-modulation, phase/frequency modulation, built-in envelope
+- **WavetableOscillator** — Wavetable-based oscillator for sample-accurate playback
+- **LFO** — Low-frequency oscillator for modulation
+- **Noise** — White noise generator
+
+\subsection control Control
+- **Envelope** — ADSR envelope generator
+- **ModMatrix** — Modulation routing matrix with curve shaping (linear, exponential, logarithmic, S-curve)
+
+\subsection synthesis Synthesis
+- **FMGraph** — FM engine; mutable builder (non-RT) + immutable DSP runtime (RT-safe)
+
+---
+
+\section architecture Architecture
+
+\code
+Node<FloatType>
+├── AudioNode<FloatType, Derived, Policy>
+│   ├── Producer<...>     // generates samples (oscillators)
+│   └── Processor<...>    // transforms samples (filters, gain)
+└── ControlNode<FloatType, Derived>   // control-rate (LFO, Envelope, ModMatrix)
+\endcode
+
+- Real-time safe — no dynamic allocation or locking in render paths
+- Compile-time polymorphism via CRTP
+- Framework agnostic — no JUCE dependency
+
+---
+
+\section installation Installation
+
+CMake:
+\code{.cmake}
+add_subdirectory(path/to/CASPI)
+target_link_libraries(your_target PRIVATE CASPI)
+\endcode
+
+Header-only:
+\code{.cpp}
+#include "caspi.h"                              // full library
+#include "oscillators/caspi_BlepOscillator.h"  // single component
+\endcode
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `CASPI_ENABLE_DEBUG` | OFF | Debug assertions and logging |
+| `CASPI_BUILD_TESTING` | OFF | Unit tests (requires GoogleTest) |
+| `CASPI_BUILD_BENCHMARKS` | OFF | Benchmarks (requires GoogleBench) |
+| `CASPI_BUILD_PYTHON` | OFF | Python bindings (CASPy) |
+| `CASPI_SANITIZER` | None | Address, Undefined, Thread, Realtime |
+
+---
+
+\section references References
+- *The Computer Music Tutorial* — Roads, C.
+- *Implementing Software Synthesisers* — Pirkle, W.
+- <a href="https://cytomic.com/files/cybot.pdf">Cytomic SVF Filter</a>
+
+*/
+```
+
+Then update the Doxyfile — remove `USE_MDFILE_AS_MAINPAGE` entirely and add `.dox` to `FILE_PATTERNS`:
+```
+FILE_PATTERNS          = *.h *.hpp *.cpp *.cc *.md *.dox
+
+# Remove this line entirely:
+# USE_MDFILE_AS_MAINPAGE = Docs/mainpage.md
