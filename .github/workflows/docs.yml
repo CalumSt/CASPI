@@ -24,6 +24,7 @@ jobs:
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCASPI_BUILD_TESTS=ON \
             -DCASPI_BUILD_BENCHMARKS=ON
 
       - name: Build
