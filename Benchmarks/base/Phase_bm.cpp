@@ -28,5 +28,3 @@ static void BM_PhaseAdvanceAndWrap (benchmark::State& state)
 
 // Register benchmark: arg 0 = off, arg 1 = on
 BENCHMARK (BM_PhaseAdvanceAndWrap)->Arg (0)->Arg (1);
-
-BENCHMARK_MAIN();
