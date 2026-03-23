@@ -30,36 +30,58 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #define CASPI_CONSTANTS_H
 #include <cstddef>
 
-namespace CASPI::Constants {
+namespace CASPI
+{
+    namespace Constants
+    {
 
-template <typename FloatType>
-    constexpr FloatType PI = static_cast<FloatType>(3.14159265358979323846);
+        template <typename FloatType>
+        constexpr FloatType PI = static_cast<FloatType> (3.14159265358979323846);
 
-template <typename FloatType>
-    constexpr FloatType TWO_PI = static_cast<FloatType>(6.2831853071795864769);
+        template <typename FloatType>
+        constexpr FloatType TWO_PI = static_cast<FloatType> (6.2831853071795864769);
 
-template <typename FloatType>
-    constexpr FloatType one = static_cast<FloatType>(1.0);
+        template <typename FloatType>
+        constexpr FloatType one = static_cast<FloatType> (1.0);
 
-template <typename FloatType>
-    constexpr FloatType zero = static_cast<FloatType>(0.0);
+        template <typename FloatType>
+        constexpr FloatType zero = static_cast<FloatType> (0.0);
 
-template <typename FloatType>
-    constexpr FloatType A4_FREQUENCY = static_cast<FloatType>(440.0);
+        template <typename FloatType>
+        constexpr FloatType A4_FREQUENCY = static_cast<FloatType> (440.0);
 
-template <typename FloatType>
-    constexpr FloatType A4_MIDI = static_cast<FloatType>(69.0);
+        template <typename FloatType>
+        constexpr FloatType A4_MIDI = static_cast<FloatType> (69.0);
 
-template <typename FloatType>
-    constexpr FloatType NOTES_IN_OCTAVE = static_cast<FloatType>(12.0);
+        template <typename FloatType>
+        constexpr FloatType NOTES_IN_OCTAVE = static_cast<FloatType> (12.0);
 
-template <typename FloatType>
-    constexpr FloatType DEFAULT_SAMPLE_RATE = static_cast<FloatType>(44100.0);
+        template <typename FloatType>
+        struct SampleRates
+        {
+                constexpr static FloatType AUDIO_RATE_22050  = static_cast<FloatType> (22050.0);
+                constexpr static FloatType AUDIO_RATE_44100  = static_cast<FloatType> (44100.0);
+                constexpr static FloatType AUDIO_RATE_48000  = static_cast<FloatType> (48000.0);
+                constexpr static FloatType AUDIO_RATE_96000  = static_cast<FloatType> (96000.0);
+                constexpr static FloatType AUDIO_RATE_192000 = static_cast<FloatType> (192000.0);
+        };
 
-template <typename FloatType>
-    constexpr FloatType MINUS_INF_DBFS = static_cast<FloatType>(-100.0);
+        template <typename FloatType>
+        constexpr FloatType DEFAULT_SAMPLE_RATE = SampleRates<FloatType>::AUDIO_RATE_44100;
 
-constexpr std::size_t DEFAULT_MAX_BUFFER_SIZE = 4096;
-};
+        template <typename FloatType>
+        constexpr FloatType MINUS_INF_DBFS = static_cast<FloatType> (-100.0);
 
-#endif //CASPI_CONSTANTS_H
+        constexpr std::size_t DEFAULT_MAX_BUFFER_SIZE = 4096;
+
+        template <typename FloatType>
+        struct LfoRates
+        {
+            constexpr static FloatType MINIMUM = FloatType (0.01);
+            constexpr static FloatType MAXIMUM = FloatType (20.0);
+            constexpr static FloatType DEFAULT = FloatType (1.0);
+        };
+    }; // namespace Constants
+} // namespace CASPI
+
+#endif // CASPI_CONSTANTS_H

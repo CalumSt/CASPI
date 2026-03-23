@@ -1,71 +1,128 @@
+![Alt text](Docs/assets/caspi.svg)
+
+---
+
 [![CI](https://github.com/CalumSt/CASPI/actions/workflows/ci.yaml/badge.svg)](https://github.com/CalumSt/CASPI/actions/workflows/ci.yaml)
 
-CASPI (C++ Audio Synthesis and Processing Interface) aims to provide modular building blocks for constructing Synthesisers, allowing for a drag-and-drop architecture.
-This project is purely for personal use, and heavily based on The Computer Music Tutorial and Will Pirkle's books, but thought it would be valuable to try to make a library. It's a collection of useful audio processing classes from a variety of sources.
 
-This project is header-only and freestanding, except for tests and benchmarks. These use the google set of toolings (googletest, googlebenchmark).
+**CASPI** (C++ Audio Synthesis and Processing Interface) is a header-only C++ library providing modular building blocks for constructing synthesisers, enabling a drag-and-drop architecture.
 
-To bind it to your project, you can include the headers directly in your source files. You can also use CMake to include the library in your project, which will automatically handle the dependencies and include paths for you.
-You can include the entire library by using `#include "caspi.h"` in your project, which will include all the necessary headers for you.
-Alternatively, if you only need a little bit, you can use specific components, e.g. #include "oscillators/caspi_BlepOscillator.h"
+Based on *The Computer Music Tutorial* and Will Pirkle's books. Pure header-only with no external runtime dependencies (only for tests and benchmarks).
 
-**Building**
+## Features
 
-To use CASPI as a header-only library in your CMake project:  
-Add CASPI as a subdirectory:  
+### Oscillators
+- **BlepOscillator** — Band-limited oscillator using PolyBLEP antialiasing; supports Sine, Saw, Square, Triangle, and Pulse waveforms with hard sync
+- **Operator** — FM/PM synthesis operator with self-modulation (feedback), phase/frequency modulation modes, and built-in envelope
+- **WavetableOscillator** — Wavetable-based oscillator for sample-accurate playback
+- **LFO** — Low-frequency oscillator for modulation
+- **Noise** — White noise generator
+
+### Filters
+
+- ` ⚠️ Coming soon! `
+
+### Gain & Dynamics
+
+- ` ⚠️ Coming soon! `
+
+### Control
+- **Envelope** — ADSR envelope generator with configurable attack, decay, sustain, and release stages
+- **ModMatrix** — Modulation routing matrix connecting sources (LFOs, envelopes) to parameters with curve shaping (linear, exponential, logarithmic, S-curve)
+
+### Synthesis
+- **FMGraph** — FM synthesis engine with a mutable builder (non-RT) and immutable DSP runtime (RT-safe); validates graph topology at build time and executes operators in precomputed topological order
+
+## Architecture
+
+### Core Class Hierarchy
+
+```
+Node<FloatType>                    // Abstract base; sole virtual boundary (processBlock per block)
+├── AudioNode<FloatType, Derived, Policy>  // CRTP; audio-rate
+│   ├── Producer<...>              // No input; generates samples (oscillators)
+│   └── Processor<...>             // Has input; transforms samples (filters, gain)
+└── ControlNode<FloatType, Derived>         // CRTP; control-rate (one value per block)
+```
+
+Classes that produce audio inherit `Producer`. Classes that process audio inherit `Processor`. Control-rate sources (LFO, Envelope, ModMatrix) inherit `ControlNode`.
+
+### Design Principles
+
+- **Everything should sound good** — The guiding principle
+- **Real-time safe** — No dynamic allocation or locking in render paths
+- **Compile-time polymorphism** — CRTP eliminates virtual call overhead in hot paths
+- **Framework agnostic** — No hard dependency on JUCE or other frameworks
+- **Hierarchical** — Heavier classes build on lighter foundations; include only what you need
+
+### Parameter System
+
+All modulatable audio parameters use `ModulatableParameter<T>` with:
+- Per-block smoothing to avoid clicks
+- Logarithmic and linear scaling options
+- Modulation input for LFO/envelope control
+
+### SIMD Support
+
+- SIMD abstractions for SSE, NEON and WASM SIMD with fallback to scalar
+- Branchless waveforms enable compiler auto-vectorisation
+- Denormal flushing via `ScopedFlushDenormals`
+
+## Installation
+
+### CMake (Recommended)
 
 ```cmake
 add_subdirectory(path/to/CASPI)
 target_link_libraries(your_target PRIVATE CASPI)
 ```
-Include the header in your code: 
+
+### Header-Only
+
+Include directly in your source files:
+
 ```cpp
-#include <caspi.h>
-#include <filters/caspi_Ladder.h>
-#include <oscillators/caspi_BlepOscillator.h>
-etc...
+#include "caspi.h"                              // Full library
+#include "oscillators/caspi_BlepOscillator.h"  // Single component
 ```
-CASPI will automatically provide the necessary include paths. No source files are compiled; simply link to the CASPI target and include the header.
 
-You can also enable the tests and benchmarks by adding the following lines:
+### Build Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `CASPI_ENABLE_DEBUG` | OFF | Enable debug assertions and logging |
+| `CASPI_BUILD_TESTING` | OFF | Build unit tests (requires GoogleTest) |
+| `CASPI_BUILD_BENCHMARKS` | OFF | Build benchmarks (requires GoogleBench) |
+| `CASPI_BUILD_PYTHON` | OFF | Build Python bindings (CASPy) |
+| `CASPI_SANITIZER` | None | Sanitizer: Address, Undefined, Thread, Realtime |
+
+## Examples
+
+`⚠️ Live Demo coming soon!`
+
+Checkout the example notebooks as part of CASPy (Python bindings) for interactive demos of oscillators, filters, and FM synthesis graphs.
+
+## Project Structure
+
 ```
--DCASPI_BUILD_TESTS=ON
--DCASPI_BUILD_BENCHMARKS=ON
+CASPI/
+├── base/           # Core utilities, SIMD, constants, assertions
+├── core/           # Node base classes, AudioBuffer, Parameter
+├── controls/       # Envelope, ModMatrix
+├── external/       # Third-party (concurrentqueue)
+├── filters/        # SVF, OnePole
+├── gain/           # Gain, Waveshaper
+├── maths/          # FFT, math utilities
+├── oscillators/    # BlepOscillator, Operator, Wavetable, LFO, Noise
+└── synthesizers/   # FMGraph
 ```
-These will be built by default if CASPI is built standalone.
 
-**Aims and Design**
+## References
 
-CASPI has a very simple guiding principle: Everything should sound good. This is audio & music, after all!
+- The Computer Music Tutorial ( Roads, C. )
+- Implementing Software Synthesisers ( Pirkle, W. )
+- [Cytomic SVF Filter](https://cytomic.com/files/cybot.pdf)
 
-The library is hierarchical and builds on itself. Including heavier classes (e.g. PMAlgorithms) will use pieces from other parts of the library, with base at the foundation. 
+## License
 
-There is no specific framework that CASPI should work best with. It is likely to be used with JUCE, but should aim to be agnostic. Any framework adapters should be separate from this library.
-
-Classes that produce audio should inherit the API from the "Producer" base class. Classes that process audio should inherit from the "Processor" base class. Everything either renders (produces) or processes audio.
-
-Generally, classes and functions are in UpperCamelCase and lowerCamelCase respectively. If a class is compatible with the standard library (e.g. iterators, algorithms), it uses snake_case to denote this.
-
-
-**TODO**
-- Wavetables
-- Samplers
-- Granular Synthesis
-- Additive Synthesis
-- CASPI Explorer program
-- Ladder Filters
-- Mod Matrix
-- Synth Engine
-- Waveshaper
-- Compressor & Mixers
-
-Further down the line...
-- JUCE Bindings (and iPlug2, hopefully!)
-- Drag-And-Drop Explorer
-- 
-
-
-See also:
-- The Computer Music Tutorial
-	
-
+BSD-3-Clause. See [LICENSE.md](LICENSE.md).

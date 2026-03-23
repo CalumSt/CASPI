@@ -1,0 +1,99 @@
+# ---------------------------------------------------------------------------
+# Project
+# ---------------------------------------------------------------------------
+PROJECT_NAME           = "CASPI"
+PROJECT_BRIEF          = "Audio Synthesis Engine"
+PROJECT_NUMBER         =
+PROJECT_LOGO           = Docs/assets/caspi-favicon.svg
+
+# ---------------------------------------------------------------------------
+# Input
+# ---------------------------------------------------------------------------
+INPUT                  = CASPI
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h *.hpp *.cpp *.cc
+EXCLUDE_PATTERNS       = */build/* */test/* */third_party/*
+EXCLUDE                = README.md
+
+# ---------------------------------------------------------------------------
+# Extraction
+# ---------------------------------------------------------------------------
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_ANON_NSPACES   = NO
+HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_CLASSES     = YES
+BUILTIN_STL_SUPPORT    = YES
+JAVADOC_AUTOBRIEF      = NO
+QT_AUTOBRIEF           = NO
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+OUTPUT_DIRECTORY       = Docs
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+
+# ---------------------------------------------------------------------------
+# doxygen-awesome-css theme
+# ---------------------------------------------------------------------------
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+HTML_COLORSTYLE        = LIGHT
+
+HTML_EXTRA_STYLESHEET  = Docs/doxygen-awesome-css/doxygen-awesome.css \
+                         Docs/doxygen-awesome-css/doxygen-awesome-sidebar-only.css \
+                         Docs/doxygen-awesome-css/doxygen-awesome-sidebar-only-darkmode-toggle.css
+
+HTML_EXTRA_FILES = Docs/doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js \
+                   Docs/doxygen-awesome-css/doxygen-awesome-fragment-copy-button.js \
+                   Docs/doxygen-awesome-css/doxygen-awesome-paragraph-link.js \
+                   Docs/doxygen-awesome-css/doxygen-awesome-interactive-toc.js \
+                   Docs/assets/caspi-logo.svg \
+                   Docs/assets/caspi-favicon.svg
+
+# Inject the JS extensions into every page header
+HTML_HEADER            = Docs/header.html
+
+# ---------------------------------------------------------------------------
+# Graphs (requires graphviz)
+# ---------------------------------------------------------------------------
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 4
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+CLASS_GRAPH            = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+
+# ---------------------------------------------------------------------------
+# Source browsing
+# ---------------------------------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+VERBATIM_HEADERS       = YES
+
+# ---------------------------------------------------------------------------
+# Warnings
+# ---------------------------------------------------------------------------
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+WARN_LOGFILE           = Docs/doxygen-warnings.log
+
+# ---------------------------------------------------------------------------
+# Preprocessing
+# ---------------------------------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+PREDEFINED             = DOXYGEN_ONLY

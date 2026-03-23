@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.13)
 set(CMAKE_CXX_STANDARD 20)
 # Set up the benchmark project
 project(Benchmarks)
@@ -28,8 +28,11 @@ FetchContent_MakeAvailable(google_benchmark)
 set(SOURCES
         base/Buffer_bm.cpp
         base/Phase_bm.cpp
-        base/Denormals_bm.cpp
         base/Expected_bm.cpp
+        base/SIMD_bm.cpp
+        base/AudioBuffer_SIMD_bm.cpp
+        base/PolyKernel_bm.cpp
+        Producers/Oscillator_bm.cpp
 )
 # --------------------------------------------------------------------------
 

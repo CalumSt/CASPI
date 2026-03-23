@@ -1,63 +1,70 @@
-cmake_minimum_required(VERSION 3.29)
-set(CMAKE_CXX_STANDARD 20)
-# Set up the testing project
-project(UnitTests)
-# allow testing from this directory
-enable_testing()
-
 message(STATUS "Configuring CASPI Tests")
 
 include(FetchContent)
 
-# Define download location for third-party libs
-set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs CACHE PATH "Base directory for FetchContent downloads")
-
-# Prevent GoogleTest from overriding your compiler/linker settings
+set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs CACHE PATH "FetchContent download dir")
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
-# Fetch GoogleTest
 FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/refs/heads/main.zip
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-
-# Make it available
 FetchContent_MakeAvailable(googletest)
-
 include(GoogleTest)
 
-# --------------------------------------------------------------------------
-# ADD TEST FILES HERE
+# ============================================================
+# Sources
+# ============================================================
+
 set(SOURCES
-        base/Phase_test.cpp
-        base/Expected_test.cpp
-        base/AudioBuffer_test.cpp
-        base/DelayLine_test.cpp
-        base/Expected_test.cpp
-        base/BaseClass_test.cpp
-        sources/Oscillator_test.cpp
+        base/SIMD_test.cpp
+        base/SIMD/SIMD_complex_test.cpp
+        base/SIMD/SIMD_operations_test.cpp
+        base/SIMD/SIMD_block_test.cpp
+        base/SIMD/SIMD_LoadStore_test.cpp
+        base/SIMD/SIMD_PolyKernel_test.cpp
+        base/SIMD/SIMD_strategy_test.cpp
+        core/Phase_test.cpp
+        core/Expected_test.cpp
+        core/AudioBuffer_test.cpp
+        core/DelayLine_test.cpp
+        core/BaseClass_test.cpp
+        core/Parameter_test.cpp
         base/Utilities_test.cpp
+        controls/Envelope_test.cpp
+        controls/ModMatrix_test.cpp
+        sources/BlepOscillator_test.cpp
+        sources/Operator_test.cpp
+        sources/Noise_test.cpp
+        sources/LFO_test.cpp
+        sources/WavetableOscillator_test.cpp
         processors/Filter_test.cpp
-        processors/Envelope_test.cpp
-        sources/PMOperator_test.cpp
-        synthesizers/PMAlgorithm_test.cpp
         processors/Gain_test.cpp
+        synthesizers/FMGraph_test.cpp
+        maths/Spectral_test.cpp
+        maths/FMTheory_test.cpp
         maths/FFT_test.cpp
         maths/Maths_test.cpp
 )
-# --------------------------------------------------------------------------
 
+add_executable(UnitTests ${SOURCES})
 
-add_executable(${PROJECT_NAME} ${SOURCES})
-# --------------------------------------------------------------------------
-    
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_include_directories(UnitTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_compile_features(UnitTests PRIVATE cxx_std_11)
+
+target_link_libraries(UnitTests PRIVATE
         gtest_main
         CASPI
 )
 
-gtest_discover_tests(${PROJECT_NAME})
+target_compile_definitions(UnitTests PRIVATE
+        CASPI_RT_SAFE_EXPECTS
+)
 
-add_test(NAME MyUnitTests COMMAND ${PROJECT_NAME})
-set_tests_properties(MyUnitTests PROPERTIES LABELS "test")
+caspi_apply_sanitizer(UnitTests)
+
+caspi_apply_debug_flags(UnitTests)
+
+gtest_discover_tests(UnitTests)
