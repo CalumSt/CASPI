@@ -9,7 +9,7 @@ PROJECT_LOGO           = Docs/assets/caspi-favicon.svg
 # ---------------------------------------------------------------------------
 # Input
 # ---------------------------------------------------------------------------
-INPUT                  = include src
+INPUT                  = CASPI
 RECURSIVE              = YES
 FILE_PATTERNS          = *.h *.hpp *.cpp *.cc
 EXCLUDE_PATTERNS       = */build/* */test/* */third_party/*
