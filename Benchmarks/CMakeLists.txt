@@ -12,14 +12,15 @@ set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs CACHE PATH "Base dire
 
 # Prevent GoogleTest from overriding your compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
 
 # Fetch GoogleTest
 FetchContent_Declare(
         google_benchmark
-        URL https://github.com/google/benchmark/archive/refs/heads/main.zip
+        URL https://github.com/google/benchmark/archive/refs/tags/v1.9.1.zip
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-
 # Make it available
 FetchContent_MakeAvailable(google_benchmark)
 
@@ -42,5 +43,6 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         benchmark::benchmark
+        benchmark::benchmark_main
         CASPI
 )
