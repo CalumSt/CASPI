@@ -1,0 +1,177 @@
+/**
+\page benchmarks Benchmarks
+
+SIMD buffer operation benchmarks across buffer sizes 64–65536 elements.
+Results updated weekly or on each tagged release.
+
+\htmlonly
+<div id="bm-controls" style="margin: 1rem 0;">
+  <label style="font-size:14px;">
+    Run:
+    <select id="bm-run-select" style="margin-left:6px; padding:4px 8px; font-size:14px;"></select>
+  </label>
+</div>
+<div id="bm-meta" style="font-size:12px; margin-bottom:1.5rem; opacity:0.6;"></div>
+<div id="bm-charts" style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function() {
+  var base = document.location.pathname.replace(/\/[^/]*$/, "/");
+  var RESULTS_DIR = base + "bench/results/";
+
+  var COLOURS = {
+    SIMD:       "#378ADD",
+    AutoVec:    "#1D9E75",
+    Scalar:     "#D85A30",
+    Memcpy:     "#7F77DD",
+    Aligned:    "#378ADD",
+    Misaligned: "#D85A30",
+  };
+
+  var SIZES = [64, 512, 2048, 16384, 65536];
+  var charts = [];
+
+  function getTextColor() {
+    return getComputedStyle(document.body).getPropertyValue("color").trim() || "#333";
+  }
+
+  function getGridColor() {
+    var c = getTextColor();
+    return c.startsWith("#") ? c + "22" : "rgba(128,128,128,0.15)";
+  }
+
+  function parseBenchmarks(data) {
+    var means = data.benchmarks.filter(function(b) {
+      return b.name.endsWith("_mean");
+    });
+    var groups = {};
+    means.forEach(function(b) {
+      var name    = b.name.replace("_mean", "");
+      var parts   = name.split("/");
+      var size    = parseInt(parts[1] || "0");
+      var tokens  = parts[0].split("_");
+      var variant = tokens[tokens.length - 1];
+      var op      = tokens.slice(1, -1).join("_");
+
+      var value, unit;
+      if (b.bytes_per_second && b.bytes_per_second > 0) {
+        value = Math.round(b.bytes_per_second / 1e6) / 1000;
+        unit  = "GB/s";
+      } else if (b.items_per_second && b.items_per_second > 0) {
+        value = Math.round(b.items_per_second / 1e3) / 1000;
+        unit  = "Mops/s";
+      } else {
+        return;
+      }
+
+      if (!groups[op])                    groups[op] = { unit: unit, variants: {} };
+      if (!groups[op].variants[variant])  groups[op].variants[variant] = {};
+      groups[op].variants[variant][size]  = value;
+    });
+    return groups;
+  }
+
+  function renderCharts(groups) {
+    charts.forEach(function(c) { c.destroy(); });
+    charts = [];
+    var container = document.getElementById("bm-charts");
+    container.innerHTML = "";
+    var textColor = getTextColor();
+    var gridColor = getGridColor();
+
+    Object.keys(groups).sort().forEach(function(op) {
+      var g    = groups[op];
+      var wrap = document.createElement("div");
+      var h    = document.createElement("h3");
+      h.textContent = op;
+      h.style.marginBottom = "0.5rem";
+      var canvasWrap = document.createElement("div");
+      canvasWrap.style.height = "260px";
+      var canvas = document.createElement("canvas");
+      canvas.id  = "bm_" + op;
+      canvasWrap.appendChild(canvas);
+      wrap.appendChild(h);
+      wrap.appendChild(canvasWrap);
+      container.appendChild(wrap);
+
+      var datasets = Object.keys(g.variants).map(function(variant) {
+        return {
+          label:           variant,
+          data:            SIZES.map(function(s) { return g.variants[variant][s] || null; }),
+          borderColor:     COLOURS[variant] || "#888",
+          backgroundColor: (COLOURS[variant] || "#888") + "33",
+          tension:         0.3,
+          spanGaps:        true,
+        };
+      });
+
+      charts.push(new Chart(canvas, {
+        type: "line",
+        data: { labels: SIZES, datasets: datasets },
+        options: {
+          responsive:          true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "top", labels: { color: textColor } },
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Buffer size (elements)", color: textColor },
+              ticks: { color: textColor },
+              grid:  { color: gridColor },
+            },
+            y: {
+              title: { display: true, text: g.unit, color: textColor },
+              ticks: { color: textColor },
+              grid:  { color: gridColor },
+              beginAtZero: true,
+            },
+          },
+        },
+      }));
+    });
+  }
+
+  async function load(filename) {
+    var r    = await fetch(RESULTS_DIR + filename);
+    var data = await r.json();
+    var ctx  = data.context || {};
+    document.getElementById("bm-meta").textContent =
+      "Host: " + (ctx.host_name || "unknown") +
+      " — " + (ctx.date || "") +
+      " — " + (ctx.num_cpus || "?") + " CPUs @ " + (ctx.mhz_per_cpu || "?") + "MHz";
+    renderCharts(parseBenchmarks(data));
+  }
+
+  async function init() {
+    var r = await fetch(RESULTS_DIR + "index.json");
+    if (!r.ok) {
+      document.getElementById("bm-meta").textContent = "No benchmark results found.";
+      return;
+    }
+    var files = await r.json();
+    var sel   = document.getElementById("bm-run-select");
+
+    if (!files.length) {
+      document.getElementById("bm-meta").textContent = "No benchmark results found.";
+      return;
+    }
+
+    files.slice().reverse().forEach(function(f) {
+      var opt       = document.createElement("option");
+      opt.value     = f;
+      opt.textContent = f.replace("results-", "").replace(".json", "");
+      sel.appendChild(opt);
+    });
+
+    sel.addEventListener("change", function() { load(sel.value); });
+    load(sel.value);
+  }
+
+  init();
+})();
+</script>
+\endhtmlonly
+
+*/
