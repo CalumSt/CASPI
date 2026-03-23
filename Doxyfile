@@ -9,9 +9,9 @@ PROJECT_LOGO           = Docs/assets/caspi-favicon.svg
 # ---------------------------------------------------------------------------
 # Input
 # ---------------------------------------------------------------------------
-INPUT                  = CASPI
+INPUT                  = CASPI Docs/pages
 RECURSIVE              = YES
-FILE_PATTERNS          = *.h *.hpp *.cpp *.cc
+FILE_PATTERNS          = *.h *.hpp *.cpp *.cc *.dox
 EXCLUDE_PATTERNS       = */build/* */test/* */third_party/*
 EXCLUDE                = README.md
 
