@@ -31,6 +31,7 @@ set(SOURCES
         core/DelayLine_test.cpp
         core/BaseClass_test.cpp
         core/Parameter_test.cpp
+        core/Graph_test.cpp
         base/Utilities_test.cpp
         controls/Envelope_test.cpp
         controls/ModMatrix_test.cpp
