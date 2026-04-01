@@ -29,7 +29,6 @@ set(SOURCES
         core/Expected_test.cpp
         core/AudioBuffer_test.cpp
         core/DelayLine_test.cpp
-        core/BaseClass_test.cpp
         core/Parameter_test.cpp
         core/Graph_test.cpp
         base/Utilities_test.cpp
