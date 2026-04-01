@@ -36,7 +36,6 @@ Unit Tests Plan
 #include <vector>
 
 #include "core/caspi_AudioBuffer.h"
-#include "core/caspi_Core.h"
 
 TEST(ChannelMajorLayoutTest, ConstructionAndResize) {
     CASPI::ChannelMajorLayout<float> buf;
