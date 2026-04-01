@@ -101,7 +101,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #include "base/caspi_Assert.h"
 #include "base/caspi_Constants.h"
-#include "core/caspi_Core.h"
+#include "core/caspi_Node.h"
 #include "core/caspi_Parameter.h"
 #include "core/caspi_Phase.h"
 
@@ -174,12 +174,12 @@ enum class LfoOutputMode
  *   lfo.renderBlock(buffer, 512);
  * @endcode
  */
-template <typename FloatType>
-class LFO : public Core::SampleRateAware<FloatType>
+template <CASPI_FLOAT_TYPE FloatType>
+class LFO : public Graph::ControlNode<LFO<FloatType>, FloatType>
 {
     CASPI_STATIC_ASSERT (std::is_floating_point<FloatType>::value,
                            "LFO requires a floating-point type");
-
+    using Base = Graph::ControlNode<LFO<FloatType>, FloatType>;
 public:
 
     /*************************************************************************
@@ -200,7 +200,8 @@ public:
      * - Amplitude:  1.0
      * - One-shot:   false
      */
-    LFO() noexcept CASPI_NON_ALLOCATING
+    LFO() noexcept
+        : Base (1) // 1 control output
     {
         initParameters();
     }
@@ -216,7 +217,7 @@ public:
      *   LFO<float> lfo(44100.f, 0.5f);  // 0.5 Hz — one cycle per 2 s
      * @endcode
      */
-    LFO (FloatType sampleRate, FloatType rateHz) noexcept CASPI_NON_ALLOCATING
+    LFO (FloatType sampleRate, FloatType rateHz) noexcept
     {
         initParameters();
         this->setSampleRate (sampleRate);
@@ -253,6 +254,48 @@ public:
         setShape (s);
         setOutputMode (m);
         resetPhase();
+    }
+
+ /*************************************************************************
+     * NodeBase hooks
+     *************************************************************************/
+
+    /**
+     * @brief Recomputes phase.increment when the sample rate changes.
+     * Called automatically by NodeBase::setSampleRate().
+     */
+    void onSampleRateChanged (FloatType newRate) noexcept override
+    {
+        const FloatType hz = rate.value();
+        phase.increment    = (newRate > FloatType (0)) ? hz / newRate : FloatType (0);
+    }
+
+    /**
+     * @brief Resize the internal block buffer for graph use.
+     * Called by ControlNode::prepareToRender() after setSampleRate().
+     */
+    void onPrepare (std::size_t /*numChannels*/, std::size_t numFrames, double) noexcept
+    {
+        blockBuffer.resize (numFrames, FloatType (0));
+    }
+
+    /**
+     * @brief Graph dispatch: render one block, store last value in controlOutputs[0].
+     *
+     * Downstream nodes read controlOutputs[0] via AudioContext::getControlInput().
+     * The full block is accessible via getLfoBuffer() for per-sample consumers.
+     */
+    void processImpl (Graph::AudioContext<FloatType>& /*ctx*/) noexcept
+    {
+        for (std::size_t i = 0; i < blockBuffer.size(); ++i)
+        {
+            blockBuffer[i] = renderSample();
+        }
+
+        if (! blockBuffer.empty())
+        {
+            this->controlOutputs[0] = blockBuffer.back();
+        }
     }
 
     /*************************************************************************
@@ -394,26 +437,6 @@ public:
         CASPI_ASSERT (bpm           > FloatType (0), "BPM must be positive");
         CASPI_ASSERT (beatsPerCycle > FloatType (0), "beatsPerCycle must be positive");
         setRate (bpm / (FloatType (60) * beatsPerCycle));
-    }
-
-    /*************************************************************************
-     * SampleRateAware override
-     *************************************************************************/
-
-    /**
-     * @brief Override from SampleRateAware. Recomputes phase increment.
-     *
-     * @details
-     * Called by the audio engine on startup or sample rate change. Also
-     * call manually if constructing the LFO before the sample rate is known.
-     *
-     * @param newRate  Sample rate in Hz. Must be > 0.
-     */
-    void setSampleRate (FloatType newRate) CASPI_NON_BLOCKING override
-    {
-        Core::SampleRateAware<FloatType>::setSampleRate (newRate);
-        const FloatType hz = rate.value();
-        phase.increment    = (newRate > FloatType (0)) ? hz / newRate : FloatType (0);
     }
 
     /*************************************************************************
@@ -751,6 +774,7 @@ private:
     bool             oneShot     { false };
     bool             halted      { false };                   ///< true after one-shot cycle completes.
     bool             wrapped     { false };                   ///< Cleared at start of each renderSample().
+     std::vector<FloatType> blockBuffer; ///< Filled by processImpl(); empty until first graph process().
 };
 
 } // namespace Oscillators
