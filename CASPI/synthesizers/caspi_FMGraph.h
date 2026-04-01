@@ -32,7 +32,8 @@
 
 
 #include "base/caspi_Compatibility.h"
-#include "core/caspi_Core.h"
+#include "base/caspi_Denormals.h"
+#include "core/caspi_Producer.h"
 #include "core/caspi_Expected.h"
 #include "oscillators/caspi_Operator.h"
 
@@ -562,9 +563,9 @@ namespace CASPI
      *  - Construction is expected to be validated by FMGraphBuilder
      *  - Runtime rendering functions do not report errors
      */
-    template <typename FloatType>
-    class FMGraphDSP : public Core::Producer<FloatType, Core::Traversal::PerFrame>,
-                       public Core::SampleRateAware<FloatType>
+    template <CASPI_FLOAT_TYPE FloatType>
+    class FMGraphDSP
+        : public Core::Producer<FMGraphDSP<FloatType>, FloatType, Core::Traversal::PerFrame>
     {
         public:
             /**
@@ -588,68 +589,33 @@ namespace CASPI
                   outputGain_ (FloatType (1)),
                   autoScaleOutputs_ (true)
             {
-                CASPI_ASSERT(sampleRate > 0 && std::isfinite(sampleRate),
-             "Sample rate must be positive and finite");
+                CASPI_ASSERT (sampleRate > 0 && std::isfinite (sampleRate),
+                              "Sample rate must be positive and finite");
+
                 const size_t n = operatorConfigs.size();
-
-                // Validate all connections reference valid operators
-                for (const auto& conn : connections)
-                {
-                    CASPI_ASSERT(conn.sourceOperator < n,
-                                 "Connection source operator out of range");
-                    CASPI_ASSERT(conn.targetOperator < n,
-                                 "Connection target operator out of range");
-                    CASPI_ASSERT(std::isfinite(conn.modulationDepth),
-                                 "Connection modulation depth must be finite");
-                }
-
-                // Validate all output operators are valid
-                for (size_t outOp : outputOperators)
-                {
-                    CASPI_ASSERT(outOp < n, "Output operator index out of range");
-                }
-
                 operators_.reserve (n);
+
                 for (const auto& config : operatorConfigs)
                 {
-                    auto op = CASPI::make_unique<Operator<FloatType>>(
+                    auto op = CASPI::make_unique<Operator<FloatType>> (
                         sampleRate,
                         config.frequency,
                         config.modulationIndex,
                         config.modulationDepth,
                         config.modulationFeedback,
-                        config.modulationMode
-                    );
-
-                    CASPI_ASSERT(op != nullptr, "Failed to create operator");
-
+                        config.modulationMode);
+                    CASPI_ASSERT (op != nullptr, "Failed to create operator");
                     operators_.push_back (std::move (op));
                 }
 
-
-                CASPI_ENSURE(operators_.size() == n,
-                             "Wrong number of operators after construction");
-
-
                 modulationSignals_.resize (n, FloatType (0));
-                operatorOutputs_.resize (n, FloatType (0));
+                operatorOutputs_.resize   (n, FloatType (0));
 
                 computeExecutionOrder();
-                CASPI_ENSURE(executionOrder_.size() == n,
-             "Execution order size doesn't match operator count");
-
                 buildAdjacencyList();
-
-                CASPI_ENSURE(outgoingOffsets_.size() == n + 1,
-                             "Adjacency offset array has wrong size");
-                CASPI_ENSURE(outgoingTargets_.size() == connections.size(),
-                             "Adjacency targets array has wrong size");
-                CASPI_ENSURE(outgoingDepths_.size() == connections.size(),
-                             "Adjacency depths array has wrong size");
-                CASPI_ENSURE(connectionIndexToFlatIndex_.size() == connections.size(),
-                             "Connection reverse index has wrong size");
                 updateEffectiveGain();
 
+                // Store sample rate via NodeBase (fires onSampleRateChanged).
                 this->setSampleRate (sampleRate);
             }
 
@@ -657,6 +623,27 @@ namespace CASPI
             FMGraphDSP& operator= (const FMGraphDSP&) = delete;
             FMGraphDSP (FMGraphDSP&&)                 = default;
             FMGraphDSP& operator= (FMGraphDSP&&)      = default;
+
+            /*------------------------------------------------------------------
+             * NodeBase hooks
+             *-----------------------------------------------------------------*/
+
+            /**
+             * @brief Propagates the new sample rate to all child operators.
+             * Called automatically by NodeBase::setSampleRate().
+             */
+            void onSampleRateChanged (FloatType newRate) noexcept override
+            {
+                for (auto& op : operators_)
+                {
+                    if (op != nullptr)
+                    {
+                        op->setSampleRate (newRate);
+                    }
+                }
+            }
+
+            void onPrepare (std::size_t, std::size_t, double) noexcept {}
 
             /**
              * @brief Returns a mutable pointer to an operator by index.
