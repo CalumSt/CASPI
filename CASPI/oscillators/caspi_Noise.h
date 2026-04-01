@@ -85,7 +85,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #include "base/caspi_Assert.h"
 #include "base/caspi_Constants.h"
-#include "core/caspi_Core.h"
+#include "core/caspi_Producer.h"
 #include "core/caspi_Parameter.h"
 
 #include <array>
@@ -385,16 +385,17 @@ struct AlgorithmTraits<FloatType, NoiseAlgorithm::Pink>
  *   osc.renderBlock(buf, 4096);
  * @endcode
  */
-template <typename FloatType, NoiseAlgorithm Algo = NoiseAlgorithm::White>
+template <CASPI_FLOAT_TYPE FloatType, NoiseAlgorithm Algo = NoiseAlgorithm::White>
 class NoiseOscillator
-    : public Core::Producer<FloatType, Core::Traversal::PerSample>
-    , public Core::SampleRateAware<FloatType>
+    : public Core::Producer<NoiseOscillator<FloatType, Algo>,
+                            FloatType,
+                            Core::Traversal::PerSample>
 {
     static_assert (std::is_floating_point<FloatType>::value,
                    "NoiseOscillator requires a floating-point type");
 
     using Engine = typename detail::AlgorithmTraits<FloatType, Algo>::Engine;
-
+        using Base = Core::Producer<NoiseOscillator<FloatType, Algo>, FloatType, Core::Traversal::PerSample>;
 public:
 
     /*************************************************************************
@@ -409,7 +410,8 @@ public:
      * noise generation is not sample-rate dependent, but setSampleRate()
      * is available for API consistency.
      */
-    NoiseOscillator() noexcept CASPI_NON_ALLOCATING
+    NoiseOscillator() noexcept
+        : Base (0, 1)
     {
         initParameters();
     }
@@ -423,11 +425,25 @@ public:
      *
      * @param sampleRate  Audio sample rate in Hz.
      */
-    explicit NoiseOscillator (FloatType sampleRate) noexcept CASPI_NON_ALLOCATING
+    explicit NoiseOscillator (FloatType sampleRate) noexcept
+        : Base (0, 1)
     {
         initParameters();
         this->setSampleRate (sampleRate);
     }
+
+    /*************************************************************************
+     * NodeBase hooks
+     *************************************************************************/
+
+    /**
+     * @brief No-op: noise generation is sample-rate independent.
+     * Retained so AudioGraph::prepare() fires without error.
+     */
+    void onSampleRateChanged (FloatType) noexcept override {}
+
+    /** @brief No additional setup needed at prepare time. */
+    void onPrepare (std::size_t, std::size_t, double) noexcept {}
 
     /*************************************************************************
      * Configuration
