@@ -6,7 +6,7 @@
 #define CASPI_PHASE_H
 
 #include "base/caspi_Assert.h"
-#include "core/caspi_Core.h"
+#include "base/caspi_Denormals.h"
 
 #include <cmath>
 
