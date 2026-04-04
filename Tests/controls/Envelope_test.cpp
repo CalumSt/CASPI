@@ -16,7 +16,7 @@ TEST(AdsrTests,Constructor_test)
     CASPI::Envelope::ADSR<float> ADSR;
     const std::string expect = {"idle" };
     ADSR.setSampleRate(44100.0f);
-    EXPECT_EQ (ADSR.getState(), expect);
+    EXPECT_EQ (ADSR.getStateString(), expect);
 }
 
 
@@ -43,7 +43,7 @@ TEST(AdsrTests, Setters_test) {
 TEST(AdsrTests, noteOn_test) {
     CASPI::Envelope::ADSR<float> ADSR;
     ADSR.noteOn();
-    std::string test = ADSR.getState();
+    std::string test = ADSR.getStateString();
     std::string expect = {"attack"};
     EXPECT_EQ(test,expect);
 }
@@ -64,7 +64,7 @@ TEST(AdsrTests, Attack_test) {
 
         // Act
         ADSR.noteOn();
-        std::string test = ADSR.getState();
+        std::string test = ADSR.getStateString();
         std::string expect = {"attack"};
 
         // Assert
@@ -80,13 +80,13 @@ TEST(AdsrTests, Attack_test) {
         }
         // Expect to have to switched to decay
         if (testIndex < 5) {
-            EXPECT_EQ(ADSR.getState(),"decay");
+            EXPECT_EQ(ADSR.getStateString(),"decay");
         } else if (testIndex >= 5) {
-            EXPECT_EQ(ADSR.getState(),"sustain");
+            EXPECT_EQ(ADSR.getStateString(),"sustain");
         }
 
         ADSR.noteOff();
-        EXPECT_EQ(ADSR.getState(),"release");
+        EXPECT_EQ(ADSR.getStateString(),"release");
     }
 }
 
@@ -116,7 +116,7 @@ TEST(AdsrTests, Decay_test) {
         }
 
         // Expect to have to switched to decay
-        EXPECT_EQ(ADSR.getState(),"sustain");
+        EXPECT_EQ(ADSR.getStateString(),"sustain");
 
     }
 }
@@ -140,7 +140,7 @@ TEST(AdsrTests, Sustain_test) {
             ADSR.render();
         }
 
-        EXPECT_EQ(ADSR.getState(),"sustain");
+        EXPECT_EQ(ADSR.getStateString(),"sustain");
         }
     }
 /// This test checks that the ADSR releases properly.
@@ -163,20 +163,20 @@ TEST(AdsrTests, Release_test) {
         }
 
         ADSR.noteOff();
-        EXPECT_EQ(ADSR.getState(),"release");
+        EXPECT_EQ(ADSR.getStateString(),"release");
         numberOfSamples = static_cast<int>(2000.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
             ADSR.render();
         }
         if (testIndex > 1) {
-            EXPECT_EQ(ADSR.getState(),"release"); // Test to see make sure the envelope doesn't release too quickly.
+            EXPECT_EQ(ADSR.getStateString(),"release"); // Test to see make sure the envelope doesn't release too quickly.
             EXPECT_GT(ADSR.render(),0.0f);
         }
         numberOfSamples = static_cast<int>(44100.0f * testTimeList[testIndex]);
         for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++) {
             ADSR.render();
         }
-        EXPECT_EQ(ADSR.getState(),"idle");
+        EXPECT_EQ(ADSR.getStateString(),"idle");
         EXPECT_EQ(ADSR.render(),0.0f);
     }
 };
@@ -219,7 +219,7 @@ TEST(AdsrTests, render_test)
             output.at(numberOfSamples) = ADSR.render();
             numberOfSamples++;
         }
-        EXPECT_EQ(ADSR.getState(),"idle");
+        EXPECT_EQ(ADSR.getStateString(),"idle");
         EXPECT_EQ(ADSR.render(),0.0f);
     }
 }
