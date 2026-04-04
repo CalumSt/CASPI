@@ -88,7 +88,7 @@
  *      getNumParameters() returns 2 after two successful registrations.
  *
  * 3.4  RegisterBeyondCapacityReturnsError
- *      After kMaxModParams successful registrations, the next call
+ *      After MAX_MOD_PARAMS successful registrations, the next call
  *      returns CapacityExceeded. Verifying capacity enforcement without
  *      allocating the full array in the test (uses a smaller proxy).
  *      Tested via a fresh matrix filled to capacity with a small-N proxy.
@@ -102,10 +102,10 @@
  *      getSourceValue on the same index.
  *
  * 4.2  SetSourceValueOutOfRangeIsIgnored
- *      setSourceValue with sourceId >= kMaxModSources must not crash.
+ *      setSourceValue with sourceId >= MAX_MOD_SOURCES must not crash.
  *
  * 4.3  GetSourceValueOutOfRangeReturnsZero
- *      getSourceValue with sourceId >= kMaxModSources returns 0.
+ *      getSourceValue with sourceId >= MAX_MOD_SOURCES returns 0.
  *
  * 4.4  SourceValuesDefaultToZero
  *      Before any setSourceValue call, getSourceValue returns 0.
@@ -152,7 +152,7 @@
  *      processes all enqueued commands in one pass.
  *
  * 5.10 AddRoutingWithOutOfRangeSourceIdIsDropped
- *      addRouting with sourceId >= kMaxModSources is silently discarded
+ *      addRouting with sourceId >= MAX_MOD_SOURCES is silently discarded
  *      by applyCommand(). getNumRoutings() must remain 0.
  *
  * 5.11 AddRoutingWithOutOfRangeDestinationIdIsDropped
@@ -630,17 +630,17 @@ TEST_F (ModMatrixFixture, GetNumParametersReflectsRegisteredCount)
 /*
  * 3.4 RegisterBeyondCapacityReturnsCapacityExceededError
  *
- * Fill a fresh matrix to kMaxModParams, then verify the next
+ * Fill a fresh matrix to MAX_MOD_PARAMS, then verify the next
  * registration returns CapacityExceeded.
  *
- * kMaxModParams == 256. We pre-allocate 256 parameters on the heap to
+ * MAX_MOD_PARAMS == 256. We pre-allocate 256 parameters on the heap to
  * avoid blowing the test stack, register all of them, then attempt 257.
  */
 TEST (ModMatrixRegistrationTest, RegisterBeyondCapacityReturnsCapacityExceededError)
 {
     /* Arrange */
     ModMatrix<float> freshMatrix;
-    constexpr size_t N = kMaxModParams;
+    constexpr size_t N = MAX_MOD_PARAMS;
 
     std::array<ModulatableParameter<float>, N> params{
         ModulatableParameter<float>(0.f,1.f,0.f)
@@ -688,7 +688,7 @@ TEST_F (ModMatrixFixture, SetAndGetSourceValueRoundTrips)
 /*
  * 4.2 SetSourceValueOutOfRangeIsIgnored
  *
- * setSourceValue with sourceId >= kMaxModSources must not crash.
+ * setSourceValue with sourceId >= MAX_MOD_SOURCES must not crash.
  */
 TEST_F (ModMatrixFixture, SetSourceValueOutOfRangeIsIgnored)
 {
@@ -702,7 +702,7 @@ TEST_F (ModMatrixFixture, SetSourceValueOutOfRangeIsIgnored)
 /*
  * 4.3 GetSourceValueOutOfRangeReturnsZero
  *
- * getSourceValue with sourceId >= kMaxModSources must return 0, not
+ * getSourceValue with sourceId >= MAX_MOD_SOURCES must return 0, not
  * an arbitrary memory read.
  */
 TEST_F (ModMatrixFixture, GetSourceValueOutOfRangeReturnsZero)
@@ -721,7 +721,7 @@ TEST_F (ModMatrixFixture, GetSourceValueOutOfRangeReturnsZero)
  * 4.4 SourceValuesDefaultToZero
  *
  * Before any setSourceValue call, all source indices return 0.
- * Tests indices 0, 1, and kMaxModSources-1.
+ * Tests indices 0, 1, and MAX_MOD_SOURCES-1.
  */
 TEST_F (ModMatrixFixture, SourceValuesDefaultToZero)
 {
@@ -730,7 +730,7 @@ TEST_F (ModMatrixFixture, SourceValuesDefaultToZero)
     /* Act / Assert */
     EXPECT_FLOAT_EQ (matrix.getSourceValue (0), 0.f);
     EXPECT_FLOAT_EQ (matrix.getSourceValue (1), 0.f);
-    EXPECT_FLOAT_EQ (matrix.getSourceValue (kMaxModSources - 1), 0.f);
+    EXPECT_FLOAT_EQ (matrix.getSourceValue (MAX_MOD_SOURCES - 1), 0.f);
 }
 
 /*======================================================================
@@ -928,7 +928,7 @@ TEST_F (ModMatrixFixture, CommandsQueuedBeforeFirstProcessAreAllApplied)
 /*
  * 5.10 AddRoutingWithOutOfRangeSourceIdIsDropped
  *
- * addRouting with sourceId == kMaxModSources (one past the end) must be
+ * addRouting with sourceId == MAX_MOD_SOURCES (one past the end) must be
  * silently discarded by applyCommand(). getNumRoutings() must remain 0
  * and no crash or assertion must occur.
  */
@@ -936,7 +936,7 @@ TEST_F (ModMatrixFixture, AddRoutingWithOutOfRangeSourceIdIsDropped)
 {
     /* Arrange */
     ModulationRouting<float> r;
-    r.sourceId      = kMaxModSources;
+    r.sourceId      = MAX_MOD_SOURCES;
     r.destinationId = destA;
     r.depth         = 1.f;
 
