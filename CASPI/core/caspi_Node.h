@@ -115,6 +115,8 @@ namespace CASPI
 
                 NodeBase (const NodeBase&)            = delete;
                 NodeBase& operator= (const NodeBase&) = delete;
+                NodeBase (NodeBase&&)                 = default;
+                NodeBase& operator= (NodeBase&&)      = default;
 
                 /**
                  * @brief Set the sample rate and notify derived classes.
@@ -446,6 +448,11 @@ namespace CASPI
                 const FloatType* getControlValuePtr (std::size_t port) const noexcept override
                 {
                     return (port < controlOutputs.size()) ? &controlOutputs[port] : nullptr;
+                }
+
+                FloatType getControlOutput (std::size_t port) const noexcept override
+                {
+                    return (port < controlOutputs.size()) ? controlOutputs[port] : FloatType(0);
                 }
 
                 /*------------------------------------------------------------------
