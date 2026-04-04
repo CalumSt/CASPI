@@ -1,0 +1,162 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 16,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "tests-debug",
+            "displayName": "Tests (Debug)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CASPI_BUILD_TESTING": "ON",
+                "CASPI_ENABLE_DEBUG": "ON"
+            }
+        },
+        {
+            "name": "tests-release",
+            "displayName": "Tests (Release)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CASPI_BUILD_TESTING": "ON",
+                "CASPI_ENABLE_DEBUG": "OFF"
+            }
+        },
+        {
+            "name": "benchmarks",
+            "displayName": "Benchmarks (Release)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CASPI_BUILD_BENCHMARKS": "ON",
+                "CASPI_ENABLE_DEBUG": "OFF"
+            }
+        },
+        {
+            "name": "python-debug",
+            "displayName": "Python Bindings (Debug)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CASPI_BUILD_PYTHON": "ON",
+                "CASPI_ENABLE_DEBUG": "ON"
+            }
+        },
+        {
+            "name": "python-release",
+            "displayName": "Python Bindings (Optimised Release)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CASPI_BUILD_PYTHON": "ON",
+                "CASPI_ENABLE_DEBUG": "OFF"
+            }
+        },
+        {
+            "name": "all-debug",
+            "displayName": "Build All (Debug)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CASPI_BUILD_TESTING": "ON",
+                "CASPI_BUILD_BENCHMARKS": "ON",
+                "CASPI_BUILD_PYTHON": "ON",
+                "CASPI_ENABLE_DEBUG": "ON"
+            }
+        },
+        {
+            "name": "all-release",
+            "displayName": "Build All (Release)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CASPI_BUILD_TESTING": "ON",
+                "CASPI_BUILD_BENCHMARKS": "ON",
+                "CASPI_BUILD_PYTHON": "ON",
+                "CASPI_ENABLE_DEBUG": "OFF"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "tests-debug",
+            "displayName": "Tests (Debug)",
+            "configurePreset": "tests-debug",
+            "configuration": "Debug",
+            "targets": [
+                "UnitTests"
+            ]
+        },
+        {
+            "name": "tests-release",
+            "displayName": "Tests (Release)",
+            "configurePreset": "tests-release",
+            "configuration": "Release",
+            "targets": [
+                "UnitTests"
+            ]
+        },
+        {
+            "name": "benchmarks",
+            "displayName": "Benchmarks",
+            "configurePreset": "benchmarks",
+            "configuration": "Release",
+            "targets": [
+                "Benchmarks"
+            ]
+        },
+        {
+            "name": "python-debug",
+            "displayName": "Python Bindings (Debug)",
+            "configurePreset": "python-debug",
+            "configuration": "Debug",
+            "targets": [
+                "caspy_wheel"
+            ]
+        },
+        {
+            "name": "python-release",
+            "displayName": "Python Bindings (Release)",
+            "configurePreset": "python-release",
+            "configuration": "Release",
+            "targets": [
+                "caspy_wheel"
+            ]
+        },
+        {
+            "name": "all-debug",
+            "displayName": "Build All (Debug)",
+            "configurePreset": "all-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "all-release",
+            "displayName": "Build All (Release)",
+            "configurePreset": "all-release",
+            "configuration": "Release"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "tests-debug",
+            "displayName": "Tests (Debug)",
+            "configurePreset": "tests-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "tests-release",
+            "displayName": "Tests (Release)",
+            "configurePreset": "tests-release",
+            "configuration": "Release"
+        }
+    ]
+}
