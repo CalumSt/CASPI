@@ -30,6 +30,8 @@ set(SOURCES
         core/AudioBuffer_test.cpp
         core/DelayLine_test.cpp
         core/Parameter_test.cpp
+        core/Processor_test.cpp
+        core/Producer_test.cpp
         core/Graph_test.cpp
         base/Utilities_test.cpp
         controls/Envelope_test.cpp
