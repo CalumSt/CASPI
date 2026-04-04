@@ -461,6 +461,9 @@ namespace CASPI
                 AudioGraph (const AudioGraph&)            = delete;
                 AudioGraph& operator= (const AudioGraph&) = delete;
 
+                AudioGraph (AudioGraph&&)            = default;
+                AudioGraph& operator= (AudioGraph&&) = default;
+
                 /*==================================================================
                  * Setup API — setup thread only; not real-time safe.
                  *================================================================*/
