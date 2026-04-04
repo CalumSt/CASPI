@@ -13,6 +13,9 @@ using namespace CASPI;
 
 using NoiseOscWhite = Oscillators::NoiseOscillator<float, Oscillators::NoiseAlgorithm::White>;
 using NoiseOscPink  = Oscillators::NoiseOscillator<float, Oscillators::NoiseAlgorithm::Pink>;
+using NodeBase_t = Graph::NodeBase<float>;
+using NoiseOscWhitePtr_t = std::shared_ptr<NoiseOscWhite>;
+using NoiseOscPinkPtr_t  = std::shared_ptr<NoiseOscPink>;
 
 // ---------------------------------------------------------------------------
 // render helpers — mirror render_wavetable* pattern exactly
@@ -59,7 +62,7 @@ void bind_noise (py::module_& m)
     // NoiseOscillatorWhite
     // -----------------------------------------------------------------------
 
-    py::class_<NoiseOscWhite> (n_m, "NoiseOscillatorWhite",
+    py::class_<NoiseOscWhite, NodeBase_t, NoiseOscWhitePtr_t> (n_m, "NoiseOscillatorWhite",
         R"pbdoc(
             White noise oscillator (xoshiro128+, float32).
 
@@ -102,7 +105,7 @@ void bind_noise (py::module_& m)
     // NoiseOscillatorPink
     // -----------------------------------------------------------------------
 
-    py::class_<NoiseOscPink> (n_m, "NoiseOscillatorPink",
+    py::class_<NoiseOscPink, NodeBase_t, NoiseOscPinkPtr_t> (n_m, "NoiseOscillatorPink",
         R"pbdoc(
             Pink noise oscillator (Voss-McCartney 8-stage IIR, float32).
 
