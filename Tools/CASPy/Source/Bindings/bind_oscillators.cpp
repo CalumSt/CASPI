@@ -10,6 +10,9 @@
 
 namespace py = pybind11;
 using namespace CASPI;
+using BlepOscFloat = Oscillators::BlepOscillator<float>;
+using NodeBase_t = Graph::NodeBase<float>;
+using BlepOscFloatPtr_t = std::shared_ptr<BlepOscFloat>;
 
 /**
  * @brief Render num_samples from a BlepOscillator into a NumPy array.
@@ -21,7 +24,7 @@ using namespace CASPI;
  * @param num_samples Number of samples to generate
  * @return Numpy array of float32 samples
  */
-py::array_t<float> render_blep(Oscillators::BlepOscillator<float>& osc,
+py::array_t<float> render_blep(BlepOscFloat& osc,
                                        int num_samples)
 {
     py::array_t<float> result(num_samples);
@@ -34,8 +37,6 @@ void bind_oscillators(py::module_& m)
     auto osc_m = m.def_submodule("oscillators",
         "Band-limited oscillators using the PolyBLEP method.");
 
-    using Osc = Oscillators::BlepOscillator<float>;
-
     py::enum_<Oscillators::WaveShape>(osc_m, "WaveShape",
         "Waveform selection for BlepOscillator.")
         .value("Sine",     Oscillators::WaveShape::Sine)
@@ -45,7 +46,10 @@ void bind_oscillators(py::module_& m)
         .value("Pulse",    Oscillators::WaveShape::Pulse)
         .export_values();
 
-    py::class_<Osc>(osc_m, "BlepOscillator",
+    // This connects the inheritance chain across file boundaries
+    py::object node_base = m.attr("NodeBase");
+
+    py::class_<BlepOscFloat, NodeBase_t, BlepOscFloatPtr_t>(osc_m, "BlepOscillator",
         R"pbdoc(
             Band-limited oscillator (PolyBLEP antialiasing).
 
@@ -71,26 +75,26 @@ void bind_oscillators(py::module_& m)
              "Construct with explicit shape, sample rate (Hz), and frequency (Hz).")
 
         // Configuration
-        .def("set_shape",       &Osc::setShape,       py::arg("shape"),
+        .def("set_shape",       &BlepOscFloat::setShape,       py::arg("shape"),
              "Select waveform at runtime. Switching to Triangle resets integrator.")
-        .def("get_shape",       &Osc::getShape,       "Get current WaveShape.")
-        .def("set_frequency",   &Osc::setFrequency,   py::arg("hz"),
+        .def("get_shape",       &BlepOscFloat::getShape,       "Get current WaveShape.")
+        .def("set_frequency",   &BlepOscFloat::setFrequency,   py::arg("hz"),
              "Set frequency (Hz), bypassing parameter smoothing. Use for init.")
-        .def("set_sample_rate", &Osc::setSampleRate,  py::arg("sample_rate"),
+        .def("set_sample_rate", &BlepOscFloat::setSampleRate,  py::arg("sample_rate"),
              "Set sample rate (Hz). Must be called before rendering.")
-        .def("set_phase_offset",&Osc::setPhaseOffset, py::arg("offset"),
+        .def("set_phase_offset",&BlepOscFloat::setPhaseOffset, py::arg("offset"),
              "Set phase offset in [0,1). Applied on reset_phase() and force_sync().")
-        .def("reset_phase",     &Osc::resetPhase,
+        .def("reset_phase",     &BlepOscFloat::resetPhase,
              "Reset phase to phase_offset. Does not clear the triangle integrator.")
 
         // Hard sync
-        .def("force_sync",      &Osc::forceSync,
+        .def("force_sync",      &BlepOscFloat::forceSync,
              "Force phase reset with one-sample discontinuity correction.")
-        .def("phase_wrapped",   &Osc::phaseWrapped,
+        .def("phase_wrapped",   &BlepOscFloat::phaseWrapped,
              "True if phase wrapped on the most recent render_sample() call.")
 
         // Rendering
-        .def("render_sample",   &Osc::renderSample,
+        .def("render_sample",   &BlepOscFloat::renderSample,
              "Render one sample. Updates parameter smoothers and phase.")
         .def("render",          &render_blep,
              py::arg("num_samples"),
@@ -103,15 +107,15 @@ void bind_oscillators(py::module_& m)
         //   osc.amplitude.set_base_normalised(0.8)
         //   osc.frequency.add_modulation(0.1)
     .def_property_readonly("amplitude",
-        [](Osc& self) -> Core::ModulatableParameter<float>& { return self.amplitude; },
+        [](BlepOscFloat& self) -> Core::ModulatableParameter<float>& { return self.amplitude; },
         py::return_value_policy::reference_internal,
         "Output amplitude [0,1]. ModulatableParameter<float>.")
     .def_property_readonly("frequency",
-        [](Osc& self) -> Core::ModulatableParameter<float>& { return self.frequency; },
+        [](BlepOscFloat& self) -> Core::ModulatableParameter<float>& { return self.frequency; },
         py::return_value_policy::reference_internal,
         "Frequency [20,20000 Hz], log scale. ModulatableParameter<float>.")
     .def_property_readonly("pulse_width",
-        [](Osc& self) -> Core::ModulatableParameter<float>& { return self.pulseWidth; },
+        [](BlepOscFloat& self) -> Core::ModulatableParameter<float>& { return self.pulseWidth; },
         py::return_value_policy::reference_internal,
         "Pulse width [0.01,0.99]. Audible on Square/Pulse only.");
 }
