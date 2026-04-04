@@ -14,6 +14,10 @@
 namespace py = pybind11;
 using namespace CASPI;
 
+using OperatorFloat = Operator<float>;
+using NodeBase_t = Graph::NodeBase<float>;
+using OperatorFloatPtr_t = std::shared_ptr<OperatorFloat>;
+
 /**
  * @brief Render audio from an Operator to a NumPy array.
  *
@@ -23,7 +27,7 @@ using namespace CASPI;
  * @param num_samples The number of samples to generate.
  * @return py::array_t<float> A NumPy array containing the rendered samples.
  */
-py::array_t<float> render_operator(Operator<float>& op, size_t num_samples)
+py::array_t<float> render_operator(OperatorFloat& op, size_t num_samples)
 {
     py::array_t<float> result(num_samples);
     auto buf = result.request();
@@ -45,7 +49,7 @@ py::array_t<float> render_operator(Operator<float>& op, size_t num_samples)
  * @return py::array_t<float> A NumPy array containing the rendered samples.
  */
 py::array_t<float> render_operator_with_modulation(
-    Operator<float>& op,
+    OperatorFloat& op,
     py::array_t<float> modulation_input)
 {
     auto mod_buf = modulation_input.request();
@@ -77,7 +81,7 @@ py::array_t<float> render_operator_with_modulation(
  * @return py::array_t<float> Rendered audio samples.
  */
 py::array_t<float> process_buffer(
-    Operator<float>& op,
+    OperatorFloat& op,
     py::array_t<float> modulation)
 {
     auto mod_buf = modulation.request();
@@ -125,11 +129,14 @@ void bind_operator(py::module_& m)
                "Frequency modulation - modulation signal varies the instantaneous frequency")
         .export_values();
 
+    // This connects the inheritance chain across file boundaries
+    py::object node_base = m.attr("NodeBase");
+
     // ========================================================================
-    // Operator<float>
+    // OperatorFloat
     // ========================================================================
 
-    py::class_<Operator<float>>(op_module, "Operator",
+    py::class_<OperatorFloat, NodeBase_t, OperatorFloatPtr_t>(op_module, "Operator",
         R"pbdoc(
             FM/PM synthesis operator.
 
@@ -186,15 +193,15 @@ void bind_operator(py::module_& m)
              "Construct an operator with specified parameters")
 
         // Frequency Control
-        .def("set_frequency", &Operator<float>::setFrequency,
+        .def("set_frequency", &OperatorFloat::setFrequency,
              py::arg("frequency"),
              "Set the oscillator frequency in Hz")
 
-        .def("get_frequency", &Operator<float>::getFrequency,
+        .def("get_frequency", &OperatorFloat::getFrequency,
              "Get the current frequency in Hz")
 
         // Modulation Control
-        .def("set_modulation_index", &Operator<float>::setModulationIndex,
+        .def("set_modulation_index", &OperatorFloat::setModulationIndex,
              py::arg("index"),
              R"pbdoc(
                  Set the modulation index.
@@ -206,7 +213,7 @@ void bind_operator(py::module_& m)
                  Typical range: 0.0 to 10.0
              )pbdoc")
 
-        .def("set_modulation_depth", &Operator<float>::setModulationDepth,
+        .def("set_modulation_depth", &OperatorFloat::setModulationDepth,
              py::arg("depth"),
              R"pbdoc(
                  Set the modulation depth (output amplitude multiplier).
@@ -215,7 +222,7 @@ void bind_operator(py::module_& m)
                  Does NOT affect modulation amount, only output level.
              )pbdoc")
 
-        .def("set_modulation_feedback", &Operator<float>::setModulationFeedback,
+        .def("set_modulation_feedback", &OperatorFloat::setModulationFeedback,
              py::arg("feedback"),
              R"pbdoc(
                  Set the feedback amount (self-modulation).
@@ -224,43 +231,43 @@ void bind_operator(py::module_& m)
                  Range: 0.0 (none) to ~5.0 (heavy distortion)
              )pbdoc")
 
-        .def("set_modulation_mode", &Operator<float>::setModulationMode,
+        .def("set_modulation_mode", &OperatorFloat::setModulationMode,
              py::arg("mode"),
              "Set the modulation mode (Phase or Frequency)")
 
-        .def("set_modulation", &Operator<float>::setModulation,
+        .def("set_modulation", &OperatorFloat::setModulation,
              py::arg("index"),
              py::arg("depth"),
              py::arg("feedback") = 0.0f,
              "Set all modulation parameters at once")
 
         .def("set_modulation_input",
-             py::overload_cast<float>(&Operator<float>::setModulationInput),
+             py::overload_cast<float>(&OperatorFloat::setModulationInput),
              py::arg("value"),
              "Set single modulation value for the next sample")
 
-        .def("clear_modulation_input", &Operator<float>::clearModulationInput,
+        .def("clear_modulation_input", &OperatorFloat::clearModulationInput,
              "Clear all modulation input")
 
         // Getters
-        .def("get_modulation_index", &Operator<float>::getModulationIndex,
+        .def("get_modulation_index", &OperatorFloat::getModulationIndex,
              "Get the current modulation index")
-        .def("get_modulation_depth", &Operator<float>::getModulationDepth,
+        .def("get_modulation_depth", &OperatorFloat::getModulationDepth,
              "Get the current modulation depth")
-        .def("get_modulation_feedback", &Operator<float>::getModulationFeedback,
+        .def("get_modulation_feedback", &OperatorFloat::getModulationFeedback,
              "Get the current feedback amount")
-        .def("get_modulation_mode", &Operator<float>::getModulationMode,
+        .def("get_modulation_mode", &OperatorFloat::getModulationMode,
              "Get the current modulation mode")
 
         // Envelope Control
-        .def("enable_envelope", &Operator<float>::enableEnvelope,
+        .def("enable_envelope", &OperatorFloat::enableEnvelope,
              py::arg("enabled") = true,
              "Enable or disable the ADSR envelope")
 
-        .def("disable_envelope", &Operator<float>::disableEnvelope,
+        .def("disable_envelope", &OperatorFloat::disableEnvelope,
              "Disable the ADSR envelope")
 
-        .def("set_adsr", &Operator<float>::setADSR,
+        .def("set_adsr", &OperatorFloat::setADSR,
              py::arg("attack_time"),
              py::arg("decay_time"),
              py::arg("sustain_level"),
@@ -275,31 +282,31 @@ void bind_operator(py::module_& m)
                      release_time: Release time in seconds
              )pbdoc")
 
-        .def("note_on", &Operator<float>::noteOn,
+        .def("note_on", &OperatorFloat::noteOn,
              "Trigger note-on (start envelope attack phase)")
 
-        .def("note_off", &Operator<float>::noteOff,
+        .def("note_off", &OperatorFloat::noteOff,
              "Trigger note-off (start envelope release phase)")
 
         // Sample Rate
-        .def("set_sample_rate", &Operator<float>::setSampleRate,
+        .def("set_sample_rate", &OperatorFloat::setSampleRate,
              py::arg("sample_rate"),
              "Set the sample rate in Hz")
 
-        .def("get_sample_rate", &Operator<float>::getSampleRate,
+        .def("get_sample_rate", &OperatorFloat::getSampleRate,
              "Get the current sample rate in Hz")
 
         // State Management
-        .def("reset", &Operator<float>::reset,
+        .def("reset", &OperatorFloat::reset,
              "Reset all operator state to defaults")
 
         // Rendering - Single Sample
         .def("render_sample",
-             py::overload_cast<>(&Operator<float>::renderSample),
+             py::overload_cast<>(&OperatorFloat::renderSample),
              "Render a single audio sample (uses stored modulation)")
 
         .def("render_sample",
-             py::overload_cast<float>(&Operator<float>::renderSample),
+             py::overload_cast<float>(&OperatorFloat::renderSample),
              py::arg("modulation_input"),
              "Render a single sample with explicit modulation input")
 
@@ -348,7 +355,7 @@ void bind_operator(py::module_& m)
 
     op_module.def("create_sine_wave",
         [](float frequency, float sample_rate, size_t num_samples) -> py::array_t<float> {
-            Operator<float> op;
+            OperatorFloat op;
             op.setSampleRate(sample_rate);
             op.setFrequency(frequency);
             op.setModulationDepth(1.0f);
