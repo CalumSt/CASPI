@@ -80,6 +80,7 @@
 #include "base/caspi_Assert.h"
 #include "base/SIMD/caspi_Blocks.h"
 #include "core/caspi_Expected.h"
+#include "core/caspi_Graph.h"
 #include "core/caspi_Parameter.h"
 #include "external/caspi_External.h"
 
@@ -94,19 +95,19 @@ namespace CASPI
         /**
          * @brief Maximum number of distinct modulation sources (LFOs, envelopes, etc.).
          */
-        static constexpr size_t kMaxModSources = 64;
+        static constexpr size_t MAX_MOD_SOURCES = 64;
 
         /**
          * @brief Maximum number of routings per curve class.
          *
-         * Total maximum routing count = 2 x kMaxModRoutings (linear + non-linear).
+         * Total maximum routing count = 2 x MAX_MOD_ROUTINGS (linear + non-linear).
          */
-        static constexpr size_t kMaxModRoutings = 1024;
+        static constexpr size_t MAX_MOD_ROUTINGS = 1024;
 
         /**
          * @brief Maximum number of registered modulatable parameters per matrix instance.
          */
-        static constexpr size_t kMaxModParams = 256;
+        static constexpr size_t MAX_MOD_PARAMS = 256;
 
         /*======================================================================
          * ModulationCurve
@@ -456,10 +457,37 @@ namespace CASPI
          *
          * @tparam FloatType  Floating-point scalar type (float or double).
          */
-        template <typename FloatType>
-        class ModMatrix
+        template <CASPI_FLOAT_TYPE FloatType>
+        class ModMatrix : public Graph::AudioNode<ModMatrix<FloatType>, FloatType>
         {
             public:
+                explicit ModMatrix (std::size_t numSources = 0)
+                    : Graph::AudioNode<ModMatrix<FloatType>, FloatType> (numSources, 1)
+                    , numSources (numSources)
+                {
+                }
+
+                // ====================================================================
+                // CRTP hooks — graph integration
+                // ====================================================================
+
+                void onPrepare (std::size_t, std::size_t, double)
+                {
+                    this->outputBuffer.clear();
+                }
+
+                void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
+                {
+                    for (std::size_t port = 0; port < numSources; ++port)
+                    {
+                        const auto* buf    = ctx.getAudioInput (this->getId(), port);
+                        sourceValues[port] = (buf != nullptr) ? buf->sample (0, 0) : FloatType (0);
+                    }
+
+                    process();
+
+                    this->outputBuffer.clear();
+                }
                 /*==============================================================
                  * Command queue types
                  *============================================================*/
@@ -508,7 +536,7 @@ namespace CASPI
                 enum class ParamRegistrationError
                 {
                     NullParameter, /**< The supplied pointer was null.               */
-                    CapacityExceeded /**< kMaxModParams registrations already reached. */
+                    CapacityExceeded /**< MAX_MOD_PARAMS registrations already reached. */
                 };
 
                 /**
@@ -534,7 +562,7 @@ namespace CASPI
                         return make_unexpected<size_t, ParamRegistrationError> (ParamRegistrationError::NullParameter);
                     }
 
-                    if (numParameters >= kMaxModParams)
+                    if (numParameters >= MAX_MOD_PARAMS)
                     {
                         return make_unexpected<size_t, ParamRegistrationError> (
                             ParamRegistrationError::CapacityExceeded);
@@ -565,7 +593,7 @@ namespace CASPI
                 {
                     auto r  = routing;
                     r.depth = Maths::clamp (r.depth, FloatType (-1), FloatType (1));
-                    pendingCommands.enqueue (producerToken,{ CommandType::AddRouting, r, 0, false });
+                    pendingCommands.enqueue (producerToken, { CommandType::AddRouting, r, 0, false });
                 }
 
                 /**
@@ -591,7 +619,7 @@ namespace CASPI
                 {
                     constexpr CommandType t =
                         detail::IsLinearCurve<Curve>::value ? CommandType::RemoveLinear : CommandType::RemoveNonLinear;
-                    pendingCommands.enqueue (producerToken,{ t, {}, index, false });
+                    pendingCommands.enqueue (producerToken, { t, {}, index, false });
                 }
 
                 /**
@@ -602,7 +630,7 @@ namespace CASPI
                  */
                 void clearRoutings() CASPI_NON_BLOCKING
                 {
-                    pendingCommands.enqueue (producerToken,{ CommandType::ClearRoutings, {}, 0, false });
+                    pendingCommands.enqueue (producerToken, { CommandType::ClearRoutings, {}, 0, false });
                 }
 
                 /**
@@ -625,7 +653,7 @@ namespace CASPI
                 {
                     constexpr CommandType t = detail::IsLinearCurve<Curve>::value ? CommandType::SetEnabledLinear
                                                                                   : CommandType::SetEnabledNonLinear;
-                    pendingCommands.enqueue (producerToken,{ t, {}, index, enabled });
+                    pendingCommands.enqueue (producerToken, { t, {}, index, enabled });
                 }
 
                 /*==============================================================
@@ -636,14 +664,14 @@ namespace CASPI
                  * @brief Write a modulation source value.
                  *
                  * Must be called from the audio thread only.
-                 * Silently ignored if sourceId >= kMaxModSources.
+                 * Silently ignored if sourceId >= MAX_MOD_SOURCES.
                  *
-                 * @param sourceId  Index into sourceValues[]. Range: [0, kMaxModSources).
+                 * @param sourceId  Index into sourceValues[]. Range: [0, MAX_MOD_SOURCES).
                  * @param value     Source value, typically in [-1, 1] or [0, 1].
                  */
                 void setSourceValue (size_t sourceId, FloatType value) noexcept CASPI_NON_BLOCKING
                 {
-                    if (sourceId < kMaxModSources)
+                    if (sourceId < MAX_MOD_SOURCES)
                     {
                         sourceValues[sourceId] = value;
                     }
@@ -654,12 +682,12 @@ namespace CASPI
                  *
                  * Must be called from the audio thread only.
                  *
-                 * @param sourceId  Index into sourceValues[]. Range: [0, kMaxModSources).
+                 * @param sourceId  Index into sourceValues[]. Range: [0, MAX_MOD_SOURCES).
                  * @return          Stored source value, or FloatType(0) if out of range.
                  */
                 CASPI_NO_DISCARD FloatType getSourceValue (size_t sourceId) const noexcept CASPI_NON_BLOCKING
                 {
-                    if (sourceId < kMaxModSources)
+                    if (sourceId < MAX_MOD_SOURCES)
                     {
                         return sourceValues[sourceId];
                     }
@@ -745,7 +773,7 @@ namespace CASPI
                  */
                 void reset() noexcept CASPI_NON_BLOCKING
                 {
-                    SIMD::ops::fill (sourceValues.data(), kMaxModSources, FloatType (0));
+                    SIMD::ops::fill (sourceValues.data(), MAX_MOD_SOURCES, FloatType (0));
                     SIMD::ops::fill (modulationAccum.data(), numParameters, FloatType (0));
 
                     for (size_t i = 0; i < numParameters; ++i)
@@ -812,7 +840,7 @@ namespace CASPI
                         const size_t src = routings->sourceId;
                         const size_t dst = routings->destinationId;
 
-                        CASPI_RT_ASSERT (src < kMaxModSources);
+                        CASPI_RT_ASSERT (src < MAX_MOD_SOURCES);
                         CASPI_RT_ASSERT (dst < numParameters);
 
                         accum[dst] += sources[src] * routings->depth;
@@ -846,7 +874,7 @@ namespace CASPI
                         const size_t src = routings->sourceId;
                         const size_t dst = routings->destinationId;
 
-                        CASPI_RT_ASSERT (src < kMaxModSources);
+                        CASPI_RT_ASSERT (src < MAX_MOD_SOURCES);
                         CASPI_RT_ASSERT (dst < numParameters);
 
                         const FloatType curved  = routings->applyCurve (sources[src]);
@@ -888,7 +916,7 @@ namespace CASPI
                         {
                             const auto& r = cmd.routing;
 
-                            if (r.sourceId >= kMaxModSources || r.destinationId >= numParameters)
+                            if (r.sourceId >= MAX_MOD_SOURCES || r.destinationId >= numParameters)
                             {
                                 break;
                             }
@@ -949,7 +977,7 @@ namespace CASPI
                 /*==============================================================
                  * Data members
                  *============================================================*/
-
+                std::size_t numSources = 0;
                 /**
                  * @brief Lock-free command queue bridging any thread to the audio thread.
                  *
@@ -967,7 +995,7 @@ namespace CASPI
                  * Indexed directly by ModulationRouting::sourceId.
                  */
                 alignas (
-                    SIMD::Strategy::simd_alignment<FloatType>()) std::array<FloatType, kMaxModSources> sourceValues {};
+                    SIMD::Strategy::simd_alignment<FloatType>()) std::array<FloatType, MAX_MOD_SOURCES> sourceValues {};
 
                 /**
                  * @brief Flat per-parameter modulation accumulator.
@@ -978,7 +1006,7 @@ namespace CASPI
                  * Indexed by destination ID, which equals the parameters[] index.
                  */
                 alignas (SIMD::Strategy::simd_alignment<FloatType>())
-                    std::array<FloatType, kMaxModParams> modulationAccum {};
+                    std::array<FloatType, MAX_MOD_PARAMS> modulationAccum {};
 
                 /**
                  * @brief Non-owning pointers to registered ModulatableParameter instances.
@@ -986,7 +1014,7 @@ namespace CASPI
                  * Populated during setup via registerParameter().
                  * Lifetime of pointed-to objects is the caller's responsibility.
                  */
-                std::array<Core::ModulatableParameter<FloatType>*, kMaxModParams> parameters {};
+                std::array<Core::ModulatableParameter<FloatType>*, MAX_MOD_PARAMS> parameters {};
 
                 /**
                  * @brief Number of successfully registered parameters.
@@ -999,17 +1027,17 @@ namespace CASPI
                  * @brief Fixed-capacity sorted list of linear (curve == Linear) routings.
                  *
                  * Processed in accumulateLinear() via the FMA-eligible scatter loop.
-                 * Stack footprint: kMaxModRoutings x sizeof(ModulationRouting<float>) = 24KB.
+                 * Stack footprint: MAX_MOD_ROUTINGS x sizeof(ModulationRouting<float>) = 24KB.
                  */
-                RoutingList<FloatType, kMaxModRoutings> linearRoutings;
+                RoutingList<FloatType, MAX_MOD_ROUTINGS> linearRoutings;
 
                 /**
                  * @brief Fixed-capacity sorted list of non-linear (curved) routings.
                  *
                  * Processed in accumulateNonLinear() via the scalar path.
-                 * Stack footprint: kMaxModRoutings x sizeof(ModulationRouting<float>) = 24KB.
+                 * Stack footprint: MAX_MOD_ROUTINGS x sizeof(ModulationRouting<float>) = 24KB.
                  */
-                RoutingList<FloatType, kMaxModRoutings> nonLinearRoutings;
+                RoutingList<FloatType, MAX_MOD_ROUTINGS> nonLinearRoutings;
         };
 
     } /* namespace Controls */
