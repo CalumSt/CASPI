@@ -15,6 +15,7 @@ void bind_modmatrix(py::module_& m);
 void bind_wavetable(py::module_& m);
 void bind_noise(py::module_& m);
 void bind_lfo(py::module_& m);
+void bind_graph(py::module_& m);
 
 
 PYBIND11_MODULE (caspy, m)
@@ -42,6 +43,7 @@ PYBIND11_MODULE (caspy, m)
     m.attr ("__version__") = "0.1.0";
 
     // Bind submodules
+    bind_graph(m);
     bind_core (m);
     bind_oscillators (m);
     bind_adsr(m);
