@@ -470,31 +470,26 @@ namespace CASPI
              * Allocates memory and must not be called on a real-time thread.
              */
             ResultValue<FMGraphDSP<FloatType>>
-                compile (const FloatType sampleRate) const
+    compile (const FloatType sampleRate) const
             {
                 auto validationResult = validate();
                 if (! validationResult.has_value())
-                {
-                    return make_unexpected<FMGraphDSP<FloatType>,
-                                           Error,
-                                           NonRealTimeSafe> (
+                    return make_unexpected<FMGraphDSP<FloatType>, Error, NonRealTimeSafe> (
                         validationResult.error());
-                }
 
                 try
                 {
-                    return ResultValue<FMGraphDSP<FloatType>> (
-                        in_place,
+                    FMGraphDSP<FloatType> dsp (
                         operators_,
                         connections_,
                         outputOperators_,
                         sampleRate);
+
+                    return ResultValue<FMGraphDSP<FloatType>> (std::move (dsp));
                 }
                 catch (...)
                 {
-                    return make_unexpected<FMGraphDSP<FloatType>,
-                                           Error,
-                                           NonRealTimeSafe> (
+                    return make_unexpected<FMGraphDSP<FloatType>, Error, NonRealTimeSafe> (
                         Error::AllocationFailure);
                 }
             }
