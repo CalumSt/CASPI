@@ -29,6 +29,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #ifndef CASPI_CONSTANTS_H
 #define CASPI_CONSTANTS_H
 #include <cstddef>
+#include <cstdint>
 
 namespace CASPI
 {
@@ -81,6 +82,44 @@ namespace CASPI
             constexpr static FloatType MAXIMUM = FloatType (20.0);
             constexpr static FloatType DEFAULT = FloatType (1.0);
         };
+
+        // ====================================================================
+        // MIDI Constants
+        // ====================================================================
+
+        /** MIDI note number range */
+        constexpr std::uint8_t MIDI_NOTE_MIN = 0;           ///< C-1
+        constexpr std::uint8_t MIDI_NOTE_MAX = 127;         ///< G9
+        constexpr std::uint8_t MIDI_NOTE_MIDDLE_C = 60;     ///< C4
+        constexpr std::uint8_t MIDI_NOTE_A4 = 69;           ///< 440 Hz reference
+
+        /** MIDI velocity range (0-127) */
+        constexpr std::uint8_t MIDI_VELOCITY_MIN = 0;
+        constexpr std::uint8_t MIDI_VELOCITY_MAX = 127;
+
+        /** MIDI controller range (0-127) */
+        constexpr std::uint8_t MIDI_CC_MIN = 0;
+        constexpr std::uint8_t MIDI_CC_MAX = 127;
+
+        /** MIDI channel count (0-15) */
+        constexpr std::uint8_t MIDI_NUM_CHANNELS = 16;
+
+        /** MIDI pitch bend (14-bit value: -8192 to +8191) */
+        constexpr std::int16_t MIDI_PITCH_BEND_MIN = -8192;
+        constexpr std::int16_t MIDI_PITCH_BEND_CENTER = 0;
+        constexpr std::int16_t MIDI_PITCH_BEND_MAX = 8191;
+        constexpr std::int16_t MIDI_PITCH_BEND_HALF_RANGE = 8192;
+
+        /** Default pitch bend range (semitones) */
+        constexpr int MIDI_PITCH_BEND_DEFAULT_RANGE = 2;
+
+        /** MIDI cent conversion (100 cents = 1 semitone, 1200 cents = octave) */
+        constexpr std::int16_t MIDI_CENTS_PER_SEMITONE = 100;
+        constexpr std::int16_t MIDI_CENTS_PER_OCTAVE = 1200;
+
+        /** MIDI event queue buffer assumptions */
+        constexpr std::size_t MIDI_EVENT_QUEUE_ESTIMATED_PER_BLOCK = 32;
+
     }; // namespace Constants
 } // namespace CASPI
 
