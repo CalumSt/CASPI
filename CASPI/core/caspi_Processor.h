@@ -79,6 +79,7 @@
 #include "base/caspi_Features.h"
 #include "caspi_AudioBuffer.h"
 #include "core/caspi_Node.h"
+#include "core/caspi_Graph.h"
 #include "core/caspi_Producer.h"   // for Traversal policies and is_traversal_policy
 
 #include <type_traits>
