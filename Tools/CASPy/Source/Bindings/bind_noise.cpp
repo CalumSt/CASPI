@@ -14,8 +14,8 @@ using namespace CASPI;
 using NoiseOscWhite = Oscillators::NoiseOscillator<float, Oscillators::NoiseAlgorithm::White>;
 using NoiseOscPink  = Oscillators::NoiseOscillator<float, Oscillators::NoiseAlgorithm::Pink>;
 using NodeBase_t = Graph::NodeBase<float>;
-using NoiseOscWhitePtr_t = std::shared_ptr<NoiseOscWhite>;
-using NoiseOscPinkPtr_t  = std::shared_ptr<NoiseOscPink>;
+using NoiseOscWhitePtr_t = std::unique_ptr<NoiseOscWhite, py::nodelete>;
+using NoiseOscPinkPtr_t  = std::unique_ptr<NoiseOscPink, py::nodelete>;
 
 // ---------------------------------------------------------------------------
 // render helpers — mirror render_wavetable* pattern exactly
