@@ -12,7 +12,7 @@ namespace py = pybind11;
 using namespace CASPI;
 using BlepOscFloat = Oscillators::BlepOscillator<float>;
 using NodeBase_t = Graph::NodeBase<float>;
-using BlepOscFloatPtr_t = std::shared_ptr<BlepOscFloat>;
+using BlepOscFloatPtr_t = std::unique_ptr<BlepOscFloat, py::nodelete>;
 
 /**
  * @brief Render num_samples from a BlepOscillator into a NumPy array.
@@ -50,7 +50,8 @@ void bind_oscillators(py::module_& m)
     py::object node_base = m.attr("NodeBase");
 
     py::class_<BlepOscFloat, NodeBase_t, BlepOscFloatPtr_t>(osc_m, "BlepOscillator",
-        R"pbdoc(
+    py::dynamic_attr(),
+    R"pbdoc(
             Band-limited oscillator (PolyBLEP antialiasing).
 
             Supports Sine, Saw, Square, Triangle, Pulse at runtime via set_shape().
