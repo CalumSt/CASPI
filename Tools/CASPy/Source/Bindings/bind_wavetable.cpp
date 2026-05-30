@@ -35,8 +35,8 @@ using WaveTableBank4 = Oscillators::WaveTableBank<float, 2048, 4>;
 using WavetableOsc4  = Oscillators::WavetableOscillator<float, 2048, 4>;
 
 using NodeBase_t = Graph::NodeBase<float>;
-using WaveTableOsc1Ptr_t = std::shared_ptr<WavetableOsc1>;
-using WaveTableOsc4Ptr_t = std::shared_ptr<WavetableOsc4>;
+using WaveTableOsc1Ptr_t = std::unique_ptr<WavetableOsc1, py::nodelete>;
+using WaveTableOsc4Ptr_t = std::unique_ptr<WavetableOsc4, py::nodelete>;
 
 // ---------------------------------------------------------------------------
 // render helpers — mirror render_blep() pattern exactly
@@ -338,6 +338,7 @@ void bind_wavetable (py::module_& m)
     // -----------------------------------------------------------------------
 
     py::class_<WavetableOsc1, NodeBase_t, WaveTableOsc1Ptr_t> (wt_m, "WavetableOscillator1",
+    py::dynamic_attr(),
         R"pbdoc(
             Wavetable oscillator — single table (float32, 2048 samples).
 
@@ -428,7 +429,8 @@ void bind_wavetable (py::module_& m)
     // -----------------------------------------------------------------------
 
     py::class_<WavetableOsc4, NodeBase_t, WaveTableOsc4Ptr_t> (wt_m, "WavetableOscillator4",
-        R"pbdoc(
+    py::dynamic_attr(),
+    R"pbdoc(
             Wavetable oscillator — 4-table morph (float32, 2048 samples per table).
 
             morph_position crossfades between adjacent tables:
