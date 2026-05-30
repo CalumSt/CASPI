@@ -16,10 +16,26 @@ void bind_wavetable(py::module_& m);
 void bind_noise(py::module_& m);
 void bind_lfo(py::module_& m);
 void bind_graph(py::module_& m);
+void bind_filters(py::module_& m);
+void bind_engine(py::module_& m);
 
+#include <pybind11/detail/class.h>
+#include <typeinfo>
+
+static void check_registered()
+{
+    auto& internals = pybind11::detail::get_internals();
+    const auto& types = internals.registered_types_cpp;
+    for (const auto& kv : types)
+    {
+        // print the mangled name of every registered type
+        fprintf(stderr, "REGISTERED: %s\n", kv.first.name());
+    }
+}
 
 PYBIND11_MODULE (caspy, m)
 {
+    check_registered();
     m.doc() = R"pbdoc(
         CASPy - Python bindings for CASPI Audio DSP Library
         ====================================================
@@ -54,4 +70,6 @@ PYBIND11_MODULE (caspy, m)
     bind_wavetable(m);
     bind_noise(m);
     bind_lfo(m);
+    bind_filters(m);
+    bind_engine(m);
 }
