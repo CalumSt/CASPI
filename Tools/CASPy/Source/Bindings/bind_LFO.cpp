@@ -13,7 +13,7 @@ using namespace CASPI;
 
 using LfoF = Oscillators::LFO<float>;
 using NodeBase_t = Graph::NodeBase<float>;
-using LfoFPtr_t = std::shared_ptr<LfoF>;
+using LfoFPtr_t = std::unique_ptr<LfoF, py::nodelete>;
 
 static py::array_t<float> render_lfo (LfoF& osc, int num_samples)
 {
