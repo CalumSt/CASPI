@@ -16,7 +16,7 @@ using namespace CASPI;
 using FMGraphDSPFloat_t  = FMGraphDSP<float>;
 using FmGraphBuilderFloat_t = FMGraphBuilder<float>;
 using NodeBase_t = Graph::NodeBase<float>;
-using FMGraphDSPFloatPtr_t = std::shared_ptr<FMGraphDSPFloat_t>;
+using FMGraphDSPFloatPtr_t = std::unique_ptr<FMGraphDSPFloat_t, py::nodelete>;
 
 
 /**
