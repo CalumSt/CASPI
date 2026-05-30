@@ -16,7 +16,7 @@ using namespace CASPI;
 
 using OperatorFloat = Operator<float>;
 using NodeBase_t = Graph::NodeBase<float>;
-using OperatorFloatPtr_t = std::shared_ptr<OperatorFloat>;
+using OperatorFloatPtr_t = std::unique_ptr<OperatorFloat, py::nodelete>;
 
 /**
  * @brief Render audio from an Operator to a NumPy array.
