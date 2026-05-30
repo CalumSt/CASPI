@@ -15,7 +15,7 @@ namespace py = pybind11;
 using namespace CASPI;
 using ADSRFloat  = Envelope::ADSR<float>;
 using NodeBase_t = Graph::NodeBase<float>;
-using ADSRFloatPtr_t = std::shared_ptr<ADSRFloat>;
+using ADSRFloatPtr_t = std::unique_ptr<ADSRFloat, py::nodelete>;
 /**
  * @brief Render a full ADSR envelope to a NumPy array.
  *
