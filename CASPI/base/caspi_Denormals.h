@@ -52,6 +52,10 @@
 #include <cmath>
 #include <type_traits>
 
+#if defined(CASPI_FEATURES_HAS_FLUSH_ZERO)
+#include <xmmintrin.h>
+#endif
+
 namespace CASPI
 {
 namespace Core
@@ -134,6 +138,7 @@ class ScopedFlushDenormals
 {
 public:
 #if defined(CASPI_FEATURES_HAS_FLUSH_ZERO)
+
     ScopedFlushDenormals() noexcept
         : savedMxcsr (_mm_getcsr())
     {
