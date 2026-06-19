@@ -142,6 +142,8 @@ namespace CASPI
 
             /** Lock-free queue capacity in events. */
             static constexpr std::size_t MidiQueueCapacity = 512u;
+        static_assert ((MidiQueueCapacity & (MidiQueueCapacity - 1u)) == 0u,
+               "MidiQueueCapacity must be a power of two for exact MAX_SUBQUEUE_SIZE enforcement");
 
             /** Master gain applied to the accumulated output buffer. */
             static constexpr float MasterGain = 1.0f;
@@ -315,6 +317,13 @@ namespace CASPI
                     }
                     return INVALID_VOICE_SLOT;
                 }
+        };
+
+    template <typename Config>
+    struct BoundedMidiTraits : public moodycamel::ConcurrentQueueDefaultTraits
+        {
+            static const size_t MAX_SUBQUEUE_SIZE = Config::MidiQueueCapacity;
+            static const size_t BLOCK_SIZE        = Config::MidiQueueCapacity;
         };
 
     } // namespace detail
@@ -910,7 +919,7 @@ namespace CASPI
 
             VoiceManager<FloatType, MaxVoices> voiceManager;
 
-            external::ConcurrentQueue<Midi::MidiMessage> midiQueue;
+            external::ConcurrentQueue<Midi::MidiMessage, detail::BoundedMidiTraits<Config>> midiQueue;
             external::ProducerToken producerToken;
 
             std::array<Midi::MidiMessage, Config::MidiQueueCapacity> pending {};
