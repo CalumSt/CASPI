@@ -43,7 +43,9 @@
  *      getPitchBend() is 0 before push, non-zero after process().
  * 2.5  PushMidiDirectly
  *      pushMidi() with a raw MidiMessage works identically to helpers.
- * 2.6  QueueAtCapacityReturnsFalse
+ * 2.6  QueueBelowCapacitySucceeds
+ *      Able to push to queue while it is below capacity
+ * 2.7  QueueAtCapacityReturnsFalse
  *      Filling the queue to Config::MidiQueueCapacity causes the next
  *      push to return false.
  *
@@ -414,6 +416,15 @@ TEST (EngineMidiIngestion, PushMidiDirectly)
     eng.process();
 
     EXPECT_EQ (noteOnCount, 1);
+}
+
+TEST (EngineMidiIngestion, QueueBelowCapacitySucceeds)
+{
+    auto eng = makePreparedEngine();
+    for (std::size_t i = 0; i < DummyConfig::MidiQueueCapacity - 1; ++i)
+    {
+        EXPECT_TRUE (eng.pushNoteOn (0u, static_cast<uint8_t> (i % 127u), 100u));
+    }
 }
 
 TEST (EngineMidiIngestion, QueueAtCapacityReturnsFalse)
