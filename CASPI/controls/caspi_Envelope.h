@@ -276,7 +276,7 @@ namespace CASPI
                  * @return True if it is idle, false otherwise.
                  */
                 CASPI_NO_DISCARD
-                bool isIdle() const noexcept CASPI_NO_DISCARD override
+                bool isIdle() const noexcept override
                 {
                     return state == State::idle;
                 }
@@ -284,7 +284,8 @@ namespace CASPI
                  *
                  * @return
                  */
-                bool isActive() const noexcept CASPI_NO_DISCARD
+                CASPI_NO_DISCARD
+                bool isActive() const noexcept
                 {
                     return state != State::idle;
                 }
