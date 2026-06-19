@@ -257,13 +257,13 @@ namespace CASPI
                  * @return The current level between 0 and 1
                  */
                 CASPI_NO_DISCARD
-                FloatType getLevel() const CASPI_NON_BLOCKING noexcept { return level; }
+                FloatType getLevel() const noexcept CASPI_NON_BLOCKING { return level; }
                 /**
                  * @brief Gets the current level of the target.
                  * @return The current level of the target
                  */
                 CASPI_NO_DISCARD
-                FloatType getTarget() const CASPI_NON_BLOCKING noexcept { return target; }
+                FloatType getTarget() const noexcept CASPI_NON_BLOCKING { return target; }
 
                 /// getters - mostly for debugging
                 FloatType getAttack()       { return parameters.attackCoefficient; }
@@ -289,7 +289,7 @@ namespace CASPI
                 {
                     return state != State::idle;
                 }
-
+                
 
                 std::string getStateString() const
                 {
