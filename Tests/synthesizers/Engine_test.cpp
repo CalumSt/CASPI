@@ -151,6 +151,7 @@
  *
  ************************************************************************/
 
+#include "base/caspi_RealtimeContext.h"
 #include "synthesizers/caspi_Engine.h"
 #include <gtest/gtest.h>
 
@@ -886,11 +887,13 @@ TEST (EngineSampleAccurate, SampleAccurateMultipleOffsets)
 {
     auto eng = makePreparedEngine<SaConfig>();
     std::vector<int32_t> offsets;
+    offsets.reserve (2);  // Pre-allocate for expected events
+
     eng.onNoteOn = [&](uint8_t, uint8_t, uint8_t, std::size_t)
     {
-        // Can't capture sampleOffset here directly; just count.
-        offsets.push_back (0); // placeholder
+        offsets.push_back (0);
     };
+    
 
     eng.pushMidi (MidiMessage::makeNoteOn (0u, 60u, 100u, 0));
     eng.pushMidi (MidiMessage::makeNoteOn (0u, 62u, 100u, static_cast<int32_t> (kFrames / 2)));
