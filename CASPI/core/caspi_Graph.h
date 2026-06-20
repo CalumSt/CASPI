@@ -305,6 +305,8 @@ namespace Graph
             /** @brief Audio buffer type used throughout this context. */
             using BufferType = AudioBuffer<FloatType, ChannelMajorLayout>;
 
+            AudioContext() = default;
+
             /*------------------------------------------------------------------
              * Audio input query (audio thread)
              *-----------------------------------------------------------------*/
@@ -401,6 +403,21 @@ namespace Graph
                 std::size_t destinationPort;
                 const FloatType* valuePtr;
             };
+
+            void reserveCapacity (std::size_t numAudioLinks, std::size_t numControlLinks) CASPI_ALLOCATING
+            {
+                resolvedAudioInputs.reserve (numAudioLinks);
+                resolvedControlInputs.reserve (numControlLinks);
+            }
+
+            void beginBlock (std::size_t numChannelsIn, std::size_t numFramesIn, double sampleRateIn) noexcept
+            {
+                numChannels = numChannelsIn;
+                numFrames   = numFramesIn;
+                sampleRate  = sampleRateIn;
+                resolvedAudioInputs.clear();
+                resolvedControlInputs.clear();
+            }
 
             /**
              * @brief Construct an AudioContext for a block with the given geometry.
@@ -806,6 +823,8 @@ namespace Graph
                     }
                 }
 
+                context.reserveCapacity (cachedAudioLinks.size(), cachedControlLinks.size());
+
                 graphPrepared = true;
                 return {};
             }
@@ -829,26 +848,16 @@ namespace Graph
             {
                 CASPI_ASSERT (graphPrepared, "AudioGraph::process() called without prepare()");
 
-                AudioContext<FloatType> ctx (blockChannels,
-                                             blockFrames,
-                                             blockSampleRate,
-                                             cachedAudioLinks.size(),
-                                             cachedControlLinks.size());
+                context.beginBlock (blockChannels, blockFrames, blockSampleRate);
 
                 for (const auto& link : cachedAudioLinks)
-                {
-                    ctx.addAudioInput (link.destinationNode, link.destinationPort, link.buffer);
-                }
+                    context.addAudioInput (link.destinationNode, link.destinationPort, link.buffer);
 
                 for (const auto& link : cachedControlLinks)
-                {
-                    ctx.addControlInput (link.destinationNode, link.destinationPort, link.valuePtr);
-                }
+                    context.addControlInput (link.destinationNode, link.destinationPort, link.valuePtr);
 
                 for (NodeType_t* node : sortedNodePtrs)
-                {
-                    node->process (ctx);
-                }
+                    node->process (context);
             }
 
             /*==================================================================
@@ -1107,6 +1116,8 @@ namespace Graph
             /*==================================================================
              * Data members
              *================================================================*/
+
+            AudioContext<FloatType> context;
 
             /**
              * @brief Node ownership map: NodeId -> unique_ptr<NodeBase>.
