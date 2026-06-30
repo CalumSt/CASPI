@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 1100px; margin: 0 auto; padding: 1rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .chart-wrap { height: 280px; }
+        select { margin-bottom: 1rem; padding: 4px 8px; }
+        h3 { margin: 0 0 0.5rem; font-size: 14px; }
+        .meta { font-size: 12px; color: #888; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="meta" id="meta"></div>
+<label>Run: <select id="run-select"></select></label>
+<div class="grid" id="charts"></div>
+
+<script>
+    const RESULTS_DIR = "results/";
+
+    async function listResults() {
+        // fetch the directory listing — works on GitHub Pages since files are committed
+        // we embed the manifest at build time, or fall back to a known index
+        const r = await fetch(RESULTS_DIR + "index.json").catch(() => null);
+        if (r && r.ok) return r.json();
+        return [];
+    }
+
+    async function loadResult(filename) {
+        const r = await fetch(RESULTS_DIR + filename);
+        return r.json();
+    }
+
+    function parseBenchmarks(data) {
+        const means = data.benchmarks.filter(b => b.name.endsWith("_mean"));
+        const groups = {};
+        for (const b of means) {
+            const name = b.name.replace("_mean", "");
+            const [opVariant, size] = name.split("/");
+            const tokens = opVariant.split("_");         // ['BM','Scale','SIMD']
+            const variant = tokens[tokens.length - 1];
+            const op = tokens.slice(1, -1).join("_");
+            const gbs = (b.bytes_per_second || 0) / 1e9;
+            if (!groups[op]) groups[op] = {};
+            if (!groups[op][variant]) groups[op][variant] = {};
+            groups[op][variant][parseInt(size)] = gbs;
+        }
+        return groups;
+    }
+
+    const COLOURS = {
+        SIMD:     "#378ADD",
+        AutoVec:  "#1D9E75",
+        Scalar:   "#D85A30",
+        Memcpy:   "#7F77DD",
+    };
+    const SIZES = [64, 512, 2048, 16384, 65536];
+    let charts = [];
+
+    function renderCharts(groups) {
+        charts.forEach(c => c.destroy());
+        charts = [];
+        const container = document.getElementById("charts");
+        container.innerHTML = "";
+
+        for (const [op, variants] of Object.entries(groups).sort()) {
+            const wrap = document.createElement("div");
+            wrap.innerHTML = `<h3>${op}</h3><div class="chart-wrap"><canvas id="c_${op}"></canvas></div>`;
+            container.appendChild(wrap);
+
+            const datasets = Object.entries(variants).map(([variant, sizeData]) => ({
+                label: variant,
+                data: SIZES.map(s => sizeData[s] ?? null),
+                borderColor: COLOURS[variant] ?? "#888",
+                backgroundColor: (COLOURS[variant] ?? "#888") + "22",
+                tension: 0.3,
+                spanGaps: true,
+            }));
+
+            charts.push(new Chart(document.getElementById(`c_${op}`), {
+                type: "line",
+                data: { labels: SIZES, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "top" } },
+                    scales: {
+                        x: { title: { display: true, text: "Buffer size (elements)" } },
+                        y: { title: { display: true, text: "GB/s" }, beginAtZero: true },
+                    },
+                },
+            }));
+        }
+    }
+
+    async function init() {
+        const files = await listResults();
+        const sel = document.getElementById("run-select");
+
+        if (!files.length) {
+            document.getElementById("meta").textContent = "No benchmark results found.";
+            return;
+        }
+
+        files.slice().reverse().forEach(f => {
+            const opt = document.createElement("option");
+            opt.value = f;
+            opt.textContent = f.replace("results-", "").replace(".json", "");
+            sel.appendChild(opt);
+        });
+
+        async function load() {
+            const data = await loadResult(sel.value);
+            document.getElementById("meta").textContent =
+                `Host: ${data.context?.host_name ?? "unknown"} — ` +
+                `${data.context?.date ?? ""} — ` +
+                `${data.context?.num_cpus ?? "?"} CPUs`;
+            renderCharts(parseBenchmarks(data));
+        }
+
+        sel.addEventListener("change", load);
+        await load();
+    }
+
+    init();
+</script>
+</body>
+</html>

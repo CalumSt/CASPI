@@ -34,6 +34,10 @@ using WavetableOsc1  = Oscillators::WavetableOscillator<float, 2048, 1>;
 using WaveTableBank4 = Oscillators::WaveTableBank<float, 2048, 4>;
 using WavetableOsc4  = Oscillators::WavetableOscillator<float, 2048, 4>;
 
+using NodeBase_t = Graph::NodeBase<float>;
+using WaveTableOsc1Ptr_t = std::unique_ptr<WavetableOsc1, py::nodelete>;
+using WaveTableOsc4Ptr_t = std::unique_ptr<WavetableOsc4, py::nodelete>;
+
 // ---------------------------------------------------------------------------
 // render helpers — mirror render_blep() pattern exactly
 // ---------------------------------------------------------------------------
@@ -164,6 +168,9 @@ void bind_wavetable (py::module_& m)
         .value ("Hermite", Oscillators::InterpolationMode::Hermite,
                 "4-point Catmull-Rom cubic. ~+6 dB SNR at ~4x FMA cost.")
         .export_values();
+
+    // This connects the inheritance chain across file boundaries
+    py::object node_base = m.attr("NodeBase");
 
     // -----------------------------------------------------------------------
     // WaveTable  (shared by both bank variants — same type)
@@ -330,7 +337,8 @@ void bind_wavetable (py::module_& m)
     // WavetableOscillator1  (single-table, no morph)
     // -----------------------------------------------------------------------
 
-    py::class_<WavetableOsc1> (wt_m, "WavetableOscillator1",
+    py::class_<WavetableOsc1, NodeBase_t, WaveTableOsc1Ptr_t> (wt_m, "WavetableOscillator1",
+    py::dynamic_attr(),
         R"pbdoc(
             Wavetable oscillator — single table (float32, 2048 samples).
 
@@ -420,8 +428,9 @@ void bind_wavetable (py::module_& m)
     // WavetableOscillator4  (4-table morph)
     // -----------------------------------------------------------------------
 
-    py::class_<WavetableOsc4> (wt_m, "WavetableOscillator4",
-        R"pbdoc(
+    py::class_<WavetableOsc4, NodeBase_t, WaveTableOsc4Ptr_t> (wt_m, "WavetableOscillator4",
+    py::dynamic_attr(),
+    R"pbdoc(
             Wavetable oscillator — 4-table morph (float32, 2048 samples per table).
 
             morph_position crossfades between adjacent tables:

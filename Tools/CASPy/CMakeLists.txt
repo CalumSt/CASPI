@@ -45,6 +45,9 @@ pybind11_add_module(caspy
         Source/Bindings/bind_parameters.cpp
         Source/Bindings/bind_noise.cpp
         Source/Bindings/bind_LFO.cpp
+        Source/Bindings/bind_graph.cpp
+        Source/Bindings/bind_engine.cpp
+        Source/Bindings/bind_filters.cpp
 )
 
 target_link_libraries(caspy PRIVATE CASPI)

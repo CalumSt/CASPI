@@ -621,6 +621,75 @@ constexpr bool is_audio_layout_v = is_audio_layout<L>::value;
             Core::scale (frame_span, factor);
         }
     } // namespace block
+
+namespace Core
+    {
+        namespace Traversal
+        {
+            // Per-sample: update state every sample
+            struct PerSample
+            {
+                    template <typename Buf, typename F>
+                    static void for_each (Buf& buf, F&& fn) noexcept
+                    {
+                        const std::size_t C  = buf.numChannels();
+                        const std::size_t Fm = buf.numFrames();
+                        for (std::size_t f = 0; f < Fm; ++f)
+                        {
+                            for (std::size_t ch = 0; ch < C; ++ch)
+                            {
+                                fn (ch, f);
+                            }
+                        }
+                    }
+            };
+
+            // Per-frame: update state once per frame, replicate across channels
+            struct PerFrame
+            {
+                    template <typename Buf, typename F>
+                    static void for_each (Buf& buf, F&& fn) noexcept
+                    {
+                        const std::size_t C  = buf.numChannels();
+                        const std::size_t Fm = buf.numFrames();
+                        for (std::size_t f = 0; f < Fm; ++f)
+                        {
+                            fn (f, C); // “once per frame” callback
+                        }
+                    }
+            };
+
+            // Per-channel: update state once per channel, operate over all frames
+            struct PerChannel
+            {
+                    template <typename Buf, typename F>
+                    static void for_each (Buf& buf, F&& fn) noexcept
+                    {
+                        const std::size_t C  = buf.numChannels();
+                        const std::size_t Fm = buf.numFrames();
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                        {
+                            fn (ch, Fm); // “once per channel” callback
+                        }
+                    }
+            };
+        } // namespace Traversal
+
+    template <typename Policy>
+    struct is_traversal_policy : std::false_type {};
+
+    template <>
+    struct is_traversal_policy<Core::Traversal::PerSample> : std::true_type {};
+
+    template <>
+    struct is_traversal_policy<Core::Traversal::PerFrame> : std::true_type {};
+
+        template <>
+        struct is_traversal_policy<Core::Traversal::PerChannel> : std::true_type
+        {
+        };
+
+    }
 } // namespace CASPI
 
 #endif // CASPI_AUDIOBUFFER_H

@@ -92,8 +92,8 @@ namespace CASPI
     namespace external
     {
         // Alias only — do NOT include inside here
-        template <typename T>
-        using ConcurrentQueue = moodycamel::ConcurrentQueue<T>;
+        template<typename T, typename Traits = moodycamel::ConcurrentQueueDefaultTraits>
+        using ConcurrentQueue = moodycamel::ConcurrentQueue<T, Traits>;
 
         using ProducerToken = moodycamel::ProducerToken;
     }

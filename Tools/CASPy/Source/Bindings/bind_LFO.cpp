@@ -12,6 +12,8 @@ namespace py = pybind11;
 using namespace CASPI;
 
 using LfoF = Oscillators::LFO<float>;
+using NodeBase_t = Graph::NodeBase<float>;
+using LfoFPtr_t = std::unique_ptr<LfoF, py::nodelete>;
 
 static py::array_t<float> render_lfo (LfoF& osc, int num_samples)
 {
@@ -39,7 +41,10 @@ void bind_lfo (py::module_& m)
         .value ("Unipolar", Oscillators::LfoOutputMode::Unipolar, "Output in [0, 1].")
         .export_values();
 
-    py::class_<LfoF> (lfo_m, "LFO",
+    // This connects the inheritance chain across file boundaries
+    py::object node_base = m.attr("NodeBase");
+
+    py::class_<LfoF,NodeBase_t, LfoFPtr_t> (lfo_m, "LFO",
         R"pbdoc(
             Low-frequency oscillator (float32).
 
