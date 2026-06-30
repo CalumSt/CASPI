@@ -1,0 +1,29 @@
+# Core language
+*.h   linguist-language=C++ diff=cpp
+*.hpp linguist-language=C++ diff=cpp
+*.hh  linguist-language=C++ diff=cpp
+
+# Line endings
+* text=auto
+
+# Exclude non-core code
+tests/**      linguist-vendored
+examples/**   linguist-vendored
+benchmarks/** linguist-vendored
+third_party/** linguist-vendored
+generated/**   linguist-generated
+
+# Docs
+docs/** linguist-documentation
+*.ipynb linguist-vendored
+
+# Export cleanup
+.github/ export-ignore
+tests/   export-ignore
+examples/ export-ignore
+docs/    export-ignore
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.pdf binary
