@@ -158,6 +158,7 @@
 #include "controls/caspi_Envelope.h"
 #include "controls/caspi_ModMatrix.h"
 #include "core/caspi_Graph.h"
+#include "base/caspi_RealtimeContext.h"
 #include "core/caspi_Node.h"
 #include "oscillators/caspi_BlepOscillator.h"
 #include "oscillators/caspi_Noise.h"
@@ -244,6 +245,15 @@ class OrderTrackingNode : public AudioNode<OrderTrackingNode<FloatType>, FloatTy
         explicit OrderTrackingNode (std::size_t numIn = 0, std::size_t numOut = 1)
             : AudioNode<OrderTrackingNode<FloatType>, FloatType> (numIn, numOut)
         {
+        }
+
+        void onPrepare (std::size_t numChannels, std::size_t numFrames, double sr)
+        {
+            (void) numChannels; (void) sr;
+            if (orderTracker != nullptr)
+            {
+                orderTracker->reserve (numChannels);  // One call per block max
+            }
         }
 
         void processImpl (AudioContext<FloatType>&) noexcept
@@ -1122,6 +1132,7 @@ TEST_F (AudioGraphFixture, NodeIsPreparedAfterGraphPrepare)
 TEST_F (AudioGraphFixture, LinearChainProcessedInOrder)
 {
     std::vector<NodeId> order;
+    order.reserve(3);
 
     NodeId a = addTracking (&order, 0, 1);
     NodeId b = addTracking (&order, 1, 1);
@@ -1140,6 +1151,7 @@ TEST_F (AudioGraphFixture, LinearChainProcessedInOrder)
 TEST_F (AudioGraphFixture, DiamondProcessedWithCorrectPrecedence)
 {
     std::vector<NodeId> order;
+    order.reserve(4);
 
     NodeId a = addTracking (&order, 0, 1);
     NodeId b = addTracking (&order, 1, 1);
