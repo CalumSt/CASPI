@@ -64,6 +64,7 @@
 #include "core/caspi_Graph.h"
 #include "core/caspi_Node.h"
 #include "core/caspi_Producer.h"
+#include "base/caspi_RealtimeContext.h"
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -93,6 +94,12 @@ public:
     explicit CountingProducer (std::size_t numOut = 1)
         : Producer<CountingProducer<FloatType>, FloatType, Traversal::PerSample> (0, numOut)
     {
+    }
+
+    void onPrepare (std::size_t numChannels, std::size_t numFrames, double sr)
+    {
+        (void) sr;
+        calls.reserve (numChannels * numFrames);  // Pre-allocate
     }
 
     FloatType renderSample (std::size_t ch, std::size_t fr) CASPI_NON_BLOCKING override
@@ -279,6 +286,7 @@ TEST (ProducerTest, PerSampleCallsRenderSampleForEveryChannelAndFrame)
 {
     constexpr std::size_t C = 2, F = 8;
     CountingProducer<float> p;
+    p.prepareToRender (C, F, 44100.0);
     AudioBuffer<float, ChannelMajorLayout> buf (C, F);
 
     p.render (buf);
@@ -290,6 +298,7 @@ TEST (ProducerTest, PerSampleChannelAndFrameIndicesCorrect)
 {
     constexpr std::size_t C = 2, F = 4;
     CountingProducer<float> p;
+    p.prepareToRender (C, F, 44100.0);
     AudioBuffer<float, ChannelMajorLayout> buf (C, F);
 
     p.render (buf);
