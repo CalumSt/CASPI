@@ -155,7 +155,7 @@ public:
      * @param nFrames    Block size in frames.
      * @param nChannels  Number of channels.
      */
-    virtual void prepareBlock (std::size_t nFrames, std::size_t nChannels)
+    virtual void prepareBlock (std::size_t nFrames, std::size_t nChannels) CASPI_NON_BLOCKING 
     {
         (void) nFrames; (void) nChannels;
     }
@@ -212,7 +212,7 @@ public:
      *
      * @param ctx  AudioContext providing upstream buffer and control pointers.
      */
-    void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
+    void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept CASPI_NON_BLOCKING
     {
         (void) ctx;
         this->render (this->outputBuffer);
@@ -231,7 +231,7 @@ public:
      * @param frameOffset  Starting frame index.
      */
     template <typename Span>
-    void renderSpan (Span& span, std::size_t channel, std::size_t frameOffset = 0)
+    void renderSpan (Span& span, std::size_t channel, std::size_t frameOffset = 0) CASPI_NON_BLOCKING
     {
         renderSpanImpl (span, channel, frameOffset,
                         std::integral_constant<bool, is_simd_eligible<Span>::value> {});
