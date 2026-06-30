@@ -167,7 +167,7 @@ namespace CASPI
                  *
                  * @param context  AudioContext providing access to connected input buffers.
                  */
-                virtual void process (AudioContext<FloatType>& context) noexcept = 0;
+                virtual void process (AudioContext<FloatType>& context) noexcept CASPI_NON_BLOCKING = 0;
 
                 /**
                  * @brief Return the output audio buffer for the given port.
@@ -339,7 +339,7 @@ namespace CASPI
                  * One virtual call per block per node. The processImpl() call is
                  * resolved at compile time; no virtual dispatch for the inner work.
                  */
-                void process (AudioContext<FloatType>& context) noexcept override final
+                void process (AudioContext<FloatType>& context) noexcept CASPI_NON_BLOCKING override final
                 {
                     getDerived().processImpl (context);
                 }
@@ -378,7 +378,7 @@ namespace CASPI
                  *
                  * Must be noexcept. No allocation. No locks.
                  */
-                void processImpl (AudioContext<FloatType>&) noexcept
+                void processImpl (AudioContext<FloatType>&) noexcept CASPI_NON_BLOCKING
                 {
                 }
 
@@ -436,7 +436,7 @@ namespace CASPI
                     this->markPrepared();
                 }
 
-                void process (AudioContext<FloatType>& context) noexcept override final
+                void process (AudioContext<FloatType>& context) noexcept CASPI_NON_BLOCKING override final
                 {
                     getDerived().processImpl (context);
                 }
@@ -462,7 +462,8 @@ namespace CASPI
                 void onPrepare (std::size_t, std::size_t, double)
                 {
                 }
-                void processImpl (AudioContext<FloatType>&) noexcept
+
+                void processImpl (AudioContext<FloatType>&) noexcept CASPI_NON_BLOCKING 
                 {
                 }
 
