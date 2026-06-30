@@ -29,8 +29,11 @@ set(SOURCES
         core/Expected_test.cpp
         core/AudioBuffer_test.cpp
         core/DelayLine_test.cpp
-        core/BaseClass_test.cpp
         core/Parameter_test.cpp
+        core/Processor_test.cpp
+        core/Producer_test.cpp
+        core/Graph_test.cpp
+        midi/Midi_test.cpp
         base/Utilities_test.cpp
         controls/Envelope_test.cpp
         controls/ModMatrix_test.cpp
@@ -39,13 +42,15 @@ set(SOURCES
         sources/Noise_test.cpp
         sources/LFO_test.cpp
         sources/WavetableOscillator_test.cpp
-        processors/Filter_test.cpp
         processors/Gain_test.cpp
         synthesizers/FMGraph_test.cpp
+        synthesizers/Engine_test.cpp
         maths/Spectral_test.cpp
         maths/FMTheory_test.cpp
         maths/FFT_test.cpp
         maths/Maths_test.cpp
+        filters/Filter_test.cpp
+        filters/SvfFilter_test.cpp
 )
 
 add_executable(UnitTests ${SOURCES})

@@ -123,7 +123,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #include "base/caspi_Assert.h"
 #include "base/caspi_Constants.h"
-#include "core/caspi_Core.h"
+#include "core/caspi_Producer.h"
+#include "core/caspi_Graph.h"
 #include "core/caspi_Parameter.h"
 #include "core/caspi_Phase.h"
 #include <array>
@@ -662,12 +663,13 @@ private:
  *   osc.renderBlock(buf, 512);
  * @endcode
  */
-template <typename FloatType,
+template <CASPI_FLOAT_TYPE FloatType,
           std::size_t TableSize = 2048,
           std::size_t NumTables = 1>
 class WavetableOscillator
-    : public Core::Producer<FloatType, Core::Traversal::PerFrame>
-    , public Core::SampleRateAware<FloatType>
+    : public Core::Producer<WavetableOscillator<FloatType, TableSize, NumTables>,
+                            FloatType,
+                            Core::Traversal::PerFrame>
 {
     CASPI_STATIC_ASSERT (std::is_floating_point<FloatType>::value,
                    "WavetableOscillator requires a floating-point type");
@@ -706,10 +708,10 @@ public:
      * The bank must outlive the oscillator. Call setSampleRate() and
      * setFrequency() before rendering.
      *
-     * @param bank  Reference to the WaveTableBank. Must outlive this object.
+     * @param bankIn  Reference to the WaveTableBank. Must outlive this object.
      */
-    explicit WavetableOscillator (Bank& bank) noexcept CASPI_NON_ALLOCATING
-        : bank_ (&bank)
+    explicit WavetableOscillator (Bank& bankIn) noexcept CASPI_NON_ALLOCATING
+        : bank (&bankIn)
     {
         initParameters();
     }
@@ -730,8 +732,8 @@ public:
      *   WavetableOscillator<float, 2048, 4> osc(bank, 44100.f, 220.f);
      * @endcode
      */
-    WavetableOscillator (Bank& bank, FloatType sampleRate, FloatType hz) noexcept CASPI_NON_ALLOCATING
-        : bank_ (&bank)
+    WavetableOscillator (Bank& bankIn, FloatType sampleRate, FloatType hz) noexcept CASPI_NON_ALLOCATING
+        : bank (&bankIn)
     {
         initParameters();
         this->setSampleRate (sampleRate);
@@ -893,7 +895,7 @@ public:
      */
     void setBank (Bank& newBank) noexcept CASPI_NON_BLOCKING
     {
-        bank_ = &newBank;
+        bank = &newBank;
     }
 
     /*************************************************************************
@@ -914,12 +916,14 @@ public:
      *       from the current frequency.value(). If the smoother has not yet
      *       converged, call setFrequency() again after setSampleRate().
      */
-    void setSampleRate (FloatType newRate) CASPI_NON_BLOCKING override
+    void onSampleRateChanged (FloatType newRate) noexcept override
     {
-        Core::SampleRateAware<FloatType>::setSampleRate (newRate);
         const FloatType hz = frequency.value();
         phase.increment    = (newRate > FloatType (0)) ? hz / newRate : FloatType (0);
     }
+
+    /** @brief AudioNode hook — no additional setup needed beyond onSampleRateChanged. */
+    void onPrepare (std::size_t, std::size_t, double) noexcept {}
 
     /*************************************************************************
      * Phase control
@@ -1043,6 +1047,39 @@ public:
         wrapped = (phase.phase < pBefore);
 
         return readTable (pBefore) * amplitude.value();
+    }
+
+/**
+     * @brief Graph dispatch: applies optional modulation from control inputs,
+     *        renders into outputBuffer, then clears modulation.
+     *
+     * Control input port 0 (optional): frequency modulation in [-1, 1] normalised.
+     * Control input port 1 (optional): morph position modulation in [-1, 1] normalised.
+     */
+    void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
+    {
+        const FloatType freqMod  = ctx.getControlInput (this->getId(), 0);
+        const FloatType morphMod = ctx.getControlInput (this->getId(), 1);
+
+        if (freqMod != FloatType (0))
+        {
+            frequency.addModulation (freqMod);
+        }
+        if (morphMod != FloatType (0))
+        {
+            morphPosition.addModulation (morphMod);
+        }
+
+        this->render (this->outputBuffer);
+
+        if (freqMod != FloatType (0))
+        {
+            frequency.clearModulation();
+        }
+        if (morphMod != FloatType (0))
+        {
+            morphPosition.clearModulation();
+        }
     }
 
     /*************************************************************************
@@ -1213,16 +1250,16 @@ private:
         const FloatType morphScaled = morphPosition.value() * kMorphScale;
 
         if (interpMode == InterpolationMode::Hermite)
-            return bank_->readHermite (p, morphScaled);
+            return bank->readHermite (p, morphScaled);
 
-        return bank_->readLinear (p, morphScaled);
+        return bank->readLinear (p, morphScaled);
     }
 
     /*************************************************************************
      * State
      *************************************************************************/
 
-    Bank*             bank_         { nullptr };             ///< Non-owning pointer. Must not be null when rendering.
+    Bank*             bank         { nullptr };             ///< Non-owning pointer. Must not be null when rendering.
     Phase<FloatType>  phase         {};                      ///< Phase accumulator and increment.
     FloatType         phaseOffset   { FloatType (0) };       ///< Applied on resetPhase() / forceSync().
     FloatType         phaseModDepth { FloatType (0) };       ///< Added to phase before each table lookup.

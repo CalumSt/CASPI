@@ -13,6 +13,11 @@
 
 namespace py = pybind11;
 using namespace CASPI;
+using FMGraphDSPFloat_t  = FMGraphDSP<float>;
+using FmGraphBuilderFloat_t = FMGraphBuilder<float>;
+using NodeBase_t = Graph::NodeBase<float>;
+using FMGraphDSPFloatPtr_t = std::unique_ptr<FMGraphDSPFloat_t, py::nodelete>;
+
 
 /**
  * @brief Render audio from FMGraphDSP to a NumPy array.
@@ -105,6 +110,7 @@ void bind_fmgraph(py::module_& m)
 {
     auto fmgraph = m.def_submodule("fmgraph", "FM synthesis graph construction and rendering");
 
+
     // ========================================================================
     // Enums
     // ========================================================================
@@ -142,7 +148,7 @@ void bind_fmgraph(py::module_& m)
     // FMGraphBuilder (float)
     // ========================================================================
 
-    py::class_<FMGraphBuilder<float>>(fmgraph, "FMGraphBuilder",
+    py::class_<FmGraphBuilderFloat_t>(fmgraph, "FMGraphBuilder",
         R"pbdoc(
             Builder for constructing FM synthesis graphs.
 
@@ -162,11 +168,11 @@ void bind_fmgraph(py::module_& m)
         .def(py::init<>(), "Construct an empty FM graph builder")
 
         // Graph construction
-        .def("add_operator", &FMGraphBuilder<float>::addOperator,
+        .def("add_operator", &FmGraphBuilderFloat_t::addOperator,
              "Add a new operator with default parameters. Returns operator index.")
 
         .def("remove_operator",
-             [](FMGraphBuilder<float>& self, size_t index) {
+             [](FmGraphBuilderFloat_t& self, size_t index) {
                  auto result = self.removeOperator(index);
                  if (!result.has_value())
                      throw py::value_error(errorToString(result.error()));
@@ -175,7 +181,7 @@ void bind_fmgraph(py::module_& m)
              "Remove an operator and all its connections")
 
         .def("connect",
-             [](FMGraphBuilder<float>& self, size_t source, size_t target, float depth) {
+             [](FmGraphBuilderFloat_t& self, size_t source, size_t target, float depth) {
                  auto result = self.connect(source, target, depth);
                  if (!result.has_value())
                      throw py::value_error(errorToString(result.error()));
@@ -184,7 +190,7 @@ void bind_fmgraph(py::module_& m)
              "Connect source operator to target operator with given modulation depth")
 
         .def("disconnect",
-             [](FMGraphBuilder<float>& self, size_t source, size_t target) {
+             [](FmGraphBuilderFloat_t& self, size_t source, size_t target) {
                  auto result = self.disconnect(source, target);
                  if (!result.has_value())
                      throw py::value_error(errorToString(result.error()));
@@ -193,7 +199,7 @@ void bind_fmgraph(py::module_& m)
              "Remove connection between two operators")
 
         .def("set_output_operators",
-             [](FMGraphBuilder<float>& self, const std::vector<size_t>& indices) {
+             [](FmGraphBuilderFloat_t& self, const std::vector<size_t>& indices) {
                  auto result = self.setOutputOperators(indices);
                  if (!result.has_value())
                      throw py::value_error(errorToString(result.error()));
@@ -203,7 +209,7 @@ void bind_fmgraph(py::module_& m)
 
         // Configuration
         .def("configure_operator",
-             [](FMGraphBuilder<float>& self, size_t index, float freq,
+             [](FmGraphBuilderFloat_t& self, size_t index, float freq,
                 float mod_index, float mod_depth) {
                  auto result = self.configureOperator(index, freq, mod_index, mod_depth);
                  if (!result.has_value())
@@ -216,7 +222,7 @@ void bind_fmgraph(py::module_& m)
              "Configure operator parameters")
 
         .def("set_operator_mode",
-             [](FMGraphBuilder<float>& self, size_t index, ModulationMode mode) {
+             [](FmGraphBuilderFloat_t& self, size_t index, ModulationMode mode) {
                  auto result = self.setOperatorMode(index, mode);
                  if (!result.has_value())
                      throw py::value_error(errorToString(result.error()));
@@ -226,7 +232,7 @@ void bind_fmgraph(py::module_& m)
 
         // Validation
         .def("validate",
-             [](const FMGraphBuilder<float>& self) {
+             [](const FmGraphBuilderFloat_t& self) {
                  auto result = self.validate();
                  if (!result.has_value())
                      throw py::value_error(errorToString(result.error()));
@@ -251,18 +257,21 @@ void bind_fmgraph(py::module_& m)
              )pbdoc")
 
         // Inspection
-        .def("get_num_operators", &FMGraphBuilder<float>::getNumOperators,
+        .def("get_num_operators", &FmGraphBuilderFloat_t::getNumOperators,
              "Get the number of operators in the graph")
-        .def("get_connections", &FMGraphBuilder<float>::getConnections,
+        .def("get_connections", &FmGraphBuilderFloat_t::getConnections,
              "Get all modulation connections")
-        .def("get_output_operators", &FMGraphBuilder<float>::getOutputOperators,
+        .def("get_output_operators", &FmGraphBuilderFloat_t::getOutputOperators,
              "Get indices of output operators");
+
+    // This connects the inheritance chain across file boundaries
+    py::object node_base = m.attr("NodeBase");
 
     // ========================================================================
     // FMGraphDSP (float)
     // ========================================================================
 
-    py::class_<FMGraphDSP<float>>(fmgraph, "FMGraphDSP",
+    py::class_<FMGraphDSPFloat_t, NodeBase_t, FMGraphDSPFloatPtr_t>(fmgraph, "FMGraphDSP",
         R"pbdoc(
             Real-time FM synthesis graph DSP engine.
 
@@ -281,56 +290,56 @@ void bind_fmgraph(py::module_& m)
 
         // Operator access
         .def("get_operator",
-             [](FMGraphDSP<float>& self, size_t index) -> Operator<float>* {
+             [](FMGraphDSPFloat_t& self, size_t index) -> Operator<float>* {
                  return self.getOperator(index);
              },
              py::arg("operator_index"),
              py::return_value_policy::reference_internal,
              "Get mutable access to an operator by index")
 
-        .def("get_num_operators", &FMGraphDSP<float>::getNumOperators,
+        .def("get_num_operators", &FMGraphDSPFloat_t::getNumOperators,
              "Get the number of operators in the graph")
 
         // Global frequency control
-        .def("set_frequency", &FMGraphDSP<float>::setFrequency,
+        .def("set_frequency", &FMGraphDSPFloat_t::setFrequency,
              py::arg("frequency"),
              "Set base frequency for all operators (Hz)")
-        .def("get_frequency", &FMGraphDSP<float>::getFrequency,
+        .def("get_frequency", &FMGraphDSPFloat_t::getFrequency,
              "Get current base frequency (Hz)")
 
         // Connection control
-        .def("set_connection_depth", &FMGraphDSP<float>::setConnectionDepth,
+        .def("set_connection_depth", &FMGraphDSPFloat_t::setConnectionDepth,
              py::arg("connection_index"), py::arg("depth"),
              "Update modulation depth of a connection by index")
-        .def("set_modulation_depth", &FMGraphDSP<float>::setModulationDepth,
+        .def("set_modulation_depth", &FMGraphDSPFloat_t::setModulationDepth,
              py::arg("source_operator"), py::arg("target_operator"), py::arg("depth"),
              "Update modulation depth between two operators")
 
         // Note control
-        .def("note_on", &FMGraphDSP<float>::noteOn,
+        .def("note_on", &FMGraphDSPFloat_t::noteOn,
              "Trigger note-on for all operators")
-        .def("note_off", &FMGraphDSP<float>::noteOff,
+        .def("note_off", &FMGraphDSPFloat_t::noteOff,
              "Trigger note-off for all operators")
 
         // Output control
-        .def("set_output_gain", &FMGraphDSP<float>::setOutputGain,
+        .def("set_output_gain", &FMGraphDSPFloat_t::setOutputGain,
              py::arg("gain"),
              "Set final output gain (linear)")
-        .def("get_output_gain", &FMGraphDSP<float>::getOutputGain,
+        .def("get_output_gain", &FMGraphDSPFloat_t::getOutputGain,
              "Get current output gain")
-        .def("set_auto_scale_outputs", &FMGraphDSP<float>::setAutoScaleOutputs,
+        .def("set_auto_scale_outputs", &FMGraphDSPFloat_t::setAutoScaleOutputs,
              py::arg("enable"),
              "Enable/disable automatic output scaling")
-        .def("get_auto_scale_outputs", &FMGraphDSP<float>::getAutoScaleOutputs,
+        .def("get_auto_scale_outputs", &FMGraphDSPFloat_t::getAutoScaleOutputs,
              "Check if auto-scaling is enabled")
 
         // State management
-        .def("reset", &FMGraphDSP<float>::reset,
+        .def("reset", &FMGraphDSPFloat_t::reset,
              "Reset all operator state and clear modulation buffers")
 
         // Rendering
     .def("render_sample",
-     [](FMGraphDSP<float>& self) {
+     [](FMGraphDSPFloat_t& self) {
          return self.renderSample();
      },
      "Render a single audio sample (float)")
@@ -342,9 +351,9 @@ void bind_fmgraph(py::module_& m)
              "Render to multi-channel NumPy array [channels, samples]")
 
         // Inspection
-        .def("get_execution_order", &FMGraphDSP<float>::getExecutionOrder,
+        .def("get_execution_order", &FMGraphDSPFloat_t::getExecutionOrder,
              "Get the topological execution order of operators")
-        .def("get_output_operators", &FMGraphDSP<float>::getOutputOperators,
+        .def("get_output_operators", &FMGraphDSPFloat_t::getOutputOperators,
              "Get indices of output operators");
 
 

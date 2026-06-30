@@ -28,7 +28,7 @@
 // Includes - Project
 //------------------------------------------------------------------------------
 #include "base/caspi_Assert.h"
-#include "caspi_Core.h"
+#include "base/caspi_Denormals.h"
 #include "maths/caspi_Maths.h"
 
 //------------------------------------------------------------------------------

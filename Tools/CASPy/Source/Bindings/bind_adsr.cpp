@@ -13,7 +13,9 @@
 
 namespace py = pybind11;
 using namespace CASPI;
-
+using ADSRFloat  = Envelope::ADSR<float>;
+using NodeBase_t = Graph::NodeBase<float>;
+using ADSRFloatPtr_t = std::unique_ptr<ADSRFloat, py::nodelete>;
 /**
  * @brief Render a full ADSR envelope to a NumPy array.
  *
@@ -25,7 +27,7 @@ using namespace CASPI;
  * @param num_samples The number of samples to generate.
  * @return py::array_t<float> A NumPy array containing the rendered samples.
  */
-py::array_t<float> render_algorithm(Envelope::ADSR<float>& envelope, size_t num_samples)
+py::array_t<float> render_algorithm(ADSRFloat& envelope, size_t num_samples)
 {
     py::array_t<float> result(num_samples);       // allocate NumPy array
     auto buf = result.request();                   // request buffer info
@@ -53,6 +55,9 @@ void bind_adsr(py::module_& m)
     // Create submodule
     auto adsr = m.def_submodule("adsr", "ADSR envelope generators for synthesis");
 
+    // This connects the inheritance chain across file boundaries
+    py::object node_base  = m.attr("NodeBase");
+
     // Bind envelope states enum
     py::enum_<Envelope::State>(adsr, "EnvelopeState",
         "States of the ADSR envelope")
@@ -67,7 +72,7 @@ void bind_adsr(py::module_& m)
         .export_values();
 
     // Bind ADSR class
-    py::class_<Envelope::ADSR<float>>(adsr, "ADSR",
+    py::class_<ADSRFloat, NodeBase_t, ADSRFloatPtr_t>(adsr, "ADSR",
         R"pbdoc(
             ADSR (Attack-Decay-Sustain-Release) envelope generator.
 
@@ -83,30 +88,30 @@ void bind_adsr(py::module_& m)
                 env.note_on()
         )pbdoc")
         .def(py::init<>(), "Construct an ADSR envelope with default parameters")
-        .def("note_on", &Envelope::ADSR<float>::noteOn,
+        .def("note_on", &ADSRFloat::noteOn,
              "Trigger the attack phase of the envelope")
-        .def("note_off", &Envelope::ADSR<float>::noteOff,
+        .def("note_off", &ADSRFloat::noteOff,
              "Trigger the release phase of the envelope")
-        .def("reset", &Envelope::ADSR<float>::reset,
+        .def("reset", &ADSRFloat::reset,
              "Reset the envelope to idle state")
-        .def("render", &Envelope::ADSR<float>::render,
+        .def("render", &ADSRFloat::render,
              "Generate the next sample of the envelope (float)")
-        .def("set_attack_time", &Envelope::ADSR<float>::setAttackTime,
+        .def("set_attack_time", &ADSRFloat::setAttackTime,
              py::arg("attack_time_s"),
              "Set attack time in seconds")
-        .def("set_decay_time", &Envelope::ADSR<float>::setDecayTime,
+        .def("set_decay_time", &ADSRFloat::setDecayTime,
              py::arg("decay_time_s"),
              "Set decay time in seconds (call after set_sustain_level)")
-        .def("set_sustain_level", &Envelope::ADSR<float>::setSustainLevel,
+        .def("set_sustain_level", &ADSRFloat::setSustainLevel,
              py::arg("sustain_level"),
              "Set sustain level in range [0.0, 1.0]")
-        .def("set_release_time", &Envelope::ADSR<float>::setReleaseTime,
+        .def("set_release_time", &ADSRFloat::setReleaseTime,
              py::arg("release_time_s"),
              "Set release time in seconds")
-        .def("set_sample_rate", &Envelope::ADSR<float>::setSampleRate,
+        .def("set_sample_rate", &ADSRFloat::setSampleRate,
              py::arg("sample_rate"),
              "Set the envelope sample rate in Hz")
-        .def("get_state", &Envelope::ADSR<float>::getState,
+        .def("get_state", &ADSRFloat::getState,
              "Get the current state of the envelope as a string")
         .def("render_algorithm", &render_algorithm, py::arg("num_samples"),
              "Render `num_samples` of the envelope as a NumPy array for Python");
