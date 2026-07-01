@@ -490,6 +490,28 @@ namespace CASPI
                 std::vector<FloatType> controlOutputs;
         };
 
+        /**
+         * @brief Apply a function to every element of a span in-place.
+         *
+         * Convenience for stateless per-sample operations (gain, DC removal,
+         * soft clip) where the compiler can auto-vectorize the loop.
+         *
+         * @tparam Span  Contiguous span type with range-for support.
+         * @tparam Fn    Invocable<FloatType(FloatType)>.
+         * @param span   Span to transform in-place.
+         * @param fn     Transform function applied to each element.
+         *
+         * @code
+         *   applySpan(chan, [g = gain](float s) { return s * g; });
+         * @endcode
+         */
+        template <typename Span, typename Fn>
+        void applySpan (Span& span, Fn&& fn) noexcept
+        {
+            for (auto& s : span)
+                s = fn (s);
+        }
+
     } // namespace Graph
 } // namespace CASPI
 
