@@ -23,11 +23,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
  * Square mid-modulation).
  *
  * ### Inheritance
- * - Core::Producer<FloatType, Traversal::PerFrame>
- *   Provides render(AudioBuffer&) through the PerFrame traversal policy.
- *   renderSample() is the scalar override called per frame.
- * - Core::SampleRateAware<FloatType>
- *   Provides getSampleRate() / setSampleRate().
+ * - Graph::AudioNode<BlepOscillator<FloatType>, FloatType>
+ *   CRTP base providing outputBuffer, process() dispatch, prepare() lifecycle.
  *
  * ### Modulatable parameters
  * | Parameter   | Range          | Scale       | Notes                         |
@@ -94,7 +91,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include "base/caspi_Constants.h"
 #include "core/caspi_Parameter.h"
 #include "core/caspi_Phase.h"
-#include "core/caspi_Producer.h"
+#include "core/caspi_Node.h"
 
 namespace CASPI
 {
@@ -254,7 +251,7 @@ namespace CASPI
          */
         template <CASPI_FLOAT_TYPE FloatType>
         class BlepOscillator final
-            : public Core::Producer<BlepOscillator<FloatType>, FloatType, Core::Traversal::PerFrame>
+            : public Graph::AudioNode<BlepOscillator<FloatType>, FloatType>
         {
                 static_assert (std::is_floating_point<FloatType>::value,
                                "BlepOscillator requires a floating-point type");
@@ -278,6 +275,12 @@ namespace CASPI
                  * - PulseWidth: 0.5 (50% duty cycle)
                  */
                 BlepOscillator() CASPI_ALLOCATING
+                {
+                    initParameters();
+                }
+
+                explicit BlepOscillator (std::size_t numInputs, std::size_t numOutputs)
+                    : Graph::AudioNode<BlepOscillator<FloatType>, FloatType> (numInputs, numOutputs)
                 {
                     initParameters();
                 }
@@ -323,13 +326,21 @@ namespace CASPI
                 }
 
                 /**
-                 * Called by AudioNode::process() each block. BlepOscillator has no
-                 * audio inputs, so ctx is unused.
+                 * Called by AudioNode::process() each block. Renders mono output
+                 * via renderBlock() then broadcasts to all output channels.
                  */
                 void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
                 {
                     (void) ctx;
-                    this->render (this->outputBuffer);
+                    auto& buf = this->outputBuffer;
+                    const auto F = buf.numFrames();
+                    const auto C = buf.numChannels();
+
+                    renderBlock (buf.data(), static_cast<int> (F));
+
+                    for (std::size_t ch = 1; ch < C; ++ch)
+                        for (std::size_t f = 0; f < F; ++f)
+                            buf.sample (ch, f) = buf.sample (0, f);
                 }
 
                 /*************************************************************************
@@ -592,7 +603,7 @@ namespace CASPI
                  *   osc.frequency.clearModulation();
                  * @endcode
                  */
-                FloatType renderSample() noexcept CASPI_NON_BLOCKING override
+                FloatType renderSample() noexcept CASPI_NON_BLOCKING
                 {
                     amplitude.process();
                     frequency.process();

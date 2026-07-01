@@ -120,7 +120,7 @@ class ConstantSourceNode : public AudioNode<ConstantSourceNode<FloatType>, Float
  */
 template <typename FloatType>
 class TrackingEnvNode final
-    : Envelope::Envelope<FloatType>, public Core::Producer<TrackingEnvNode<FloatType>, FloatType, Core::Traversal::PerFrame>
+    : Envelope::Envelope<FloatType>, public Graph::AudioNode<TrackingEnvNode<FloatType>, FloatType>
 {
     public:
         int noteOnCount  = 0;
@@ -129,7 +129,7 @@ class TrackingEnvNode final
         bool forceIdle   = false; // set true to make isIdle() return true immediately
 
         TrackingEnvNode()
-            : Core::Producer<TrackingEnvNode<FloatType>, FloatType, Core::Traversal::PerFrame> (0, 1)
+            : Graph::AudioNode<TrackingEnvNode<FloatType>, FloatType> (0, 1)
         {
         }
 
@@ -165,7 +165,22 @@ class TrackingEnvNode final
             level = v;
         }
 
-        FloatType renderSample() CASPI_NON_BLOCKING override
+        void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
+        {
+            (void) ctx;
+            auto& buf = this->outputBuffer;
+            const auto F = buf.numFrames();
+            const auto C = buf.numChannels();
+
+            for (std::size_t f = 0; f < F; ++f)
+            {
+                const FloatType s = renderSample();
+                for (std::size_t ch = 0; ch < C; ++ch)
+                    buf.sample (ch, f) = s;
+            }
+        }
+
+        FloatType renderSample() CASPI_NON_BLOCKING
         {
             // Advance idle after one process() call following noteOff
             if (releasing)

@@ -1116,7 +1116,10 @@ TEST_F(FMGraphAudioBufferTest, RenderMonoInterleaved)
     AudioBuffer<double, InterleavedLayout> buffer(1, 512);
 
     // Render using base class interface
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // Verify all samples are rendered
     for (size_t f = 0; f < buffer.numFrames(); ++f)
@@ -1142,7 +1145,10 @@ TEST_F(FMGraphAudioBufferTest, RenderMonoChannelMajor)
     AudioBuffer<double, ChannelMajorLayout> buffer(1, 512);
 
     // Render using base class interface
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // Verify all samples are rendered
     for (size_t f = 0; f < buffer.numFrames(); ++f)
@@ -1164,7 +1170,10 @@ TEST_F(FMGraphAudioBufferTest, RenderStereoInterleaved)
     AudioBuffer<double, InterleavedLayout> buffer(2, 512);
 
     // Render using base class interface
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // Verify both channels have identical output (mono replication)
     for (size_t f = 0; f < buffer.numFrames(); ++f)
@@ -1188,7 +1197,10 @@ TEST_F(FMGraphAudioBufferTest, RenderStereoChannelMajor)
     AudioBuffer<double, ChannelMajorLayout> buffer(2, 512);
 
     // Render using base class interface
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // Verify both channels have identical output
     for (size_t f = 0; f < buffer.numFrames(); ++f)
@@ -1225,7 +1237,10 @@ TEST_F(FMGraphAudioBufferTest, RenderQuadInterleaved)
 
     AudioBuffer<double, InterleavedLayout> buffer(4, 256);
 
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // All channels should have identical output
     for (size_t f = 0; f < buffer.numFrames(); ++f)
@@ -1247,7 +1262,10 @@ TEST_F(FMGraphAudioBufferTest, Render51Surround)
     // 5.1 = 6 channels
     AudioBuffer<double, ChannelMajorLayout> buffer(6, 128);
 
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // All 6 channels should have identical output
     std::vector<double> channelMaxes(6, 0.0);
@@ -1281,10 +1299,16 @@ TEST_F(FMGraphAudioBufferTest, StateConsistentAcrossMultipleRenders)
     AudioBuffer<double, InterleavedLayout> buffer2(2, 64);
 
     // Render first buffer
-    dsp.render(buffer1);
+    for (std::size_t f = 0; f < buffer1.numFrames(); ++f)
+    {
+        Core::fill(buffer1.frame_span(f), dsp.renderSample());
+    }
 
     // Render second buffer (should continue from where first left off)
-    dsp.render(buffer2);
+    for (std::size_t f = 0; f < buffer2.numFrames(); ++f)
+    {
+        Core::fill(buffer2.frame_span(f), dsp.renderSample());
+    }
 
     // Verify both buffers have valid output
     for (size_t ch = 0; ch < 2; ++ch)
@@ -1321,7 +1345,10 @@ TEST_F(FMGraphAudioBufferTest, ChannelSpansWorkInterleaved)
 
     AudioBuffer<double, InterleavedLayout> buffer(2, 128);
 
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // Get channel spans
     auto ch0Span = buffer.channel_span(0);
@@ -1344,7 +1371,10 @@ TEST_F(FMGraphAudioBufferTest, ChannelSpansWorkChannelMajor)
 
     AudioBuffer<double, ChannelMajorLayout> buffer(2, 128);
 
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // Get channel spans
     auto ch0Span = buffer.channel_span(0);
@@ -1367,7 +1397,10 @@ TEST_F(FMGraphAudioBufferTest, FrameSpansWorkInterleaved)
 
     AudioBuffer<double, InterleavedLayout> buffer(2, 128);
 
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // Get first frame span
     auto frame0 = buffer.frame_span(0);
@@ -1391,7 +1424,10 @@ TEST_F(FMGraphAudioBufferTest, VaryingBufferSizes)
     {
         AudioBuffer<double, InterleavedLayout> buffer(2, size);
 
-        dsp.render(buffer);
+        for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+        {
+            Core::fill(buffer.frame_span(f), dsp.renderSample());
+        }
 
         // Verify all samples valid
         for (size_t ch = 0; ch < 2; ++ch)
@@ -1419,14 +1455,20 @@ TEST_F(FMGraphAudioBufferTest, RenderAfterReset)
     AudioBuffer<double, InterleavedLayout> buffer1(2, 64);
 
     // Render first buffer
-    dsp.render(buffer1);
+    for (std::size_t f = 0; f < buffer1.numFrames(); ++f)
+    {
+        Core::fill(buffer1.frame_span(f), dsp.renderSample());
+    }
 
     // Reset
     dsp.reset();
 
     // Render second buffer
     AudioBuffer<double, InterleavedLayout> buffer2(2, 64);
-    dsp.render(buffer2);
+    for (std::size_t f = 0; f < buffer2.numFrames(); ++f)
+    {
+        Core::fill(buffer2.frame_span(f), dsp.renderSample());
+    }
 
     // After reset, phases should be back to start
     // First few samples should be similar (but not identical due to random phase init)
@@ -1450,7 +1492,10 @@ TEST_F(FMGraphAudioBufferTest, SampleRenderMethodConsistency)
 
     // Render using render() method
     AudioBuffer<double, InterleavedLayout> buffer1(1, 128);
-    dsp.render(buffer1);
+    for (std::size_t f = 0; f < buffer1.numFrames(); ++f)
+    {
+        Core::fill(buffer1.frame_span(f), dsp.renderSample());
+    }
 
     // Reset to same state
     dsp.reset();
@@ -1490,7 +1535,10 @@ TEST_F(FMGraphAudioBufferTest, EnvelopeWorksAcrossAllChannels)
     AudioBuffer<double, InterleavedLayout> buffer(4, 256);
 
     dsp.noteOn();
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     // All channels should have identical envelope shape
     for (size_t f = 0; f < buffer.numFrames(); ++f)
@@ -1527,14 +1575,20 @@ TEST_F(FMGraphAudioBufferTest, ExtremeChannelCounts)
 
     // Test 1 channel
     AudioBuffer<double, InterleavedLayout> mono(1, 64);
-    dsp.render(mono);
+    for (std::size_t f = 0; f < mono.numFrames(); ++f)
+    {
+        Core::fill(mono.frame_span(f), dsp.renderSample());
+    }
     EXPECT_FALSE(std::isnan(mono.sample(0, 0)));
 
     dsp.reset();
 
     // Test 8 channels (7.1 surround)
     AudioBuffer<double, ChannelMajorLayout> surround(8, 64);
-    dsp.render(surround);
+    for (std::size_t f = 0; f < surround.numFrames(); ++f)
+    {
+        Core::fill(surround.frame_span(f), dsp.renderSample());
+    }
 
     for (size_t ch = 0; ch < 8; ++ch)
     {
@@ -1564,8 +1618,14 @@ TEST_F(FMGraphAudioBufferTest, InterleavedVsChannelMajorProduceSameOutput)
     AudioBuffer<double, InterleavedLayout> interleaved(2, 128);
     AudioBuffer<double, ChannelMajorLayout> channelMajor(2, 128);
 
-    dsp1.render(interleaved);
-    dsp2.render(channelMajor);
+    for (std::size_t f = 0; f < interleaved.numFrames(); ++f)
+    {
+        Core::fill(interleaved.frame_span(f), dsp1.renderSample());
+    }
+    for (std::size_t f = 0; f < channelMajor.numFrames(); ++f)
+    {
+        Core::fill(channelMajor.frame_span(f), dsp2.renderSample());
+    }
 
     // Both layouts should produce identical output
     for (size_t ch = 0; ch < 2; ++ch)
@@ -1595,13 +1655,22 @@ TEST_F(FMGraphAudioBufferTest, PerformanceScalesWithChannels)
     AudioBuffer<double, InterleavedLayout> quad(4, 4096);
 
     // Just verify all complete without errors
-    dsp.render(mono);
+    for (std::size_t f = 0; f < mono.numFrames(); ++f)
+    {
+        Core::fill(mono.frame_span(f), dsp.renderSample());
+    }
 
     dsp.reset();
-    dsp.render(stereo);
+    for (std::size_t f = 0; f < stereo.numFrames(); ++f)
+    {
+        Core::fill(stereo.frame_span(f), dsp.renderSample());
+    }
 
     dsp.reset();
-    dsp.render(quad);
+    for (std::size_t f = 0; f < quad.numFrames(); ++f)
+    {
+        Core::fill(quad.frame_span(f), dsp.renderSample());
+    }
 
     // All should complete (this is a smoke test, not a benchmark)
     EXPECT_TRUE(true);
@@ -1618,7 +1687,10 @@ TEST_F(FMGraphAudioBufferTest, ZeroSizeBuffer)
     AudioBuffer<double, InterleavedLayout> buffer(2, 0);
 
     // Should not crash
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     EXPECT_EQ(buffer.numFrames(), 0);
     EXPECT_TRUE(true);  // If we get here, didn't crash
@@ -1630,7 +1702,10 @@ TEST_F(FMGraphAudioBufferTest, SingleSampleBuffer)
 
     AudioBuffer<double, InterleavedLayout> buffer(2, 1);
 
-    dsp.render(buffer);
+    for (std::size_t f = 0; f < buffer.numFrames(); ++f)
+    {
+        Core::fill(buffer.frame_span(f), dsp.renderSample());
+    }
 
     EXPECT_FALSE(std::isnan(buffer.sample(0, 0)));
     EXPECT_FALSE(std::isnan(buffer.sample(1, 0)));
