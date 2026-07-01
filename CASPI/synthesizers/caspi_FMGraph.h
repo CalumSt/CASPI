@@ -33,7 +33,7 @@
 
 #include "base/caspi_Compatibility.h"
 #include "base/caspi_Denormals.h"
-#include "core/caspi_Producer.h"
+#include "core/caspi_Node.h"
 #include "core/caspi_Expected.h"
 #include "oscillators/caspi_Operator.h"
 
@@ -560,7 +560,7 @@ namespace CASPI
      */
     template <CASPI_FLOAT_TYPE FloatType>
     class FMGraphDSP
-        : public Core::Producer<FMGraphDSP<FloatType>, FloatType, Core::Traversal::PerFrame>
+        : public Graph::AudioNode<FMGraphDSP<FloatType>, FloatType>
     {
         public:
             /**
@@ -861,7 +861,7 @@ namespace CASPI
              * @return Rendered audio sample.
              */
             CASPI_NO_DISCARD 
-            FloatType renderSample() CASPI_NON_BLOCKING override 
+            FloatType renderSample() CASPI_NON_BLOCKING 
             {
                 Core::ScopedFlushDenormals flush{};
 
@@ -939,7 +939,30 @@ namespace CASPI
             }
 
             /**
-             * @brief Producer interface override for per-frame rendering.
+             * @brief Called by AudioNode::process() each block. Renders mono
+             *        output via renderBlock() then broadcasts to all channels.
+             */
+            void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
+            {
+                (void) ctx;
+                auto& buf = this->outputBuffer;
+                const auto F = buf.numFrames();
+                const auto C = buf.numChannels();
+
+                renderBlock (buf.data(), F);
+
+                for (std::size_t ch = 1; ch < C; ++ch)
+                { 
+                    for (std::size_t f = 0; f < F; ++f)
+                    { 
+                        buf.sample (ch, f) = buf.sample (0, f);
+                    }
+                }
+            }
+
+            /**
+             * @brief Per-frame rendering (channel/frame overload kept for
+             *        compatibility).
              *
              * @param channel Channel index (ignored).
              * @param frame Frame index (ignored).
@@ -948,7 +971,7 @@ namespace CASPI
             CASPI_NO_DISCARD
                 FloatType
                 renderSample (const std::size_t channel,
-                              const std::size_t frame) CASPI_NON_BLOCKING override
+                              const std::size_t frame) CASPI_NON_BLOCKING
             {
                 (void) channel;
                 (void) frame;
