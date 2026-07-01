@@ -16,12 +16,12 @@
  *
  * @file   filters/caspi_Filter.h
  * @author CS Islay
- * @brief  CRTP base class for digital filters integrating with Processor.
+ * @brief  CRTP base class for digital filters integrating with AudioNode.
  *
  * @details
  * ### Overview
  *
- * FilterBase<Derived, FloatType, NumStates> inherits Core::Processor and
+ * FilterBase<Derived, FloatType, NumStates> inherits Graph::AudioNode and
  * adds:
  *   - Per-channel state variable storage (z^-1 delays).
  *   - AtomicCoefficients double buffer for lock-free parameter updates.
@@ -83,7 +83,8 @@
 #include "base/caspi_Assert.h"
 #include "base/caspi_Constants.h"
 #include "base/caspi_Features.h"
-#include "core/caspi_Processor.h"
+#include "core/caspi_Node.h"
+#include "core/caspi_Graph.h"
 
 namespace CASPI
 {
@@ -203,7 +204,7 @@ namespace CASPI
         /**
          * @brief CRTP base class for digital filters.
          *
-         * Inherits Core::Processor<Derived, FloatType, Traversal::PerSample>.
+         * Inherits Graph::AudioNode<Derived, FloatType>.
          * Adds: state storage, AtomicCoefficients, common parameter API,
          * and sample-rate notification forwarding.
          *
@@ -213,7 +214,7 @@ namespace CASPI
          * @tparam NumCoeffs   Number of coefficients in the atomic double buffer.
          */
         template <typename Derived, typename FloatType, std::size_t NumStates, std::size_t NumCoeffs>
-        class FilterBase : public Core::Processor<Derived, FloatType, Core::Traversal::PerSample>
+        class FilterBase : public Graph::AudioNode<Derived, FloatType>
         {
             public:
                 /*------------------------------------------------------------------
@@ -400,13 +401,39 @@ namespace CASPI
                     }
                 }
 
+                /**
+                 * @brief Called by AudioNode::process() each block.
+                 *
+                 * Reads the upstream audio buffer from AudioContext port 0,
+                 * processes each sample through Derived::processSample(), and
+                 * writes the result to this->outputBuffer.
+                 *
+                 * If port 0 is not connected, outputBuffer retains its previous
+                 * content (cleared to silence at prepare() time).
+                 */
+                void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
+                {
+                    const auto* inBuf = ctx.getAudioInput (this->getId(), 0);
+                    auto& buf = this->outputBuffer;
+                    const auto C = buf.numChannels();
+                    const auto F = buf.numFrames();
+
+                    if (inBuf != nullptr)
+                    {
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                            for (std::size_t fr = 0; fr < F; ++fr)
+                                buf.sample (ch, fr) =
+                                    static_cast<Derived*> (this)->processSample (inBuf->sample (ch, fr));
+                    }
+                }
+
             protected:
                 /*------------------------------------------------------------------
                  * Construction — protected; only Derived constructs via CRTP
                  *-----------------------------------------------------------------*/
 
                 FilterBase()
-                    : Core::Processor<Derived, FloatType, Core::Traversal::PerSample> (1, 1)
+                    : Graph::AudioNode<Derived, FloatType> (1, 1)
                 {
                     states.fill (FloatType (0));
                 }
