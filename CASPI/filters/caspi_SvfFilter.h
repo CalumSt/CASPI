@@ -206,7 +206,7 @@ namespace CASPI
                  * @param x  Input sample.
                  * @return   Filtered output sample.
                  */
-                CASPI_NO_DISCARD FloatType processSample (FloatType x) noexcept CASPI_NON_BLOCKING override
+                CASPI_NO_DISCARD FloatType processSample (FloatType x) noexcept CASPI_NON_BLOCKING
                 {
                     const auto& c = this->coeffs.get();
 

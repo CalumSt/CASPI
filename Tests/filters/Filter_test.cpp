@@ -92,7 +92,7 @@ class FilterTracker : public FilterBase<FilterTracker<FloatType>, FloatType, 2, 
             ++updateCount;
         }
 
-        FloatType processSample (FloatType in) noexcept override
+        FloatType processSample (FloatType in) noexcept
         {
             return in;
         }
