@@ -43,9 +43,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
  * value to an engine type at compile time. Add new noise colours here.
  *
  * ### Inheritance
- * - Core::Producer<FloatType, Traversal::PerSample>
- *   Provides render(AudioBuffer&) via the PerSample traversal policy.
- *   prepareBlock() and renderSample() are overridden.
+ * - Graph::AudioNode<NoiseOscillator<FloatType, Algo>, FloatType>
+ *   CRTP base providing outputBuffer, process() dispatch, prepare() lifecycle.
  * - Core::SampleRateAware<FloatType>
  *   Provides getSampleRate() / setSampleRate(). Noise generation is not
  *   sample-rate dependent, but the parameter is retained for API consistency
@@ -85,7 +84,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #include "base/caspi_Assert.h"
 #include "base/caspi_Constants.h"
-#include "core/caspi_Producer.h"
+#include "core/caspi_Node.h"
 #include "core/caspi_Parameter.h"
 
 #include <array>
@@ -366,9 +365,9 @@ struct AlgorithmTraits<FloatType, NoiseAlgorithm::Pink>
  * parameter. Runtime algorithm switching is not supported; construct a
  * new oscillator of the desired type.
  *
- * Inherits Core::Producer<FloatType, Traversal::PerSample>. prepareBlock()
- * steps the amplitude smoother once per block; renderSample() generates one
- * noise sample scaled by amplitude.
+ * Inherits Graph::AudioNode<NoiseOscillator<FloatType, Algo>, FloatType>.
+ * processImpl() renders per-channel via renderBlock(); renderSample()
+ * generates one noise sample scaled by amplitude.
  *
  * renderBlock() is an additional convenience method for Python bindings and
  * raw-buffer callers. It is not an override of a Producer virtual.
@@ -387,15 +386,13 @@ struct AlgorithmTraits<FloatType, NoiseAlgorithm::Pink>
  */
 template <CASPI_FLOAT_TYPE FloatType, NoiseAlgorithm Algo = NoiseAlgorithm::White>
 class NoiseOscillator
-    : public Core::Producer<NoiseOscillator<FloatType, Algo>,
-                            FloatType,
-                            Core::Traversal::PerSample>
+    : public Graph::AudioNode<NoiseOscillator<FloatType, Algo>, FloatType>
 {
     static_assert (std::is_floating_point<FloatType>::value,
                    "NoiseOscillator requires a floating-point type");
 
     using Engine = typename detail::AlgorithmTraits<FloatType, Algo>::Engine;
-        using Base = Core::Producer<NoiseOscillator<FloatType, Algo>, FloatType, Core::Traversal::PerSample>;
+        using Base = Graph::AudioNode<NoiseOscillator<FloatType, Algo>, FloatType>;
 public:
 
     /*************************************************************************
@@ -498,39 +495,35 @@ public:
     void reset() noexcept CASPI_NON_BLOCKING { engine.reset(); }
 
     /*************************************************************************
-     * Producer overrides
+     * Graph hook
      *************************************************************************/
 
     /**
-     * @brief Step the amplitude smoother once per block.
-     *
-     * @details
-     * Called by Producer::render() before the per-sample loop. Keeps
-     * amplitude stepping at block rate rather than sample rate, matching
-     * the renderBlock() behaviour.
-     *
-     * @param nFrames    Number of frames in the upcoming block (unused).
-     * @param nChannels  Number of channels (unused).
+     * @brief Called by AudioNode::process() each block. Renders independent
+     *        noise into each channel via renderBlock().
      */
-    void prepareBlock (std::size_t /*nFrames*/,
-                       std::size_t /*nChannels*/) CASPI_NON_BLOCKING override
+    void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
     {
-        amplitude.process();
+        (void) ctx;
+        auto& buf = this->outputBuffer;
+        const auto F = buf.numFrames();
+        const auto C = buf.numChannels();
+
+        for (std::size_t ch = 0; ch < C; ++ch)
+            renderBlock (&buf.sample (ch, 0), static_cast<int> (F));
     }
 
     /**
      * @brief Render one noise sample.
      *
      * @details
-     * Called per-sample by Producer::render() via the PerSample traversal
-     * policy. amplitude.value() is valid after prepareBlock() has run.
-     * When called directly (outside Producer::render()), amplitude.value()
-     * reflects the last prepareBlock() call — call renderBlock() or
-     * renderSample() consistently, not a mix of both.
+     * amplitude.value() must be valid — call amplitude.process() before
+     * calling renderSample() standalone, or use renderBlock()/processImpl()
+     * which handle smoothing automatically.
      *
      * @return Noise sample scaled by amplitude.value().
      */
-    CASPI_NO_DISCARD FloatType renderSample() noexcept CASPI_NON_BLOCKING override
+    CASPI_NO_DISCARD FloatType renderSample() noexcept CASPI_NON_BLOCKING
     {
         return engine.next() * amplitude.value();
     }
@@ -548,11 +541,8 @@ public:
      * emit SIMD stores for the amplitude multiply on the WhiteNoiseEngine
      * path (no loop-carried dependency).
      *
-     * @note This method is not an override of a Producer virtual. It is an
-     *       additional method for Python bindings and raw-buffer callers.
-     *       Do not mix calls to renderBlock() with calls to
-     *       Producer::render(AudioBuffer&) within the same block, as both
-     *       call amplitude.process() independently.
+     * @note This method is the primary block renderer for standalone use.
+     *       processImpl() delegates to it per channel for graph mode.
      *
      * @param output      Pointer to a buffer of at least @p numSamples
      *                    elements. Must not be null.
