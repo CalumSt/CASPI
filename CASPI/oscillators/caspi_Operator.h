@@ -28,7 +28,7 @@
 #include "controls/caspi_Envelope.h"
 #include "core/caspi_Graph.h"
 #include "core/caspi_Phase.h"
-#include "core/caspi_Producer.h"
+#include "core/caspi_Node.h"
 #include <cmath>
 
 namespace CASPI
@@ -129,12 +129,11 @@ namespace CASPI
      * ```
      *
      * @tparam FloatType Floating point type (float or double)
-     * @tparam Policy Traversal policy (default: PerSample)
      */
-    template <CASPI_FLOAT_TYPE FloatType, typename Policy = Core::Traversal::PerSample>
-    class Operator final : public Core::Producer<Operator<FloatType, Policy>, FloatType, Policy>
+    template <CASPI_FLOAT_TYPE FloatType>
+    class Operator final : public Graph::AudioNode<Operator<FloatType>, FloatType>
     {
-            using Base = Core::Producer<Operator<FloatType, Policy>, FloatType, Policy>;
+            using Base = Graph::AudioNode<Operator<FloatType>, FloatType>;
 
         public:
             /**
@@ -379,7 +378,7 @@ namespace CASPI
              * Uses modulation from setModulationInput() or buffer
              */
 
-            CASPI_NO_DISCARD FloatType renderSample() CASPI_NON_BLOCKING override
+            CASPI_NO_DISCARD FloatType renderSample() CASPI_NON_BLOCKING
             {
                 // Get modulation signal
                 FloatType modulationSignal = getCurrentModulationSignal();
@@ -405,7 +404,7 @@ namespace CASPI
             /**
              * @brief Render sample for multi-channel rendering
              */
-            FloatType renderSample (std::size_t channel, std::size_t frame) CASPI_NON_BLOCKING override
+            FloatType renderSample (std::size_t channel, std::size_t frame) CASPI_NON_BLOCKING
             {
                 (void) channel;
                 (void) frame;
