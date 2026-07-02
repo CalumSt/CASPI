@@ -1,0 +1,156 @@
+/**
+\page examples C++ Examples
+
+\section ex_oscillator Oscillator — Filling a Buffer
+
+\code
+#include "oscillators/caspi_BlepOscillator.h"
+#include "core/caspi_AudioBuffer.h"
+
+using namespace CASPI;
+
+BlepOscillator<double, BLEPWaveform::Saw> osc;
+osc.setFrequency(220.0, 48000.0);
+osc.setAmplitude(0.4);
+
+constexpr std::size_t blockSize = 256;
+double data[blockSize];
+osc.renderBlock(data, blockSize);
+
+// Or render a single sample:
+double sample = osc.renderSample();
+\endcode
+
+\section ex_fm FM Graph — Two-Operator Patch
+
+\code
+#include "synthesizers/caspi_FMGraph.h"
+
+using namespace CASPI;
+
+FMGraphBuilder<double> builder;
+
+auto mod = builder.addOperator();
+auto car = builder.addOperator();
+
+builder.configureOperator(mod, 880.0, 3.0, 1.0);   // modulator
+builder.configureOperator(car, 440.0, 1.0, 1.0);   // carrier
+builder.connect(mod, car, 4.0);                     // mod → car, depth 4.0
+builder.setOutputOperators({car});
+
+auto result = builder.compile(48000.0);
+if (!result) return false;
+
+auto& dsp = result.value();
+
+constexpr std::size_t blockSize = 512;
+double buffer[blockSize];
+for (size_t f = 0; f < blockSize; ++f)
+    buffer[f] = dsp.renderSample();
+\endcode
+
+\section ex_filter Processing Audio Through an SVF Filter
+
+\code
+#include "filters/caspi_SvfFilter.h"
+
+using namespace CASPI;
+
+SvfFilter<double> filter;
+filter.setCutoff(2000.0);
+filter.setQ(0.707);                // Butterworth response
+filter.setMode(FilterMode::LowPass);
+filter.prepare(48000.0);
+
+// Process per-sample:
+double input = 0.5;
+double output = filter.processSample(input);
+
+// Or process a buffer:
+constexpr std::size_t N = 256;
+double in[N], out[N];
+// fill in[] ...
+for (std::size_t i = 0; i < N; ++i)
+    out[i] = filter.processSample(in[i]);
+\endcode
+
+\section ex_graph Graph Engine — Multi-Node Patch
+
+\code
+#include "core/caspi_Graph.h"
+#include "oscillators/caspi_BlepOscillator.h"
+#include "filters/caspi_SvfFilter.h"
+
+using namespace CASPI;
+using namespace CASPI::Graph;
+
+// Build a graph: Osc → Filter → Output
+AudioContext<double> ctx(48000.0, 512);
+
+auto* osc = ctx.createNode<BlepOscillator<double, BLEPWaveform::Sine>>();
+auto* flt = ctx.createNode<SvfFilter<double>>();
+
+osc->setFrequency(440.0, 48000.0);
+osc->setAmplitude(0.5);
+flt->setCutoff(1000.0);
+flt->setQ(0.707);
+
+// Wire: osc's channel 0 → filter's input channel 0
+ctx.connect(osc, 0, flt, 0);
+ctx.setOutput(flt, 0);
+
+// Process one block
+ctx.process();
+
+// Read output
+auto& output = ctx.getOutputBuffer();
+// output (AudioBuffer<double>&) now contains the rendered block
+\endcode
+
+\section ex_adsr ADSR Envelope Controlling Amplitude
+
+\code
+#include "controls/caspi_Envelope.h"
+#include "oscillators/caspi_BlepOscillator.h"
+
+using namespace CASPI;
+
+BlepOscillator<double, BLEPWaveform::Sine> osc;
+osc.setFrequency(440.0, 48000.0);
+osc.setAmplitude(0.0);   // start quiet, envelope will scale
+
+ADSR<double> env;
+env.setAttack(0.02);     // 20 ms
+env.setDecay(0.1);       // 100 ms
+env.setSustain(0.7);     // 70 % sustain level
+env.setRelease(0.3);     // 300 ms
+env.prepare(48000.0, 128);
+
+env.noteOn();
+
+constexpr std::size_t N = 512;
+double buf[N];
+osc.renderBlock(buf, N);
+
+for (std::size_t i = 0; i < N; ++i)
+    buf[i] *= env.render();
+
+env.noteOff();
+\endcode
+
+\section ex_simd Using the SIMD Abstraction
+
+\code
+#include "base/caspi_Simd.h"
+
+using namespace CASPI;
+using F = Simd::float_v;   // selects SSE/NEON/fallback at compile time
+
+F a = F::fromScalar(1.0);
+F b = F::fromScalar(2.0);
+F c = a * b + a;           // element-wise SIMD operations
+
+double sum = c.sum();      // horizontal sum
+\endcode
+
+*/
