@@ -9,7 +9,6 @@ cmake-build-release
 build
 dist
 .ipynb_checkpoints
-docs/html/
-docs/doxygen-awesome-css/
-docs/doxygen-warnings.log
+Docs/html/
+Docs/doxygen-warnings.log
 *~
