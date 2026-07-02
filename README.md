@@ -12,15 +12,14 @@ Based on *The Computer Music Tutorial* and Will Pirkle's books. Pure header-only
 ## Features
 
 ### Oscillators
-- **BlepOscillator** — Band-limited oscillator using PolyBLEP antialiasing; supports Sine, Saw, Square, Triangle, and Pulse waveforms with hard sync
-- **Operator** — FM/PM synthesis operator with self-modulation (feedback), phase/frequency modulation modes, and built-in envelope
+- **BlepOscillator** — Band-limited oscillator using PolyBLEP antialiasing; Sine, Saw, Square, Triangle, Pulse with hard sync
+- **Operator** — FM/PM synthesis operator with self-modulation, phase/frequency modulation, and built-in envelope
 - **WavetableOscillator** — Wavetable-based oscillator for sample-accurate playback
 - **LFO** — Low-frequency oscillator for modulation
-- **Noise** — White noise generator
+- **Noise** — White and pink noise generators
 
 ### Filters
-
-- ` ⚠️ Coming soon! `
+- **SvfFilter** — State-variable filter with low-pass, high-pass, band-pass, notch, and all-pass modes
 
 ### Gain & Dynamics
 
@@ -38,14 +37,19 @@ Based on *The Computer Music Tutorial* and Will Pirkle's books. Pure header-only
 ### Core Class Hierarchy
 
 ```
-Node<FloatType>                    // Abstract base; sole virtual boundary (processBlock per block)
-├── AudioNode<FloatType, Derived, Policy>  // CRTP; audio-rate
-│   ├── Producer<...>              // No input; generates samples (oscillators)
-│   └── Processor<...>             // Has input; transforms samples (filters, gain)
-└── ControlNode<FloatType, Derived>         // CRTP; control-rate (one value per block)
+NodeBase<FloatType>                // Polymorphic base; one virtual call per block per node
+├── AudioNode<Derived, FloatType>  // CRTP; audio-rate output buffer, processImpl()
+│   ├── BlepOscillator             // Generates samples (no audio input)
+│   ├── WavetableOscillator
+│   ├── NoiseOscillator
+│   ├── Operator
+│   ├── FMGraphDSP
+│   └── FilterBase (→ SvfFilter)   // Reads audio input, transforms samples
+└── ControlNode<Derived, FloatType> // CRTP; control-rate, one value per block
+    ├── LFO
+    ├── ADSR (Envelope)
+    └── ModMatrix
 ```
-
-Classes that produce audio inherit `Producer`. Classes that process audio inherit `Processor`. Control-rate sources (LFO, Envelope, ModMatrix) inherit `ControlNode`.
 
 ### Design Principles
 
@@ -98,9 +102,13 @@ Include directly in your source files:
 
 ## Examples
 
-`⚠️ Live Demo coming soon!`
+### C++
 
-Checkout the example notebooks as part of CASPy (Python bindings) for interactive demos of oscillators, filters, and FM synthesis graphs.
+See the [documentation](https://calumst.github.io/CASPI/) for C++ examples.
+
+### Python
+
+See the Jupyter notebooks in `Tools/CASPy/Examples/` for interactive demos of oscillators, filters, and FM synthesis graphs.
 
 ## Project Structure
 
