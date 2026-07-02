@@ -3,57 +3,27 @@ name: Docs
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [develop]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Doxygen and Graphviz
-        run: sudo apt-get install -y doxygen graphviz
-
-      - name: Clone doxygen-awesome-css
-        run: |
-          git clone --depth 1 \
-            https://github.com/jothepro/doxygen-awesome-css.git \
-            Docs/doxygen-awesome-css
-
-      - name: Build docs
-        run: |
-          doxygen Doxyfile
-          test -f Docs/html/index.html || (echo "Doxygen produced no output" && exit 1)
-
-      - name: Copy benchmark assets
-        run: |
-          if [ -d Docs/bench ]; then
-            mkdir -p Docs/html/bench
-            cp -r Docs/bench/. Docs/html/bench/
-          else
-            echo "No benchmark files yet, skipping"
-          fi
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
         with:
-          path: Docs/html
+          submodules: true
 
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Install Doxygen + Graphviz
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+
+      - name: Generate Doxygen documentation
+        run: doxygen Doxyfile
+
+      - name: Copy benchmark viewer into Doxygen output
+        run: cp -r Docs/bench Docs/html/bench
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_dir: ./Docs/html
+          github_token: ${{ secrets.GITHUB_TOKEN }}
