@@ -14,6 +14,7 @@
  * @file caspi_External.h
  * @author CS Islay
  * @brief Boundary for external dependencies (header-only).
+ * @ingroup external
  * Current contents:
  *  - concurrentqueue
  ************************************************************************/

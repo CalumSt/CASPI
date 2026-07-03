@@ -1,3 +1,10 @@
+/**
+ * @file caspi.h
+ * @brief Umbrella header that includes all CASPI components.
+ * @defgroup caspi CASPI
+ * @brief C++ Audio Synthesis and Processing Interface - header-only audio DSP library.
+ */
+
 #ifndef CASPI_H
 #define CASPI_H
 

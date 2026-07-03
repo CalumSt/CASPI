@@ -15,10 +15,11 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_SIMD.h
 * @author CS Islay
-* @brief Cross-platform SIMD wrapper with kernel-based block operations
-*
-* ============================================================================
-* QUICK DEV GUIDE TO SIMD (CASPI)
+ * @brief Cross-platform SIMD wrapper with kernel-based block operations
+ * @ingroup maths
+ *
+ * ============================================================================
+ * QUICK DEV GUIDE TO SIMD (CASPI)
 * ============================================================================
 *
 * This guide summarises the practical patterns used when developing with the

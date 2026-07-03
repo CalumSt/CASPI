@@ -14,6 +14,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
  * @file   caspi_Noise.h
  * @author CS Islay
  * @brief  Noise oscillator with pluggable algorithm policy.
+ * @ingroup oscillators
  *
  * @details
  * NoiseOscillator<FloatType, Algo> produces noise at audio rate via a

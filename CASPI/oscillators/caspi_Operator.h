@@ -17,6 +17,7 @@
  * @file caspi_Operator.h
  * @author CS Islay
  * @brief A modulation operator for FM/PM synthesis.
+ * @ingroup oscillators
  *
  * This operator generates sine waves with support for Phase Modulation (PM)
  * and Frequency Modulation (FM). It can accept external modulation input and

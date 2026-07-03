@@ -13,7 +13,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
  * @file   caspi_LFO.h
  * @author CS Islay
- * @brief  Low-frequency oscillator — control signal source.
+ * @brief  Low-frequency oscillator - control signal source.
+ * @ingroup oscillators
  *
  * @details
  * LFO<FloatType> is a control-rate modulation source. It does not inherit

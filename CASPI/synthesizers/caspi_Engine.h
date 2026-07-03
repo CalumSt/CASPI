@@ -17,6 +17,7 @@
  * @file   caspi_Engine.h
  * @author CS Islay
  * @brief  MIDI-driven synthesis engine with optional MPE support.
+ * @ingroup synthesis
  *
  * @details
  * ### Overview

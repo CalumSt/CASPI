@@ -13,9 +13,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Complex.h
 * @author CS Islay
-* @brief Complex arithmetic primitives for SIMD vector operations.
-*
-* Provides shuffle and complex-multiply primitives for two-lane double vectors.
+ * @brief Complex arithmetic primitives for SIMD vector operations.
+ * @ingroup maths
+ *
+ * Provides shuffle and complex-multiply primitives for two-lane double vectors.
 * These operations exploit the two-lane geometry specific to complex arithmetic
 * and are essential for FFT, convolution, and other complex DSP operations.
 *
@@ -213,7 +214,7 @@ namespace CASPI
          * @param b         Second vector [b0, b1]
          * @return          Interleaved result [a1, b1]
          *
-         * @example
+         *
          * @code
          * // If a = [ar, ai], b = [br, bi]
          * // interleave_hi(a, b) -> [ai, bi]
@@ -274,11 +275,11 @@ namespace CASPI
          * @param b         Second complex number [br, bi]
          * @return          Complex product [(ar*br-ai*bi), (ar*bi+ai*br)]
          *
-         * @limitations
+         * @note
          * - Uses platform intrinsics to optimize across SSE/NEON/WASM; behaviour
          *   is numerically equivalent to scalar complex multiply.
          *
-         * @example
+         *
          * @code
          * // (3+2i)*(1+4i) = -5 + 14i
          * float64x2 a = interleave_lo(set1<double>(3.0), set1<double>(2.0)); // [3,2]

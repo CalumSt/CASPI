@@ -1,3 +1,12 @@
+/**
+ * @file caspi_Traits.h
+ * @brief Type traits and tag types for CASPI.
+ * @ingroup base
+ *
+ * Provides RealTimeSafe/NonRealTimeSafe tag types, type traits for
+ * span concepts, SIMD width detection, and other compile-time utilities.
+ */
+
 #ifndef CASPI_TRAITS_H
 #define CASPI_TRAITS_H
 
@@ -6,9 +15,10 @@
 
 namespace CASPI {
 // clang-format off
-    // === Tag types ===
+    /** @brief Tag type indicating real-time safe operations. */
     struct RealTimeSafe {};
 
+    /** @brief Tag type indicating operations that may not be real-time safe. */
     struct NonRealTimeSafe {};
 
     struct SampleRateAwareTag {};
