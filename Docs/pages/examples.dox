@@ -1,7 +1,7 @@
 /**
 \page examples C++ Examples
 
-\section ex_oscillator Oscillator — Filling a Buffer
+\section ex_oscillator Oscillator - Filling a Buffer
 
 \code
 #include "oscillators/caspi_BlepOscillator.h"
@@ -21,7 +21,7 @@ osc.renderBlock(data, blockSize);
 double sample = osc.renderSample();
 \endcode
 
-\section ex_fm FM Graph — Two-Operator Patch
+\section ex_fm FM Graph - Two-Operator Patch
 
 \code
 #include "synthesizers/caspi_FMGraph.h"
@@ -74,7 +74,7 @@ for (std::size_t i = 0; i < N; ++i)
     out[i] = filter.processSample(in[i]);
 \endcode
 
-\section ex_graph Graph Engine — Multi-Node Patch
+\section ex_graph Graph Engine - Multi-Node Patch
 
 \code
 #include "core/caspi_Graph.h"

@@ -139,8 +139,8 @@ Results updated weekly or on each tagged release.
     var ctx  = data.context || {};
     document.getElementById("bm-meta").textContent =
       "Host: " + (ctx.host_name || "unknown") +
-      " — " + (ctx.date || "") +
-      " — " + (ctx.num_cpus || "?") + " CPUs @ " + (ctx.mhz_per_cpu || "?") + "MHz";
+      " - " + (ctx.date || "") +
+      " - " + (ctx.num_cpus || "?") + " CPUs @ " + (ctx.mhz_per_cpu || "?") + "MHz";
     renderCharts(parseBenchmarks(data));
   }
 

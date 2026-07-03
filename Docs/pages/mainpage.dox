@@ -3,7 +3,7 @@
 
 \htmlonly
 <div style="text-align:center; margin: 1rem 0 2rem;">
-  <img src="Docs/assets/caspi-logo.svg" alt="CASPI logo" style="max-width:200px;">
+  <img src="caspi.svg" alt="CASPI logo" style="max-width:200px;">
 </div>
 \endhtmlonly
 
@@ -18,25 +18,25 @@ No external runtime dependencies.
 \section features Features
 
 \subsection oscillators Oscillators
-- **BlepOscillator** — Band-limited oscillator using PolyBLEP antialiasing; Sine, Saw, Square, Triangle, Pulse with hard sync
-- **Operator** — FM/PM operator with self-modulation, phase/frequency modulation, built-in envelope
-- **WavetableOscillator** — Wavetable-based oscillator for sample-accurate playback
-- **LFO** — Low-frequency oscillator for modulation
-- **Noise** — White and pink noise generators
+- **BlepOscillator** - Band-limited oscillator using PolyBLEP antialiasing; Sine, Saw, Square, Triangle, Pulse with hard sync
+- **Operator** - FM/PM operator with self-modulation, phase/frequency modulation, built-in envelope
+- **WavetableOscillator** - Wavetable-based oscillator for sample-accurate playback
+- **LFO** - Low-frequency oscillator for modulation
+- **Noise** - White and pink noise generators
 
 \subsection filters Filters
-- **SvfFilter** — State-variable filter with low-pass, high-pass, band-pass, notch, and all-pass modes
+- **SvfFilter** - State-variable filter with low-pass, high-pass, band-pass, notch, and all-pass modes
 
 \subsection control Control
-- **Envelope** — ADSR envelope generator with configurable attack, decay, sustain, release
-- **ModMatrix** — Modulation routing matrix with curve shaping (linear, exponential, logarithmic, S-curve)
+- **Envelope** - ADSR envelope generator with configurable attack, decay, sustain, release
+- **ModMatrix** - Modulation routing matrix with curve shaping (linear, exponential, logarithmic, S-curve)
 
 \subsection synthesis Synthesis
-- **FMGraph** — FM synthesis engine; mutable builder (non-RT) + immutable DSP runtime (RT-safe)
+- **FMGraph** - FM synthesis engine; mutable builder (non-RT) + immutable DSP runtime (RT-safe)
 
 \subsection utilities Utilities
-- **AudioBuffer** — Multichannel audio buffer with interleaved and channel-major layouts, Span-based operations
-- **SIMD** — SSE, NEON, and WASM SIMD abstractions with scalar fallbacks
+- **AudioBuffer** - Multichannel audio buffer with interleaved and channel-major layouts, Span-based operations
+- **SIMD** - SSE, NEON, and WASM SIMD abstractions with scalar fallbacks
 
 ---
 
@@ -57,16 +57,16 @@ NodeBase<FloatType>                        // Polymorphic base; one virtual call
     └── ModMatrix
 \endcode
 
-- **Real-time safe** — No dynamic allocation or locking in render paths
-- **Compile-time polymorphism** — CRTP eliminates virtual call overhead in hot paths
-- **Framework agnostic** — No hard dependency on JUCE or other frameworks
-- **Header-only** — Include what you need, nothing more
+- **Real-time safe** - No dynamic allocation or locking in render paths
+- **Compile-time polymorphism** - CRTP eliminates virtual call overhead in hot paths
+- **Framework agnostic** - No hard dependency on JUCE or other frameworks
+- **Header-only** - Include what you need, nothing more
 
 ---
 
-\section examples Examples
+\section quick_examples Quick Examples
 
-\subsection examples_oscillator Basic Oscillator
+\subsection qe_oscillator Basic Oscillator
 
 \code
 #include "oscillators/caspi_BlepOscillator.h"
@@ -82,7 +82,7 @@ double buffer[numSamples];
 osc.renderBlock (buffer, numSamples);
 \endcode
 
-\subsection examples_fm FM Graph
+\subsection qe_fm FM Graph
 
 \code
 #include "synthesizers/caspi_FMGraph.h"
@@ -101,7 +101,7 @@ auto result = builder.compile (48000.0);
 // result is a CASPI::Expected<FMGraphDSP<double>, FMGraphError>
 \endcode
 
-\subsection examples_filter SVF Filter
+\subsection qe_filter SVF Filter
 
 \code
 #include "filters/caspi_SvfFilter.h"
@@ -149,27 +149,30 @@ target_link_libraries(your_target PRIVATE CASPI)
 \section python Python Bindings (CASPy)
 
 CASPI includes Python bindings for interactive use and rapid prototyping.
-See the \ref caspy "CASPy" page for installation and API reference.
+See `Tools/CASPy/` for installation and API reference.
 
-Examples in `Tools/CASPy/Examples/`:
-- \subpage examples_oscillators "Oscillators"
-- \subpage examples_fm_graph "FM Graph"
-- \subpage examples_adsr "ADSR Envelope"
-- \subpage examples_lfo "LFO"
-- \subpage examples_wavetable "Wavetable"
-- \subpage examples_operator "Operator"
-- \subpage examples_noise "Noise"
-- \subpage examples_modmatrix "ModMatrix"
-- \subpage examples_parameters "Parameters"
-- \subpage examples_graph "Graph Engine"
-- \subpage examples_integration "Integration"
+Examples in `Tools/CASPy/Examples/` (Jupyter notebooks):
+- Oscillators
+- FM Graph
+- ADSR Envelope
+- LFO
+- Wavetable
+- Operator
+- Noise
+- ModMatrix
+- Parameters
+- Graph Engine
+- Integration
 
 ---
 
 \section references References
-- *The Computer Music Tutorial* — Roads, C.
-- *Implementing Software Synthesisers* — Pirkle, W.
+- *The Computer Music Tutorial* - Roads, C.
+- *Implementing Software Synthesisers* - Pirkle, W.
 - \ref benchmarks "Benchmarks"
 - <a href="https://cytomic.com/files/cybot.pdf">Cytomic SVF Filter</a>
 
+\subpage getting_started "Getting Started"
+\subpage examples "C++ Examples"
+\subpage benchmarks "Benchmarks"
 */
