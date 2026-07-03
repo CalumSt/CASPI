@@ -14,7 +14,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Constants.h
 * @author CS Islay
-* @brief A collection of useful constant values as templates.
+ * @brief A collection of useful constant values as templates.
+ * @ingroup base
 *        Currently:
 *        - PI
 *        - TWO_PI

@@ -1,6 +1,11 @@
-//
-// Created by calum on 01/11/2024.
-//
+/**
+ * @file caspi_Maths.h
+ * @brief Math utility functions for audio DSP.
+ * @ingroup maths
+ *
+ * Provides commonly used audio DSP math operations: range mapping,
+ * interpolation, decibel conversion, MIDI note conversion, and clamping.
+ */
 
 #ifndef CASPI_MATHS_H
 #define CASPI_MATHS_H
@@ -17,9 +22,15 @@ namespace CASPI
 {
     namespace Maths {
         /**
-         * Maps an input value between a given range to a value between a given range.
-         * Assumes that inputMin < input < inputMax, and that outputMin < outputMax,
-         * but doesn't assert this.
+         * @brief Map a value from one range to another.
+         *
+         * @tparam FloatType  Floating point type.
+         * @param input     Input value to map.
+         * @param inputMin  Lower bound of input range.
+         * @param inputMax  Upper bound of input range.
+         * @param outputMin Lower bound of output range.
+         * @param outputMax Upper bound of output range.
+         * @return Mapped value in [outputMin, outputMax].
          */
         template <typename FloatType>
         static FloatType cmap (FloatType input, FloatType inputMin, FloatType inputMax, FloatType outputMin, FloatType outputMax)
@@ -27,17 +38,33 @@ namespace CASPI
             return (((input - inputMin) / (inputMax - inputMin)) * (outputMax - outputMin)) + outputMin;
         }
 
+        /**
+         * @brief Linear interpolation between two values.
+         *
+         * @tparam FloatType  Floating point type.
+         * @param y1           Value at fraction 0.
+         * @param y2           Value at fraction 1.
+         * @param fractional_X Interpolation factor in [0, 1].
+         * @return Interpolated value (y2 if fractional_X >= 1).
+         */
         template <typename FloatType>
         static auto linearInterpolation (const FloatType y1, const FloatType y2, const FloatType fractional_X)
         {
             auto one = static_cast<FloatType> (1.0);
-            // check for invalid inputs
             if (fractional_X >= one)
                 return y2;
-            // otherwise apply weighted sum interpolation
             return fractional_X * y2 + (one - fractional_X) * y1;
         }
 
+        /**
+         * @brief Generate a range of values from start to end with a fixed step.
+         *
+         * @tparam FloatType Floating point type.
+         * @param start   Start of range.
+         * @param end     End of range (exclusive).
+         * @param step    Step size between values.
+         * @return Vector of values in [start, end).
+         */
         template <typename FloatType>
         std::vector<FloatType> range (FloatType start, FloatType end, FloatType step)
         {
@@ -49,6 +76,15 @@ namespace CASPI
             return result;
         }
 
+        /**
+         * @brief Generate a range of values with a fixed number of steps.
+         *
+         * @tparam FloatType     Floating point type.
+         * @param start          Start of range.
+         * @param end            End of range (exclusive).
+         * @param numberOfSteps  Number of steps to divide the range into.
+         * @return Vector of numberOfSteps values.
+         */
         template <typename FloatType>
         std::vector<FloatType> range (FloatType start, FloatType end, int numberOfSteps)
         {
@@ -62,6 +98,12 @@ namespace CASPI
             return result;
         }
 
+        /**
+         * @brief Convert linear amplitude to dBFS.
+         *
+         * @param linear Linear amplitude value.
+         * @return Level in dBFS (MINUS_INF_DBFS if linear <= 0).
+         */
         template <typename FloatType>
         CASPI_NO_DISCARD static FloatType linearTodBFS (const FloatType linear)
         {
@@ -72,6 +114,12 @@ namespace CASPI
             return CASPI::Constants::MINUS_INF_DBFS<FloatType>;
         }
 
+        /**
+         * @brief Convert dBFS to linear amplitude.
+         *
+         * @param dBFS Level in dBFS.
+         * @return Linear amplitude value.
+         */
         template <typename FloatType>
         CASPI_NO_DISCARD static FloatType dBFSToLinear (const FloatType dBFS)
         {
@@ -82,24 +130,54 @@ namespace CASPI
             return CASPI::Constants::MINUS_INF_DBFS<FloatType>;
         }
 
+        /**
+         * @brief Convert MIDI note number to frequency in Hz.
+         *
+         * Uses A4 = 440 Hz as reference (MIDI note 69).
+         *
+         * @param noteNumber MIDI note number (0-127).
+         * @return Frequency in Hz.
+         */
         template <typename FloatType>
         CASPI_NO_DISCARD static FloatType midiNoteToHz (const int noteNumber)
         {
             return static_cast<FloatType> (Constants::A4_FREQUENCY<FloatType> * std::pow (2, (static_cast<FloatType> (noteNumber) - Constants::A4_MIDI<FloatType>) / Constants::NOTES_IN_OCTAVE<FloatType>));
         }
 
+        /**
+         * @brief Clamp a value between lower and upper bounds.
+         *
+         * @param value Value to clamp.
+         * @param lower Lower bound.
+         * @param upper Upper bound.
+         * @return Clamped value in [lower, upper].
+         */
         template <typename FloatType>
         CASPI_NO_DISCARD FloatType clamp (const FloatType value, const FloatType lower, const FloatType upper)
         {
             return value < lower ? lower : (value > upper ? upper : value);
         }
 
+    /**
+     * @brief Convert an enum to its underlying integer type.
+     *
+     * @tparam Enum Enum type.
+     * @param e     Enum value.
+     * @return Underlying integer value.
+     */
     template <typename Enum>
     std::underlying_type_t<Enum> to_underlying (Enum e) noexcept
     {
         return static_cast<std::underlying_type_t<Enum>> (e);
     }
 
+        /**
+         * @brief Compute 1/n! for use in series expansions.
+         *
+         * @tparam FloatType Floating point type.
+         * @param n Term index (n >= 0).
+         * @return 1/n! as FloatType.
+         */
         template <typename FloatType>
         CASPI_ALWAYS_INLINE FloatType factorialTerm (int n) noexcept
         {
@@ -111,6 +189,16 @@ namespace CASPI
             return term;
         }
 
+        /**
+         * @brief Branchless absolute value for signed integers and floats.
+         *
+         * Uses two's complement for integers and sign-bit masking for
+         * floating point. Falls back to ternary on pre-C++17 compilers.
+         *
+         * @tparam T Signed integer or floating point type.
+         * @param x Input value.
+         * @return Absolute value of x.
+         */
         template <typename T>
         CASPI_NO_DISCARD inline T abs_branchless (T x) noexcept
         {
@@ -145,18 +233,44 @@ namespace CASPI
 #endif
         }
 
+    /**
+     * @brief Branchless linear interpolation (fused multiply-add friendly).
+     *
+     * @tparam T Floating point type.
+     * @param a Value at t = 0.
+     * @param b Value at t = 1.
+     * @param t Interpolation factor.
+     * @return a + t * (b - a).
+     */
     template <typename T>
     CASPI_NO_DISCARD inline T linearInterpolation_bl (T a, T b, T t) noexcept
     {
         return a + t * (b - a);
     }
 
+        /**
+         * @brief Branchless fractional part (wrap to [0, 1)).
+         *
+         * @tparam T Floating point type.
+         * @param x Input value.
+         * @return Fractional part of x in [0, 1).
+         */
         template <typename T>
         CASPI_NO_DISCARD inline T wrap_01_branchless (T x) noexcept
         {
             return x - static_cast<T> (static_cast<int> (x));
         }
 
+        /**
+         * @brief Fast approximate cosine using parabolic approximation.
+         *
+         * Less accurate than std::cos but significantly faster.
+         * Useful when precision is not critical (e.g. LFO waveforms).
+         *
+         * @tparam FloatType Floating point type.
+         * @param x Input angle in radians.
+         * @return Approximate cosine of x.
+         */
         template <typename FloatType>
         FloatType fast_cos (const FloatType x)
         {
@@ -166,6 +280,13 @@ namespace CASPI
             return 0.775 * y; // optional correction factor
         }
 
+        /**
+         * @brief Inverse square root.
+         *
+         * @tparam FloatType Floating point type.
+         * @param x Input value (must be > 0).
+         * @return 1 / sqrt(x).
+         */
         template <typename FloatType>
         float inv_sqrt (FloatType x)
         {

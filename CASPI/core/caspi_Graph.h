@@ -1,7 +1,7 @@
 #ifndef CASPI_GRAPH_H
 #define CASPI_GRAPH_H
 
-/*
+/*************************************************************************
  *  .d8888b.                             d8b
  * d88P  Y88b                            Y8P
  * 888    888
@@ -17,6 +17,7 @@
  * @file   core/caspi_Graph.h
  * @author CS Islay
  * @brief  Directed acyclic graph of audio and control nodes.
+ * @ingroup core
  *
  * OVERVIEW
  *

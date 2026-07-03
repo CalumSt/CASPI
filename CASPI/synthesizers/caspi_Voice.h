@@ -1,7 +1,7 @@
 #ifndef CASPI_VOICE_MANAGER_H
 #define CASPI_VOICE_MANAGER_H
 
-/*
+/*************************************************************************
  *  .d8888b.                             d8b
  * d88P  Y88b                            Y8P
  * 888    888
@@ -17,6 +17,7 @@
  * @file   caspi_VoiceManager.h
  * @author CS Islay
  * @brief  Polyphonic voice manager owning N independent AudioGraph instances.
+ * @ingroup synthesis
  *
  * ARCHITECTURE
  *
@@ -419,8 +420,6 @@ namespace CASPI
              *
              * Returns INVALID_VOICE (std::size_t max) if no voice is available and
              * policy is StealPolicy::None.
-             *
-             * @param midiNote  Unused; reserved for future per-note routing.
              */
             CASPI_NO_DISCARD std::size_t findNextVoiceForNote (int /*midiNote*/) const noexcept
                 CASPI_NON_BLOCKING

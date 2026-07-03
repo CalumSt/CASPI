@@ -15,9 +15,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 * @file caspi_Gain.h
 * @author CS Islay
 * @class Gain
-* @brief A class for gain-related functionality, such as ramps.
-*
-************************************************************************/
+ * @brief A class for gain-related functionality, such as ramps.
+ * @ingroup gain
+ *
+ ************************************************************************/
 
 #ifndef CASPI_GAIN_H
 #define CASPI_GAIN_H

@@ -3,6 +3,8 @@
 
 /*************************************************************************
  * @file caspi_ModMatrix.h
+ * @brief Modulation matrix with linear and non-linear routings.
+ * @ingroup controls
  *
  * ARCHITECTURE
  *

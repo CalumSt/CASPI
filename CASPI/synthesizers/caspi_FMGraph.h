@@ -3,6 +3,7 @@
 /*************************************************************************
  * @file caspi_FMGraph.h
  * @brief FM synthesis graph with builder/runtime separation
+ * @ingroup synthesis
  *
  * ARCHITECTURE OVERVIEW:
  *

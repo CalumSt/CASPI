@@ -16,6 +16,7 @@
  * @file   core/caspi_Node.h
  * @author CS Islay
  * @brief  Base classes for all nodes in an AudioGraph.
+ * @ingroup core
  *
  * @details
  * Provides three base classes:

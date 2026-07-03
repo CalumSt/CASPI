@@ -4,6 +4,7 @@
 /**
  * @file caspi_Assert.h
  * @brief Assertion, contract, and diagnostic utilities for CASPI
+ * @ingroup base
  *
  * OVERVIEW
  * ========
