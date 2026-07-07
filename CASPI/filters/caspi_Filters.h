@@ -66,7 +66,6 @@ namespace CASPI
                  */
                 Filters() noexcept CASPI_NON_ALLOCATING
                 {
-                    dispatchTable = buildDispatchTable();
                     initFilters (Constants::DEFAULT_SAMPLE_RATE<FloatType>);
                     active.store (0, std::memory_order_release);
                 }
@@ -85,7 +84,6 @@ namespace CASPI
                     FloatType sampleRate,
                     std::size_t initialIndex = 0) noexcept CASPI_NON_ALLOCATING
                 {
-                    dispatchTable = buildDispatchTable();
                     initFilters (sampleRate);
                     active.store (initialIndex, std::memory_order_release);
                 }
@@ -252,6 +250,14 @@ namespace CASPI
                 }
 
                 /**
+                 * @brief Read the gain from the first stored filter.
+                 */
+                CASPI_NO_DISCARD FloatType getGainDb() const noexcept
+                {
+                    return std::get<0> (filters).getGainDb();
+                }
+
+                /**
                  * @brief Read the mode from the first stored filter.
                  *
                  * All filters share the same mode (set via delegation), so
@@ -319,29 +325,6 @@ namespace CASPI
                 {
                     if (I == idx)
                     {
-                        std::get<I> (filters).reset();
-                    }
-                    else
-                    {
-                        resetFilterAtImpl<I + 1> (idx);
-                    }
-                }
-#endif
-
-                /*--------------------------------------------------------------
-                 * Dispatch — C++17 if constexpr chain
-                 *-------------------------------------------------------------*/
-
-#if defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
-                template <std::size_t I>
-                FloatType dispatchIfConstexpr (
-                    FloatType in,
-                    std::integral_constant<std::size_t, I>) noexcept CASPI_NON_BLOCKING
-                {
-                    const auto current = active.load (std::memory_order_relaxed);
-                    CASPI_RT_ASSERT (static_cast<std::size_t> (current) < sizeof...(Topologies));
-                    if (current == static_cast<FilterTopology> (I))
-                    {
                         return std::get<I> (filters).processSample (in);
                     }
                     else if constexpr (I + 1 < sizeof...(FilterTs))
@@ -355,11 +338,10 @@ namespace CASPI
                  * Compile-time index lookup by type
                  *-------------------------------------------------------------*/
 
-                using DispatchFn =
-                    FloatType (Filters::*) (FloatType);
-
-                template <FilterTopology T>
-                FloatType dispatchMember (FloatType in) noexcept CASPI_NON_BLOCKING
+                template <template <typename> class Needle,
+                          template <typename> class First,
+                          template <typename> class... Rest>
+                struct IndexOfImpl
                 {
                     static const std::size_t value =
                         std::is_same<Needle<FloatType>, First<FloatType>>::value
@@ -367,7 +349,9 @@ namespace CASPI
                             : 1 + IndexOfImpl<Needle, Rest...>::value;
                 };
 
-                static const DispatchFn* buildDispatchTable() noexcept
+                template <template <typename> class Needle,
+                          template <typename> class First>
+                struct IndexOfImpl<Needle, First>
                 {
                     static const std::size_t value =
                         std::is_same<Needle<FloatType>, First<FloatType>>::value
@@ -375,13 +359,10 @@ namespace CASPI
                             : 1;
                 };
 
-#if !defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
-                FloatType dispatchMemberFn (FloatType in) noexcept CASPI_NON_BLOCKING
+                template <template <typename> class FilterT>
+                static constexpr std::size_t indexOf() noexcept
                 {
-                    const auto idx = static_cast<std::size_t> (
-                        active.load (std::memory_order_relaxed));
-                    CASPI_RT_ASSERT (idx < sizeof...(Topologies));
-                    return (this->*dispatchTable[idx]) (in);
+                    return IndexOfImpl<FilterT, FilterTs...>::value;
                 }
 
                 /*--------------------------------------------------------------
@@ -391,7 +372,6 @@ namespace CASPI
                 FilterTuple filters;
                 std::atomic<std::size_t> active { 0 };
                 FloatType sampleRate = FloatType (48000);
-                const DispatchFn* dispatchTable;
         };
 
         /*--------------------------------------------------------------
