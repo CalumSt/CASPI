@@ -48,7 +48,8 @@ set(SOURCES
         maths/FFT_test.cpp
         maths/Maths_test.cpp
         filters/Filter_test.cpp
-        filters/SvfFilter_test.cpp
+        filters/StateVariableFilter_test.cpp
+        filters/Filters_test.cpp
 )
 
 add_executable(UnitTests ${SOURCES})
