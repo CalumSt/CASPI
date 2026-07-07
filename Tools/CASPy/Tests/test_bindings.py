@@ -55,10 +55,10 @@ def add_osc4(g, bank, hz=440.0):
 
 
 def add_filter(g, cutoff=1000.0, mode=None):
-    """Add an SvfFilter to graph g; return its NodeId."""
+    """Add a StateVariableFilter to graph g; return its NodeId."""
     if mode is None:
         mode = caspy.FilterMode.LowPass
-    return g.add_node(caspy.SvfFilter(SR, cutoff, 0.707, mode))
+    return g.add_node(caspy.StateVariableFilter(SR, cutoff, 0.707, mode))
 
 
 # ===========================================================================
@@ -81,7 +81,7 @@ class TestImport:
         _ = wt.InterpolationMode.Linear
 
     def test_classes_present(self):
-        for name in ("AudioGraph", "SvfFilter", "NodeBase"):
+        for name in ("AudioGraph", "StateVariableFilter", "NodeBase"):
             assert hasattr(caspy, name), f"caspy.{name} missing"
         for name in ("WaveTable", "WaveTableBank1", "WaveTableBank4",
                      "WavetableOscillator1", "WavetableOscillator4"):
@@ -286,50 +286,50 @@ class TestWavetableOsc4:
 
 
 # ===========================================================================
-# SvfFilter  (standalone — no graph)
+# StateVariableFilter  (standalone — no graph)
 # ===========================================================================
 
-class TestSvfFilter:
+class TestStateVariableFilter:
     def test_construct_default(self):
-        assert caspy.SvfFilter() is not None
+        assert caspy.StateVariableFilter() is not None
 
     def test_construct_full(self):
-        assert caspy.SvfFilter(SR, 1000.0, 0.707, caspy.FilterMode.LowPass) is not None
+        assert caspy.StateVariableFilter(SR, 1000.0, 0.707, caspy.FilterMode.LowPass) is not None
 
     def test_process_sample_returns_float(self):
-        assert isinstance(caspy.SvfFilter(SR, 1000.0).process_sample(1.0), float)
+        assert isinstance(caspy.StateVariableFilter(SR, 1000.0).process_sample(1.0), float)
 
     def test_process_block_shape(self):
-        f   = caspy.SvfFilter(SR, 1000.0)
+        f   = caspy.StateVariableFilter(SR, 1000.0)
         out = f.process_block(np.random.randn(FRAMES).astype(np.float32))
         assert out.shape == (FRAMES,)
         assert out.dtype == np.float32
 
     def test_lowpass_attenuates_high_freq(self):
-        f = caspy.SvfFilter(SR, 500.0, 0.707, caspy.FilterMode.LowPass)
+        f = caspy.StateVariableFilter(SR, 500.0, 0.707, caspy.FilterMode.LowPass)
         assert f.frequency_response(100.0) > f.frequency_response(5000.0) * 10
 
     def test_highpass_attenuates_low_freq(self):
-        f = caspy.SvfFilter(SR, 5000.0, 0.707, caspy.FilterMode.HighPass)
+        f = caspy.StateVariableFilter(SR, 5000.0, 0.707, caspy.FilterMode.HighPass)
         assert f.frequency_response(SR / 2 * 0.9) > f.frequency_response(200.0) * 10
 
     def test_mode_property_roundtrip(self):
-        f = caspy.SvfFilter(SR, 1000.0)
+        f = caspy.StateVariableFilter(SR, 1000.0)
         f.mode = caspy.FilterMode.BandPass
         assert f.mode == caspy.FilterMode.BandPass
 
     def test_cutoff_property_roundtrip(self):
-        f = caspy.SvfFilter(SR, 1000.0)
+        f = caspy.StateVariableFilter(SR, 1000.0)
         f.cutoff = 2000.0
         assert f.cutoff == pytest.approx(2000.0, rel=1e-4)
 
     def test_q_property_roundtrip(self):
-        f = caspy.SvfFilter(SR, 1000.0)
+        f = caspy.StateVariableFilter(SR, 1000.0)
         f.q = 2.0
         assert f.q == pytest.approx(2.0, rel=1e-4)
 
     def test_reset_clears_state(self):
-        f = caspy.SvfFilter(SR, 1000.0)
+        f = caspy.StateVariableFilter(SR, 1000.0)
         for _ in range(100):
             f.process_sample(1.0)
         f.reset()
@@ -340,7 +340,7 @@ class TestSvfFilter:
         for mode in (caspy.FilterMode.LowPass, caspy.FilterMode.HighPass,
                      caspy.FilterMode.BandPass, caspy.FilterMode.Notch,
                      caspy.FilterMode.Peak, caspy.FilterMode.AllPass):
-            f   = caspy.SvfFilter(SR, 1000.0, 0.707, mode)
+            f   = caspy.StateVariableFilter(SR, 1000.0, 0.707, mode)
             out = f.process_block(noise)
             assert float(np.max(np.abs(out))) > 0.0, f"Mode {mode} produced silence"
 
