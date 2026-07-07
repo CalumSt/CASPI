@@ -21,11 +21,11 @@
  * @details
  * ### Overview
  *
- * FilterBase<Derived, FloatType, NumStates> inherits Graph::AudioNode and
+ * FilterBase<Derived, FloatType, NumStates, NumCoeffs> inherits Graph::AudioNode and
  * adds:
  *   - Per-channel state variable storage (z^-1 delays).
  *   - AtomicCoefficients double buffer for lock-free parameter updates.
- *   - Common parameter API: setCutoff(), setQ(), setGain().
+ *   - Common parameter API: setCutoff(), setQ(), setGain(), setMode().
  *   - CRTP hook: updateCoefficients() called whenever parameters change.
  *
  * ### CRTP contract
@@ -42,10 +42,10 @@
  *
  * ### Parameter update model
  *
- * Parameters (cutoff, Q, gain) are stored as plain FloatType members.
+ * Parameters (cutoff, Q, gain, mode) are stored as plain FloatType members.
  * Coefficient computation is deferred to updateCoefficients() which is
- * called on the setup thread by setCutoff() / setQ() / setGain() and by
- * onSampleRateChanged().
+ * called on the setup thread by setCutoff() / setQ() / setGain() / setMode()
+ * and by onSampleRateChanged().
  *
  * AtomicCoefficients<FloatType, NumCoeffs> double-buffers the computed
  * coefficient array and provides a lock-free swap so the audio thread
@@ -67,11 +67,6 @@
  *
  * The simpler and more common case (mono or single-channel processing via
  * Processor's traversal) stores state in the flat array directly.
- *
- * ### FilterMode
- *
- * FilterMode is defined here so all filters share a common vocabulary.
- * Derived classes use it in processSample() to select output topology.
  *
  ************************************************************************/
 
@@ -198,7 +193,7 @@ namespace CASPI
         };
 
         /*======================================================================
-         * FilterBase<Derived, FloatType, NumStates>
+         * FilterBase<Derived, FloatType, NumStates, NumCoeffs>
          *====================================================================*/
 
         /**
@@ -298,19 +293,19 @@ namespace CASPI
                  * Parameter accessors
                  *-----------------------------------------------------------------*/
 
-                CASPI_NO_DISCARD FloatType getCutoff() const noexcept
+                CASPI_NO_DISCARD FloatType getCutoff() const noexcept CASPI_NON_BLOCKING
                 {
                     return cutoff;
                 }
-                CASPI_NO_DISCARD FloatType getQ() const noexcept
+                CASPI_NO_DISCARD FloatType getQ() const noexcept CASPI_NON_BLOCKING
                 {
                     return Q;
                 }
-                CASPI_NO_DISCARD FloatType getGainDb() const noexcept
+                CASPI_NO_DISCARD FloatType getGainDb() const noexcept CASPI_NON_BLOCKING
                 {
                     return gainDb;
                 }
-                CASPI_NO_DISCARD FilterMode getMode() const noexcept
+                CASPI_NO_DISCARD FilterMode getMode() const noexcept CASPI_NON_BLOCKING
                 {
                     return mode;
                 }
@@ -377,7 +372,7 @@ namespace CASPI
                  *
                  * Stores the new rate and triggers updateCoefficients() via CRTP.
                  */
-                void onSampleRateChanged (FloatType newRate) noexcept override
+                void onSampleRateChanged (FloatType newRate) noexcept CASPI_NON_BLOCKING override
                 {
                     CASPI_ASSERT (newRate > FloatType (0), "Sample rate must be positive");
                     // Store via the base NodeBase method.
@@ -395,10 +390,6 @@ namespace CASPI
                 {
                     const FloatType fs = static_cast<FloatType> (sampleRateIn);
                     Graph::NodeBase<FloatType>::setSampleRate (fs);
-                    if (cutoff > FloatType (0))
-                    {
-                        static_cast<Derived*> (this)->updateCoefficients();
-                    }
                 }
 
                 /**
@@ -411,7 +402,7 @@ namespace CASPI
                  * If port 0 is not connected, outputBuffer retains its previous
                  * content (cleared to silence at prepare() time).
                  */
-                void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
+                void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept CASPI_NON_BLOCKING
                 {
                     const auto* inBuf = ctx.getAudioInput (this->getId(), 0);
                     auto& buf = this->outputBuffer;
@@ -421,9 +412,23 @@ namespace CASPI
                     if (inBuf != nullptr)
                     {
                         for (std::size_t ch = 0; ch < C; ++ch)
+                        {
                             for (std::size_t fr = 0; fr < F; ++fr)
+                            {
                                 buf.sample (ch, fr) =
                                     static_cast<Derived*> (this)->processSample (inBuf->sample (ch, fr));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                        {
+                            for (std::size_t fr = 0; fr < F; ++fr)
+                            {
+                                buf.sample (ch, fr) = FloatType (0);
+                            }
+                        }
                     }
                 }
 
