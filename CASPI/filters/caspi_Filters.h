@@ -1,5 +1,5 @@
-#ifndef CASPI_FILTER_SELECTOR_H
-#define CASPI_FILTER_SELECTOR_H
+#ifndef CASPI_FILTERS_H
+#define CASPI_FILTERS_H
 
 /*************************************************************************
  *  .d8888b.                             d8b
@@ -14,56 +14,47 @@
  *                              888
  *                              888
  *
- * @file   filters/caspi_FilterSelector.h
+ * @file   filters/caspi_Filters.h
  * @author CS Islay
- * @brief  FilterSelector -- runtime-selectable filter topology.
- *
- * Pre-allocates one Filter<F, Topology> for each topology in the pack
- * and dispatches processSample() to the active one with zero-allocation
- * overhead.
- *
- * Dispatch strategies:
- *   C++17 -- if constexpr chain (zero misprediction if topology stable).
- *   C++11 -- member-function-pointer table (3-4 cycle indirect call cost).
+ * @brief  Top-level filter module. Runtime-switchable multi-filter dispatcher.
  *
  * Usage:
- *   FilterSelector<float, StateVariable, Biquad, Ladder> sel(48000.f);
- *   sel.setCutoff(1000.f);
- *   float out = sel.processSample(in);
- *   sel.setTopology(FilterTopology::Biquad);
+ *   Filters<float, StateVariable, Biquad, Ladder> f(48000.f);
+ *   f.setCutoff(1000.f);
+ *   float out = f.processSample(in);
+ *   f.setActiveIndex(1);              // runtime switch
+ *   f.setActive<Biquad>();            // compile-time switch
  *
  ************************************************************************/
 
 #include <atomic>
 #include <tuple>
 #include <utility>
+#include <type_traits>
 
 #include "base/caspi_Assert.h"
+#include "base/caspi_Constants.h"
 #include "base/caspi_Features.h"
 #include "filters/caspi_Filter.h"
+#include "filters/caspi_StateVariable.h"
+#include "filters/caspi_Biquad.h"
+#include "filters/caspi_Ladder.h"
+#include "filters/caspi_DiodeLadder.h"
+#include "filters/caspi_OnePole.h"
 
 namespace CASPI
 {
     namespace Filters
     {
 
-        template <typename FloatType, FilterTopology... Topologies>
-        class FilterSelector
+        template <typename FloatType, template <typename> class... FilterTs>
+        class Filters
         {
-            static_assert (sizeof...(Topologies) > 0,
-                           "FilterSelector requires at least one topology");
-
-            /*------------------------------------------------------------------
-             * Helper: capture the first topology from the pack.
-             *-----------------------------------------------------------------*/
-            template <FilterTopology First, FilterTopology...>
-            struct FirstTopology
-            {
-                static constexpr FilterTopology value = First;
-            };
+            static_assert (sizeof...(FilterTs) > 0,
+                           "Filters requires at least one filter type");
 
             public:
-                using FilterTuple = std::tuple<Filter<FloatType, Topologies>...>;
+                using FilterTuple = std::tuple<FilterTs<FloatType>...>;
 
                 /*--------------------------------------------------------------
                  * Construction
@@ -71,33 +62,30 @@ namespace CASPI
 
                 /**
                  * @brief Default constructor. Uses the project default sample
-                 *        rate and sets the active topology to the first in the
-                 *        pack.
+                 *        rate and sets the active filter to the first in the pack.
                  */
-                FilterSelector() noexcept CASPI_NON_ALLOCATING
+                Filters() noexcept CASPI_NON_ALLOCATING
                 {
                     initFilters (Constants::DEFAULT_SAMPLE_RATE<FloatType>);
-                    active.store (FirstTopology<Topologies...>::value,
-                                  std::memory_order_release);
+                    active.store (0, std::memory_order_release);
                 }
 
                 /**
                  * @brief Construct with a sample rate and optional initial
-                 *        topology.
+                 *        filter index.
                  *
                  * Initialises every filter to the given sample rate and resets
                  * their state.
                  *
                  * @param sampleRate  Sample rate in Hz. Must be > 0.
-                 * @param initial     Initial active topology. Defaults to
-                 *                    the first topology in the pack.
+                 * @param initialIndex  Initial active filter index. Defaults to 0.
                  */
-                explicit FilterSelector (
+                explicit Filters (
                     FloatType sampleRate,
-                    FilterTopology initial = FirstTopology<Topologies...>::value) noexcept CASPI_NON_ALLOCATING
+                    std::size_t initialIndex = 0) noexcept CASPI_NON_ALLOCATING
                 {
                     initFilters (sampleRate);
-                    active.store (initial, std::memory_order_release);
+                    active.store (initialIndex, std::memory_order_release);
                 }
 
                 /*--------------------------------------------------------------
@@ -107,7 +95,7 @@ namespace CASPI
                 /**
                  * @brief Process one input sample through the active filter.
                  *
-                 * Dispatches to the currently selected filter topology with
+                 * Dispatches to the currently selected filter with
                  * no allocation. Audio thread safe.
                  *
                  * @param in  Input sample.
@@ -115,12 +103,8 @@ namespace CASPI
                  */
                 FloatType processSample (FloatType in) noexcept CASPI_NON_BLOCKING
                 {
-#if defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
-                    return dispatchIfConstexpr (in,
-                                                std::integral_constant<std::size_t, 0>{});
-#else
-                    return dispatchMemberFn (in);
-#endif
+                    const auto idx = active.load (std::memory_order_relaxed);
+                    return dispatch (in, idx);
                 }
 
                 /*--------------------------------------------------------------
@@ -128,29 +112,38 @@ namespace CASPI
                  *-------------------------------------------------------------*/
 
                 /**
-                 * @brief Switch the active filter topology at runtime.
+                 * @brief Switch the active filter at runtime by pack index.
                  *
                  * Resets the target filter before activating it so the
-                 * new topology starts from a clean state. Setup thread only.
+                 * new filter starts from a clean state. Setup thread only.
                  *
-                 * @param t  The topology to activate. Must be one of the
-                 *           topologies in the pack.
+                 * @param idx  The filter index to activate. Must be < pack size.
                  */
-                void setTopology (FilterTopology t) noexcept
+                void setActiveIndex (std::size_t idx) noexcept
                 {
-                    CASPI_ASSERT (static_cast<std::size_t> (t) < sizeof...(Topologies),
-                                  "Topology index out of range");
-                    resetFilterAt (static_cast<std::size_t> (t));
-                    active.store (t, std::memory_order_release);
+                    CASPI_ASSERT (idx < sizeof...(FilterTs), "Filter index out of range");
+                    resetFilterAt (idx);
+                    active.store (idx, std::memory_order_release);
                 }
 
                 /**
-                 * @brief Read the currently active topology.
-                 * @return The active FilterTopology value.
+                 * @brief Read the currently active filter index.
+                 * @return The active filter pack index (0-based).
                  */
-                CASPI_NO_DISCARD FilterTopology getTopology() const noexcept
+                CASPI_NO_DISCARD std::size_t getActiveIndex() const noexcept
                 {
                     return active.load (std::memory_order_acquire);
+                }
+
+                /**
+                 * @brief Compile-time switch by filter type.
+                 *
+                 * @tparam FilterT  Filter class template to activate (must be in pack).
+                 */
+                template <template <typename> class FilterT>
+                void setActive() noexcept
+                {
+                    setActiveIndex (indexOf<FilterT>());
                 }
 
                 /*--------------------------------------------------------------
@@ -178,6 +171,16 @@ namespace CASPI
                 void setQ (FloatType q) noexcept
                 {
                     forEachFilter ([&] (auto& f) { f.setQ (q); });
+                }
+
+                /**
+                 * @brief Forward setGain to every stored filter.
+                 *
+                 * @param dB  Gain in dB.
+                 */
+                void setGain (FloatType dB) noexcept
+                {
+                    forEachFilter ([&] (auto& f) { f.setGain (dB); });
                 }
 
                 /**
@@ -224,6 +227,47 @@ namespace CASPI
                     return sampleRate;
                 }
 
+                /**
+                 * @brief Read the cutoff from the first stored filter.
+                 *
+                 * All filters share the same cutoff (set via delegation), so
+                 * the first filter's value is representative.
+                 */
+                CASPI_NO_DISCARD FloatType getCutoff() const noexcept
+                {
+                    return std::get<0> (filters).getCutoff();
+                }
+
+                /**
+                 * @brief Read the Q from the first stored filter.
+                 *
+                 * All filters share the same Q (set via delegation), so
+                 * the first filter's value is representative.
+                 */
+                CASPI_NO_DISCARD FloatType getQ() const noexcept
+                {
+                    return std::get<0> (filters).getQ();
+                }
+
+                /**
+                 * @brief Read the gain from the first stored filter.
+                 */
+                CASPI_NO_DISCARD FloatType getGainDb() const noexcept
+                {
+                    return std::get<0> (filters).getGainDb();
+                }
+
+                /**
+                 * @brief Read the mode from the first stored filter.
+                 *
+                 * All filters share the same mode (set via delegation), so
+                 * the first filter's value is representative.
+                 */
+                CASPI_NO_DISCARD FilterMode getMode() const noexcept
+                {
+                    return std::get<0> (filters).getMode();
+                }
+
             private:
                 /*--------------------------------------------------------------
                  * Initialisation
@@ -236,34 +280,14 @@ namespace CASPI
                 }
 
                 /*--------------------------------------------------------------
-                 * Tuple iteration — C++17 fold vs C++11 recursion
+                 * Tuple iteration — C++17 fold expression
                  *-------------------------------------------------------------*/
 
                 template <typename Fn>
                 void forEachFilter (Fn&& fn) noexcept
                 {
-#if defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
-                    (fn (std::get<Filter<FloatType, Topologies>> (filters)), ...);
-#else
-                    forEachFilterImpl<0> (std::forward<Fn> (fn));
-#endif
+                    (fn (std::get<FilterTs<FloatType>> (filters)), ...);
                 }
-
-#if !defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
-                template <std::size_t I, typename Fn>
-                typename std::enable_if<I == sizeof...(Topologies), void>::type
-                forEachFilterImpl (Fn&&) noexcept
-                {
-                }
-
-                template <std::size_t I, typename Fn>
-                typename std::enable_if<I < sizeof...(Topologies), void>::type
-                forEachFilterImpl (Fn&& fn) noexcept
-                {
-                    fn (std::get<I> (filters));
-                    forEachFilterImpl<I + 1> (std::forward<Fn> (fn));
-                }
-#endif
 
                 /*--------------------------------------------------------------
                  * Reset a single filter by pack index
@@ -274,7 +298,6 @@ namespace CASPI
                     resetFilterAtImpl<0> (idx);
                 }
 
-#if defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
                 template <std::size_t I>
                 void resetFilterAtImpl (std::size_t idx) noexcept
                 {
@@ -282,100 +305,99 @@ namespace CASPI
                     {
                         std::get<I> (filters).reset();
                     }
-                    else if constexpr (I + 1 < sizeof...(Topologies))
+                    else if constexpr (I + 1 < sizeof...(FilterTs))
                     {
                         resetFilterAtImpl<I + 1> (idx);
                     }
                 }
-#else
-                /* Base case: I == sizeof...(Topologies) — do nothing. */
-                template <std::size_t I>
-                typename std::enable_if<I == sizeof...(Topologies), void>::type
-                resetFilterAtImpl (std::size_t) noexcept
+
+                /*--------------------------------------------------------------
+                 * Dispatch by index
+                 *-------------------------------------------------------------*/
+
+                FloatType dispatch (FloatType in, std::size_t idx) noexcept CASPI_NON_BLOCKING
                 {
+                    return dispatchImpl<0> (in, idx);
                 }
 
-                /* Recursive case: check index I, then advance. */
                 template <std::size_t I>
-                typename std::enable_if<I < sizeof...(Topologies), void>::type
-                resetFilterAtImpl (std::size_t idx) noexcept
+                FloatType dispatchImpl (FloatType in, std::size_t idx) noexcept CASPI_NON_BLOCKING
                 {
                     if (I == idx)
                     {
-                        std::get<I> (filters).reset();
-                    }
-                    else
-                    {
-                        resetFilterAtImpl<I + 1> (idx);
-                    }
-                }
-#endif
-
-                /*--------------------------------------------------------------
-                 * Dispatch — C++17 if constexpr chain
-                 *-------------------------------------------------------------*/
-
-#if defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
-                template <std::size_t I>
-                FloatType dispatchIfConstexpr (
-                    FloatType in,
-                    std::integral_constant<std::size_t, I>) noexcept CASPI_NON_BLOCKING
-                {
-                    if (active.load (std::memory_order_relaxed) ==
-                        static_cast<FilterTopology> (I))
-                    {
                         return std::get<I> (filters).processSample (in);
                     }
-                    if constexpr (I + 1 < sizeof...(Topologies))
+                    else if constexpr (I + 1 < sizeof...(FilterTs))
                     {
-                        return dispatchIfConstexpr (
-                            in, std::integral_constant<std::size_t, I + 1>{});
+                        return dispatchImpl<I + 1> (in, idx);
                     }
                     return FloatType (0);
                 }
-#endif
 
                 /*--------------------------------------------------------------
-                 * Dispatch — C++11 member-function-pointer table
+                 * Compile-time index lookup by type
                  *-------------------------------------------------------------*/
 
-#if !defined(CASPI_FEATURES_HAS_IF_CONSTEXPR)
-                using DispatchFn =
-                    FloatType (FilterSelector::*) (FloatType);
-
-                template <FilterTopology T>
-                FloatType dispatchMember (FloatType in) noexcept CASPI_NON_BLOCKING
+                template <template <typename> class Needle,
+                          template <typename> class First,
+                          template <typename> class... Rest>
+                struct IndexOfImpl
                 {
-                    return std::get<Filter<FloatType, T>> (filters)
-                        .processSample (in);
-                }
+                    static const std::size_t value =
+                        std::is_same<Needle<FloatType>, First<FloatType>>::value
+                            ? 0
+                            : 1 + IndexOfImpl<Needle, Rest...>::value;
+                };
 
-                static const DispatchFn* buildDispatchTable() noexcept CASPI_NON_BLOCKING
+                template <template <typename> class Needle,
+                          template <typename> class First>
+                struct IndexOfImpl<Needle, First>
                 {
-                    static const DispatchFn table[sizeof...(Topologies)] = {
-                        &FilterSelector::dispatchMember<Topologies>...
-                    };
-                    return table;
-                }
+                    static const std::size_t value =
+                        std::is_same<Needle<FloatType>, First<FloatType>>::value
+                            ? 0
+                            : 1;
+                };
 
-                FloatType dispatchMemberFn (FloatType in) noexcept CASPI_NON_BLOCKING
+                template <template <typename> class FilterT>
+                static constexpr std::size_t indexOf() noexcept
                 {
-                    return (this->*buildDispatchTable()
-                                          [static_cast<std::size_t> (
-                                              active.load (std::memory_order_relaxed))]) (in);
+                    return IndexOfImpl<FilterT, FilterTs...>::value;
                 }
-#endif
 
                 /*--------------------------------------------------------------
                  * State
                  *-------------------------------------------------------------*/
 
                 FilterTuple filters;
-                std::atomic<FilterTopology> active { FirstTopology<Topologies...>::value };
+                std::atomic<std::size_t> active { 0 };
                 FloatType sampleRate = FloatType (48000);
         };
+
+        /*--------------------------------------------------------------
+         * Convenience aliases for common filter sets
+         *-------------------------------------------------------------*/
+
+        template <typename FloatType>
+        using AllFilters = Filters<FloatType,
+            StateVariable,
+            Biquad,
+            Ladder,
+            DiodeLadder,
+            OnePole>;
+
+        template <typename FloatType>
+        using LinearFilters = Filters<FloatType,
+            StateVariable,
+            Biquad,
+            OnePole>;
+
+        template <typename FloatType>
+        using NonlinearFilters = Filters<FloatType,
+            Ladder,
+            DiodeLadder>;
 
     } // namespace Filters
 } // namespace CASPI
 
-#endif // CASPI_FILTER_SELECTOR_H
+#endif // CASPI_FILTERS_H
