@@ -1,8 +1,8 @@
 /*
- * @file test_FilterSelector.cpp
+ * @file test_Filters.cpp
  *
  * Unit tests for:
- *   CASPI::Filters::FilterSelector<FloatType, FilterTopology...>
+ *   CASPI::Filters::Filters<FloatType, FilterTopology...>
  *
  * TEST PLAN
  *
@@ -32,10 +32,7 @@
  *   6.1 ResetZerosAllFilterStates
  */
 
-#include "filters/caspi_FilterSelector.h"
-#include "filters/caspi_StateVariable.h"
-#include "filters/caspi_Biquad.h"
-#include "filters/caspi_Ladder.h"
+#include "filters/caspi_Filters.h"
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -51,12 +48,12 @@ static constexpr float kQval  = 0.707f;
 static constexpr int   kBlock = 4096;
 
 /* A selector using exactly the topologies the spec mentions. */
-using Selector3 = FilterSelector<float, FilterTopology::StateVariable,
+using Selector3 = Filters<float, FilterTopology::StateVariable,
                                           FilterTopology::Biquad,
                                           FilterTopology::Ladder>;
 
 /* A single-topology selector for minimal tests. */
-using Selector1 = FilterSelector<float, FilterTopology::StateVariable>;
+using Selector1 = Filters<float, FilterTopology::StateVariable>;
 
 /* Helper: generate uniform white noise. */
 static std::vector<float> generateNoise (int n, unsigned seed = 42u)
@@ -75,18 +72,18 @@ static std::vector<float> generateNoise (int n, unsigned seed = 42u)
  * Section 1: Construction
  *==========================================================================*/
 
-TEST (FilterSelector, DefaultConstructsWithoutError)
+TEST (Filters, DefaultConstructsWithoutError)
 {
     EXPECT_NO_FATAL_FAILURE ({ Selector3 sel; (void) sel; });
 }
 
-TEST (FilterSelector, ConstructorWithSampleRate)
+TEST (Filters, ConstructorWithSampleRate)
 {
     Selector3 sel (kSr);
     EXPECT_FLOAT_EQ (sel.getSampleRate(), kSr);
 }
 
-TEST (FilterSelector, ConstructorWithInitialTopology)
+TEST (Filters, ConstructorWithInitialTopology)
 {
     Selector3 sel (kSr, FilterTopology::Biquad);
     EXPECT_EQ (sel.getTopology(), FilterTopology::Biquad);
@@ -96,7 +93,7 @@ TEST (FilterSelector, ConstructorWithInitialTopology)
  * Section 2: Topology switching
  *==========================================================================*/
 
-TEST (FilterSelector, SetTopologyUpdatesActive)
+TEST (Filters, SetTopologyUpdatesActive)
 {
     Selector3 sel (kSr);
     sel.setTopology (FilterTopology::Ladder);
@@ -106,7 +103,7 @@ TEST (FilterSelector, SetTopologyUpdatesActive)
     EXPECT_EQ (sel.getTopology(), FilterTopology::StateVariable);
 }
 
-TEST (FilterSelector, SetTopologyZerosNewFilterState)
+TEST (Filters, SetTopologyZerosNewFilterState)
 {
     Selector3 sel (kSr, FilterTopology::StateVariable);
 
@@ -128,7 +125,7 @@ TEST (FilterSelector, SetTopologyZerosNewFilterState)
  * Section 3: Parameter synchronisation
  *==========================================================================*/
 
-TEST (FilterSelector, SetCutoffPropagatesToAllFilters)
+TEST (Filters, SetCutoffPropagatesToAllFilters)
 {
     Selector3 sel (kSr, FilterTopology::StateVariable);
     sel.setCutoff (2000.0f);
@@ -142,14 +139,14 @@ TEST (FilterSelector, SetCutoffPropagatesToAllFilters)
     /* No crash = delegated correctly. */
 }
 
-TEST (FilterSelector, SetQPropagatesToAllFilters)
+TEST (Filters, SetQPropagatesToAllFilters)
 {
     Selector1 sel (kSr);
     sel.setQ (2.0f);
     EXPECT_TRUE (std::isfinite (sel.processSample (1.0f)));
 }
 
-TEST (FilterSelector, SetModePropagatesToAllFilters)
+TEST (Filters, SetModePropagatesToAllFilters)
 {
     Selector1 sel (kSr);
     sel.setMode (FilterMode::HighPass);
@@ -160,9 +157,9 @@ TEST (FilterSelector, SetModePropagatesToAllFilters)
  * Section 4: Process sample
  *==========================================================================*/
 
-TEST (FilterSelector, OutputMatchesDirectFilter)
+TEST (Filters, OutputMatchesDirectFilter)
 {
-    /* Compare FilterSelector<float, StateVariable> with
+    /* Compare Filters<float, StateVariable> with
        Filter<float, StateVariable> directly. */
     Filter<float, FilterTopology::StateVariable> direct (kSr, kFc, kQval, FilterMode::LowPass);
     Selector1 sel (kSr, FilterTopology::StateVariable);
@@ -179,7 +176,7 @@ TEST (FilterSelector, OutputMatchesDirectFilter)
     }
 }
 
-TEST (FilterSelector, ProcessSampleDoesNotAllocate)
+TEST (Filters, ProcessSampleDoesNotAllocate)
 {
     Selector1 sel (kSr);
     /* Warm up — just verify no crash under repeated calls. */
@@ -193,7 +190,7 @@ TEST (FilterSelector, ProcessSampleDoesNotAllocate)
  * Section 5: Dispatch equivalence
  *==========================================================================*/
 
-TEST (FilterSelector, StateVariableDispatchCorrect)
+TEST (Filters, StateVariableDispatchCorrect)
 {
     /* Verify that when StateVariable is active, processSample correctly
        delegates to the StateVariable filter. */
@@ -209,7 +206,7 @@ TEST (FilterSelector, StateVariableDispatchCorrect)
     }
 }
 
-TEST (FilterSelector, BiquadDispatchCorrect)
+TEST (Filters, BiquadDispatchCorrect)
 {
     /* Biquad is a stub (identity pass-through); verify it returns input. */
     Selector3 sel (kSr, FilterTopology::Biquad);
@@ -220,7 +217,7 @@ TEST (FilterSelector, BiquadDispatchCorrect)
     }
 }
 
-TEST (FilterSelector, LadderDispatchCorrect)
+TEST (Filters, LadderDispatchCorrect)
 {
     /* Ladder is a stub (identity pass-through); verify it returns input. */
     Selector3 sel (kSr, FilterTopology::Ladder);
@@ -235,7 +232,7 @@ TEST (FilterSelector, LadderDispatchCorrect)
  * Section 6: Reset
  *==========================================================================*/
 
-TEST (FilterSelector, ResetZerosAllFilterStates)
+TEST (Filters, ResetZerosAllFilterStates)
 {
     Selector1 sel (kSr, FilterTopology::StateVariable);
 
