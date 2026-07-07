@@ -55,10 +55,7 @@
  *
  */
 
-#include "filters/caspi_Filter.h"
-#include "filters/caspi_StateVariable.h"
-#include "filters/caspi_Biquad.h"
-#include "filters/caspi_Ladder.h"
+#include "filters/caspi_Filters.h"
 #include "analysis/caspi_SpectralProfile.h"
 #include <gtest/gtest.h>
 
