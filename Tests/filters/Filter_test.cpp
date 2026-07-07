@@ -4,7 +4,7 @@
  * Unit tests for:
  *   CASPI::Filters::AtomicCoefficients<FloatType, N>
  *   CASPI::Filters::FilterBase<Derived, FloatType, NumStates, NumCoeffs>
- *   CASPI::Filters::SvfFilter<FloatType>
+ *   CASPI::Filters::Filter<FloatType, FilterTopology::StateVariable>
  *
  * TEST STRATEGY
  *
@@ -24,10 +24,10 @@
  *
  * CONSTRUCTION PATTERN
  *
- * SvfFilter contains std::atomic and is non-copyable. All tests construct
+ * Filter contains std::atomic and is non-copyable. All tests construct
  * filters in-place using the full constructor:
  *
- *   SvfFilter<double> f (kSampleRate, kCutoff, kQ, FilterMode::LowPass);
+ *   Filter<double, FilterTopology::StateVariable> f (kSampleRate, kCutoff, kQ, FilterMode::LowPass);
  *
  * There is no factory helper function.
  *
@@ -56,6 +56,9 @@
  */
 
 #include "filters/caspi_Filter.h"
+#include "filters/caspi_StateVariable.h"
+#include "filters/caspi_Biquad.h"
+#include "filters/caspi_Ladder.h"
 #include "analysis/caspi_SpectralProfile.h"
 #include <gtest/gtest.h>
 
@@ -71,6 +74,53 @@ using CASPI::WindowType;
 /*
  * Test constants
  */
+
+/*
+ * Section 0: FilterTopology and FilterTraits
+ */
+TEST (FilterTopology, EnumValuesAreDistinct)
+{
+    EXPECT_NE (static_cast<int> (FilterTopology::StateVariable),
+               static_cast<int> (FilterTopology::Biquad));
+    EXPECT_NE (static_cast<int> (FilterTopology::StateVariable),
+               static_cast<int> (FilterTopology::Ladder));
+    EXPECT_NE (static_cast<int> (FilterTopology::Biquad),
+               static_cast<int> (FilterTopology::Ladder));
+}
+
+TEST (FilterTraits, StateVariableHasCorrectSizes)
+{
+    EXPECT_EQ (FilterTraits<FilterTopology::StateVariable>::NumStates, 2u);
+    EXPECT_EQ (FilterTraits<FilterTopology::StateVariable>::NumCoeffs, 5u);
+}
+
+TEST (FilterTraits, BiquadHasCorrectSizes)
+{
+    EXPECT_EQ (FilterTraits<FilterTopology::Biquad>::NumStates, 4u);
+    EXPECT_EQ (FilterTraits<FilterTopology::Biquad>::NumCoeffs, 5u);
+}
+
+TEST (FilterTraits, LadderHasCorrectSizes)
+{
+    EXPECT_EQ (FilterTraits<FilterTopology::Ladder>::NumStates, 4u);
+    EXPECT_EQ (FilterTraits<FilterTopology::Ladder>::NumCoeffs, 6u);
+}
+
+TEST (FilterTraits, FilterTemplateCanBeInstantiated)
+{
+    /* Verify the primary Filter template compiles for each topology. */
+    Filter<float, FilterTopology::StateVariable> f1;
+    Filter<float, FilterTopology::Biquad>        f2;
+    Filter<float, FilterTopology::Ladder>        f3;
+    (void) f1;
+    (void) f2;
+    (void) f3;
+}
+
+/*
+ * Test constants
+ */
+
 static constexpr double kSampleRate = 48000.0;
 static constexpr double kCutoff     = 1000.0;
 static constexpr double kQ          = 0.7071067811865476;
