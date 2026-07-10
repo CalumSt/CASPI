@@ -389,3 +389,4 @@ TEST (StateVariableFilter_Analytic, ResponseChangesWithMode)
     EXPECT_LT (hp.getFrequencyResponse (kCutoff / 4.0), 0.1);
     EXPECT_NEAR (lp.getFrequencyResponse (kCutoff), hp.getFrequencyResponse (kCutoff), 0.02);
 }
+
