@@ -49,6 +49,10 @@ set(SOURCES
         maths/Maths_test.cpp
         filters/Filter_test.cpp
         filters/StateVariableFilter_test.cpp
+        filters/BiquadFilter_test.cpp
+        filters/LadderFilter_test.cpp
+        filters/DiodeLadderFilter_test.cpp
+        filters/OnePoleFilter_test.cpp
         filters/Filters_test.cpp
 )
 
