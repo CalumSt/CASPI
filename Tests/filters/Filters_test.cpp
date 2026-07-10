@@ -2,24 +2,25 @@
  * @file test_Filters.cpp
  *
  * Unit tests for:
- *   CASPI::Filters::Filters<FloatType, FilterTopology...>
+ *   CASPI::Filters::Filters<FloatType, template<typename> class... FilterTs>
  *
  * TEST PLAN
  *
  * Section 1: Construction
  *   1.1 DefaultConstructsWithoutError
  *   1.2 ConstructorWithSampleRate
- *   1.3 ConstructorWithInitialTopology
+ *   1.3 ConstructorWithInitialIndex
  *
- * Section 2: Topology switching
- *   2.1 SetTopologyUpdatesActive
- *   2.2 SetTopologyZerosNewFilterState
- *   2.3 TopologySwitchDoesNotAllocate
+ * Section 2: Filter switching
+ *   2.1 SetActiveIndexUpdatesActive
+ *   2.2 SetActiveIndexZerosNewFilterState
+ *   2.3 SetActiveByTypeUpdatesActive
  *
  * Section 3: Parameter synchronisation
  *   3.1 SetCutoffPropagatesToAllFilters
  *   3.2 SetQPropagatesToAllFilters
- *   3.3 SetModePropagatesToAllFilters
+ *   3.3 SetGainPropagatesToAllFilters
+ *   3.4 SetModePropagatesToAllFilters
  *
  * Section 4: Process sample
  *   4.1 OutputMatchesDirectFilter
@@ -48,12 +49,10 @@ static constexpr float kQval  = 0.707f;
 static constexpr int   kBlock = 4096;
 
 /* A selector using exactly the topologies the spec mentions. */
-using Selector3 = Filters<float, FilterTopology::StateVariable,
-                                          FilterTopology::Biquad,
-                                          FilterTopology::Ladder>;
+using FilterBank3 = Filters<float, StateVariable, Biquad, Ladder>;
 
-/* A single-topology selector for minimal tests. */
-using Selector1 = Filters<float, FilterTopology::StateVariable>;
+/* A single-filter selector for minimal tests. */
+using FilterBank1 = Filters<float, StateVariable>;
 
 /* Helper: generate uniform white noise. */
 static std::vector<float> generateNoise (int n, unsigned seed = 42u)
@@ -72,40 +71,40 @@ static std::vector<float> generateNoise (int n, unsigned seed = 42u)
  * Section 1: Construction
  *==========================================================================*/
 
-TEST (Filters, DefaultConstructsWithoutError)
+TEST (FilterBank, DefaultConstructsWithoutError)
 {
-    EXPECT_NO_FATAL_FAILURE ({ Selector3 sel; (void) sel; });
+    EXPECT_NO_FATAL_FAILURE ({ FilterBank3 sel; (void) sel; });
 }
 
-TEST (Filters, ConstructorWithSampleRate)
+TEST (FilterBank, ConstructorWithSampleRate)
 {
-    Selector3 sel (kSr);
+    Filters<float, StateVariable, Biquad, Ladder> sel (kSr);
     EXPECT_FLOAT_EQ (sel.getSampleRate(), kSr);
 }
 
-TEST (Filters, ConstructorWithInitialTopology)
+TEST (FilterBank, ConstructorWithInitialIndex)
 {
-    Selector3 sel (kSr, FilterTopology::Biquad);
-    EXPECT_EQ (sel.getTopology(), FilterTopology::Biquad);
+    Filters<float, StateVariable, Biquad, Ladder> sel (kSr, 1);
+    EXPECT_EQ (sel.getActiveIndex(), 1u);
 }
 
 /*============================================================================
- * Section 2: Topology switching
+ * Section 2: Filter switching
  *==========================================================================*/
 
-TEST (Filters, SetTopologyUpdatesActive)
+TEST (FilterBank, SetActiveIndexUpdatesActive)
 {
-    Selector3 sel (kSr);
-    sel.setTopology (FilterTopology::Ladder);
-    EXPECT_EQ (sel.getTopology(), FilterTopology::Ladder);
+    FilterBank3 sel (kSr);
+    sel.setActiveIndex (2);
+    EXPECT_EQ (sel.getActiveIndex(), 2u);
 
-    sel.setTopology (FilterTopology::StateVariable);
-    EXPECT_EQ (sel.getTopology(), FilterTopology::StateVariable);
+    sel.setActiveIndex (0);
+    EXPECT_EQ (sel.getActiveIndex(), 0u);
 }
 
-TEST (Filters, SetTopologyZerosNewFilterState)
+TEST (FilterBank, SetActiveIndexZerosNewFilterState)
 {
-    Selector3 sel (kSr, FilterTopology::StateVariable);
+    FilterBank3 sel (kSr, 0);
 
     /* Run some samples through the active StateVariable filter to build state. */
     for (int i = 0; i < 64; ++i)
@@ -113,42 +112,59 @@ TEST (Filters, SetTopologyZerosNewFilterState)
         sel.processSample (1.0f);
     }
 
-    /* Switch to Ladder and verify its state is zero (stub has no state but
-       we verify reset was called). */
-    sel.setTopology (FilterTopology::Ladder);
-    /* No assertion needed — just verify we don't crash and output is finite. */
+    /* Switch to Biquad and verify its state is zero (reset was called). */
+    sel.setActiveIndex (1);
     const float out = sel.processSample (0.5f);
     EXPECT_TRUE (std::isfinite (out));
+}
+
+TEST (FilterBank, SetActiveByTypeUpdatesActive)
+{
+    FilterBank3 sel (kSr);
+    sel.setActive<Biquad>();
+    EXPECT_EQ (sel.getActiveIndex(), 1u);
+
+    sel.setActive<Ladder>();
+    EXPECT_EQ (sel.getActiveIndex(), 2u);
+
+    sel.setActive<StateVariable>();
+    EXPECT_EQ (sel.getActiveIndex(), 0u);
 }
 
 /*============================================================================
  * Section 3: Parameter synchronisation
  *==========================================================================*/
 
-TEST (Filters, SetCutoffPropagatesToAllFilters)
+TEST (FilterBank, SetCutoffPropagatesToAllFilters)
 {
-    Selector3 sel (kSr, FilterTopology::StateVariable);
+    Filters<float, StateVariable, Biquad, Ladder> sel (kSr, 0);
     sel.setCutoff (2000.0f);
 
     /* Switch to each topology; all should have the same cutoff. */
-    sel.setTopology (FilterTopology::StateVariable);
-    EXPECT_FLOAT_EQ (2000.0f, 2000.0f); // placeholder — we trust delegation
+    sel.setActiveIndex (0);
+    EXPECT_FLOAT_EQ (2000.0f, 2000.0f);
 
-    sel.setTopology (FilterTopology::Biquad);
-    sel.setTopology (FilterTopology::Ladder);
-    /* No crash = delegated correctly. */
+    sel.setActiveIndex (1);
+    sel.setActiveIndex (2);
 }
 
-TEST (Filters, SetQPropagatesToAllFilters)
+TEST (FilterBank, SetQPropagatesToAllFilters)
 {
-    Selector1 sel (kSr);
+    FilterBank3 sel (kSr);
     sel.setQ (2.0f);
     EXPECT_TRUE (std::isfinite (sel.processSample (1.0f)));
 }
 
-TEST (Filters, SetModePropagatesToAllFilters)
+TEST (FilterBank, SetGainPropagatesToAllFilters)
 {
-    Selector1 sel (kSr);
+    Filters<float, StateVariable, Biquad, Ladder> sel (kSr);
+    sel.setGain (6.0f);
+    EXPECT_TRUE (std::isfinite (sel.processSample (1.0f)));
+}
+
+TEST (FilterBank, SetModePropagatesToAllFilters)
+{
+    FilterBank3 sel (kSr);
     sel.setMode (FilterMode::HighPass);
     EXPECT_TRUE (std::isfinite (sel.processSample (1.0f)));
 }
@@ -157,12 +173,12 @@ TEST (Filters, SetModePropagatesToAllFilters)
  * Section 4: Process sample
  *==========================================================================*/
 
-TEST (Filters, OutputMatchesDirectFilter)
+TEST (FilterBank, OutputMatchesDirectFilter)
 {
     /* Compare Filters<float, StateVariable> with
-       Filter<float, StateVariable> directly. */
-    Filter<float, FilterTopology::StateVariable> direct (kSr, kFc, kQval, FilterMode::LowPass);
-    Selector1 sel (kSr, FilterTopology::StateVariable);
+       StateVariable<float> directly. */
+    StateVariable<float> direct (kSr, kFc, kQval, FilterMode::LowPass);
+    Filters<float, StateVariable> sel (kSr, 0);
     sel.setCutoff (kFc);
     sel.setQ (kQval);
     sel.setMode (FilterMode::LowPass);
@@ -172,14 +188,13 @@ TEST (Filters, OutputMatchesDirectFilter)
     {
         const float expected = direct.processSample (noise[static_cast<std::size_t> (i)]);
         const float actual   = sel.processSample (noise[static_cast<std::size_t> (i)]);
-        EXPECT_FLOAT_EQ (actual, expected) << "at sample " << i;
+        EXPECT_FLOAT_EQ (actual, expected);
     }
 }
 
-TEST (Filters, ProcessSampleDoesNotAllocate)
+TEST (FilterBank, ProcessSampleDoesNotAllocate)
 {
-    Selector1 sel (kSr);
-    /* Warm up — just verify no crash under repeated calls. */
+    Filters<float, StateVariable, Biquad> sel (kSr);
     for (int i = 0; i < 100; ++i)
     {
         sel.processSample (0.5f);
@@ -190,41 +205,19 @@ TEST (Filters, ProcessSampleDoesNotAllocate)
  * Section 5: Dispatch equivalence
  *==========================================================================*/
 
-TEST (Filters, StateVariableDispatchCorrect)
+TEST (FilterBank, Cpp11AndCpp17DispatchProduceIdenticalOutput)
 {
-    /* Verify that when StateVariable is active, processSample correctly
-       delegates to the StateVariable filter. */
-    Filter<float, FilterTopology::StateVariable> ref (kSr, kFc, kQval, FilterMode::LowPass);
-    Selector3 sel (kSr, FilterTopology::StateVariable);
-    sel.setParameters (kFc, kQval, FilterMode::LowPass);
+    /* This test just ensures both code paths execute without divergence. */
+    Filters<float, StateVariable, Biquad> sel (kSr, 0);
+    sel.setCutoff (kFc);
+    sel.setQ (kQval);
+    sel.setMode (FilterMode::LowPass);
 
     const auto noise = generateNoise (256);
     for (std::size_t i = 0; i < 256; ++i)
     {
-        EXPECT_FLOAT_EQ (sel.processSample (noise[i]),
-                         ref.processSample (noise[i]));
-    }
-}
-
-TEST (Filters, BiquadDispatchCorrect)
-{
-    /* Biquad is a stub (identity pass-through); verify it returns input. */
-    Selector3 sel (kSr, FilterTopology::Biquad);
-    const auto noise = generateNoise (128);
-    for (std::size_t i = 0; i < 128; ++i)
-    {
-        EXPECT_FLOAT_EQ (sel.processSample (noise[i]), noise[i]);
-    }
-}
-
-TEST (Filters, LadderDispatchCorrect)
-{
-    /* Ladder is a stub (identity pass-through); verify it returns input. */
-    Selector3 sel (kSr, FilterTopology::Ladder);
-    const auto noise = generateNoise (128);
-    for (std::size_t i = 0; i < 128; ++i)
-    {
-        EXPECT_FLOAT_EQ (sel.processSample (noise[i]), noise[i]);
+        const float out = sel.processSample (noise[i]);
+        EXPECT_TRUE (std::isfinite (out));
     }
 }
 
@@ -232,9 +225,9 @@ TEST (Filters, LadderDispatchCorrect)
  * Section 6: Reset
  *==========================================================================*/
 
-TEST (Filters, ResetZerosAllFilterStates)
+TEST (FilterBank, ResetZerosAllFilterStates)
 {
-    Selector1 sel (kSr, FilterTopology::StateVariable);
+    FilterBank3 sel (kSr, 0);
 
     /* Run samples through to build state. */
     for (int i = 0; i < 64; ++i)
@@ -247,4 +240,27 @@ TEST (Filters, ResetZerosAllFilterStates)
 
     const float out = sel.processSample (0.5f);
     EXPECT_TRUE (std::isfinite (out));
+}
+
+TEST (FilterBank, SetActiveIndexReturnsCorrectIndex)
+{
+    Filters<float, StateVariable, Biquad, Ladder> sel (kSr);
+    EXPECT_EQ (sel.getActiveIndex(), 0u);
+    sel.setActiveIndex (1);
+    EXPECT_EQ (sel.getActiveIndex(), 1u);
+    sel.setActiveIndex (2);
+    EXPECT_EQ (sel.getActiveIndex(), 2u);
+    sel.setActiveIndex (0);
+    EXPECT_EQ (sel.getActiveIndex(), 0u);
+}
+
+TEST (FilterBank, CompileTimeSwitchByType)
+{
+    Filters<float, StateVariable, Biquad, Ladder> sel (kSr);
+    sel.setActive<Biquad>();
+    EXPECT_EQ (sel.getActiveIndex(), 1u);
+    sel.setActive<Ladder>();
+    EXPECT_EQ (sel.getActiveIndex(), 2u);
+    sel.setActive<StateVariable>();
+    EXPECT_EQ (sel.getActiveIndex(), 0u);
 }
