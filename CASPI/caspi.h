@@ -34,8 +34,7 @@
 #include "oscillators/caspi_Noise.h"
 
 // Filters
-#include "filters/caspi_OnePoleFilter.h"
-#include "filters/caspi_SvfFilter.h"
+#include "filters/caspi_Filters.h"
 
 // Gain
 #include "gain/caspi_Gain.h"
