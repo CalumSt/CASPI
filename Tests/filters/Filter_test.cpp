@@ -4,7 +4,6 @@
  * Unit tests for:
  *   CASPI::Filters::AtomicCoefficients<FloatType, N>
  *   CASPI::Filters::FilterBase<Derived, FloatType, NumStates, NumCoeffs>
- *   CASPI::Filters::SvfFilter<FloatType>
  *
  * TEST STRATEGY
  *
@@ -24,10 +23,10 @@
  *
  * CONSTRUCTION PATTERN
  *
- * SvfFilter contains std::atomic and is non-copyable. All tests construct
+ * Filter contains std::atomic and is non-copyable. All tests construct
  * filters in-place using the full constructor:
  *
- *   SvfFilter<double> f (kSampleRate, kCutoff, kQ, FilterMode::LowPass);
+ *   StateVariable<double> f (kSampleRate, kCutoff, kQ, FilterMode::LowPass);
  *
  * There is no factory helper function.
  *
@@ -55,7 +54,7 @@
  *
  */
 
-#include "filters/caspi_Filter.h"
+#include "filters/caspi_Filters.h"
 #include "analysis/caspi_SpectralProfile.h"
 #include <gtest/gtest.h>
 
@@ -71,6 +70,7 @@ using CASPI::WindowType;
 /*
  * Test constants
  */
+
 static constexpr double kSampleRate = 48000.0;
 static constexpr double kCutoff     = 1000.0;
 static constexpr double kQ          = 0.7071067811865476;
