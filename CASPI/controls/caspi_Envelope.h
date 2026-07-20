@@ -159,7 +159,7 @@ namespace CASPI
         {
             public:
                 ADSR()
-                    : Graph::AudioNode<ADSR<FloatType>, FloatType> (0, 1)
+                    : Graph::AudioNode<ADSR<FloatType>, FloatType> (1, 1)
                 {
                 }
 
@@ -337,16 +337,20 @@ namespace CASPI
                  */
                 void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
                 {
-                    (void) ctx;
                     auto& buf = this->outputBuffer;
                     const auto F = buf.numFrames();
                     const auto C = buf.numChannels();
 
+                    const auto* audioIn = ctx.getAudioInput (this->getId(), 0);  // nullptr if unconnected
+
                     for (std::size_t f = 0; f < F; ++f)
                     {
-                        const FloatType s = render();
+                        const FloatType env = render();
                         for (std::size_t ch = 0; ch < C; ++ch)
-                            buf.sample (ch, f) = s;
+                        {
+                            const FloatType carrier = (audioIn != nullptr) ? audioIn->sample (ch, f) : FloatType (1);
+                            buf.sample (ch, f) = carrier * env;  // VCA when connected, raw envelope otherwise
+                        }
                     }
                 }
 
