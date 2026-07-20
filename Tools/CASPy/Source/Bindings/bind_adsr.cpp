@@ -73,6 +73,7 @@ void bind_adsr(py::module_& m)
 
     // Bind ADSR class
     py::class_<ADSRFloat, NodeBase_t, ADSRFloatPtr_t>(adsr, "ADSR",
+     py::dynamic_attr(),
         R"pbdoc(
             ADSR (Attack-Decay-Sustain-Release) envelope generator.
 
