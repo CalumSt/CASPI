@@ -63,7 +63,8 @@ void bind_noise (py::module_& m)
     // -----------------------------------------------------------------------
 
     py::class_<NoiseOscWhite, NodeBase_t, NoiseOscWhitePtr_t> (n_m, "NoiseOscillatorWhite",
-        R"pbdoc(
+      py::dynamic_attr(),  
+      R"pbdoc(
             White noise oscillator (xoshiro128+, float32).
 
             Power spectrum: flat.
