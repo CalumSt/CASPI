@@ -20,32 +20,39 @@
 
 namespace py = pybind11;
 
-using namespace CASPI;
-using FiltNS = CASPI::Filters;
+using F = float;
+using NodeBase_t = CASPI::Graph::NodeBase<float>;
+using FilterMode = CASPI::Filters::FilterMode;
 
-using F          = float;
-using NodeBase_t = Graph::NodeBase<F>;
-using Svf_t      = FiltNS::StateVariable<F>;
-using Bq_t       = FiltNS::Biquad<F>;
-using Lad_t      = FiltNS::Ladder<F>;
-using DLad_t     = FiltNS::DiodeLadder<F>;
-using Op_t       = FiltNS::OnePole<F>;
-using FB_t       = FiltNS::Filters<F, FiltNS::StateVariable, FiltNS::Biquad, FiltNS::Ladder, FiltNS::DiodeLadder, FiltNS::OnePole>;
+// Concrete type aliases for float instantiations
+using Svf_t  = CASPI::Filters::StateVariable<float>;
+using Bq_t   = CASPI::Filters::Biquad<float>;
+using Lad_t  = CASPI::Filters::Ladder<float>;
+using DLad_t = CASPI::Filters::DiodeLadder<float>;
+using Op_t   = CASPI::Filters::OnePole<float>;
+
+// FilterBank with fully qualified template template parameters
+using FB_t = CASPI::Filters::Filters<float,
+    CASPI::Filters::StateVariable,
+    CASPI::Filters::Biquad,
+    CASPI::Filters::Ladder,
+    CASPI::Filters::DiodeLadder,
+    CASPI::Filters::OnePole>;
 
 void bind_filters (py::module_& m)
 {
     /*----------------------------------------------------------------------
      * FilterMode enum
      *--------------------------------------------------------------------*/
-    py::enum_<FiltNS::FilterMode> (m, "FilterMode")
-        .value ("LowPass",   FiltNS::FilterMode::LowPass)
-        .value ("HighPass",  FiltNS::FilterMode::HighPass)
-        .value ("BandPass",  FiltNS::FilterMode::BandPass)
-        .value ("Notch",     FiltNS::FilterMode::Notch)
-        .value ("Peak",      FiltNS::FilterMode::Peak)
-        .value ("AllPass",   FiltNS::FilterMode::AllPass)
-        .value ("LowShelf",  FiltNS::FilterMode::LowShelf)
-        .value ("HighShelf", FiltNS::FilterMode::HighShelf)
+    py::enum_<FilterMode> (m, "FilterMode")
+        .value ("LowPass",   FilterMode::LowPass)
+        .value ("HighPass",  FilterMode::HighPass)
+        .value ("BandPass",  FilterMode::BandPass)
+        .value ("Notch",     FilterMode::Notch)
+        .value ("Peak",      FilterMode::Peak)
+        .value ("AllPass",   FilterMode::AllPass)
+        .value ("LowShelf",  FilterMode::LowShelf)
+        .value ("HighShelf", FilterMode::HighShelf)
         .export_values();
 
     /*----------------------------------------------------------------------
@@ -68,12 +75,12 @@ void bind_filters (py::module_& m)
 
         .def (py::init ([] () { return new Svf_t(); }),
               "Default constructor. Call set_parameters() before rendering.")
-        .def (py::init ([] (F sr, F cutoff, F q, FiltNS::FilterMode m)
+        .def (py::init ([] (F sr, F cutoff, F q, FilterMode m)
               { return new Svf_t (sr, cutoff, q, m); }),
               py::arg ("sample_rate"),
               py::arg ("cutoff"),
               py::arg ("q")    = F (0.7071067811865476f),
-              py::arg ("mode") = FiltNS::FilterMode::LowPass,
+              py::arg ("mode") = FilterMode::LowPass,
               "Construct with sample rate, cutoff, Q, and mode.")
 
         .def ("set_sample_rate",  &Svf_t::setSampleRate, py::arg ("sr"))
@@ -81,9 +88,8 @@ void bind_filters (py::module_& m)
         .def ("set_q",            &Svf_t::setQ,          py::arg ("q"))
         .def ("set_mode",         &Svf_t::setMode,       py::arg ("mode"))
         .def ("set_parameters",
-            [] (Svf_t& self, F hz, F q, FiltNS::FilterMode m) { self.setParameters (hz, q, m); },
-            py::arg ("hz"), py::arg ("q"), py::arg ("mode") = FiltNS::FilterMode::LowPass,
-            "Set all parameters at once.")
+            [] (Svf_t& self, F hz, F q, FilterMode m) { self.setParameters (hz, q, m); },
+            py::arg ("hz"), py::arg ("q"), py::arg ("mode") = FilterMode::LowPass)
         .def ("reset", &Svf_t::reset)
 
         .def_property ("cutoff",
@@ -94,7 +100,7 @@ void bind_filters (py::module_& m)
             [] (Svf_t& s, F v)  { s.setQ (v); })
         .def_property ("mode",
             [] (const Svf_t& s) { return s.getMode(); },
-            [] (Svf_t& s, FiltNS::FilterMode mode) { s.setMode (mode); })
+            [] (Svf_t& s, FilterMode mode) { s.setMode (mode); })
 
         .def ("frequency_response", &Svf_t::getFrequencyResponse, py::arg ("freq"),
               "Analytic |H(f)| at freq Hz for the current mode.")
@@ -125,7 +131,7 @@ void bind_filters (py::module_& m)
                 }
             },
             py::arg ("samples"),
-            "Process a 1-D float32 numpy array in-place, overwriting the input.")
+            "Process a 1-D float32 numpy array in-place, overwriting the input.");
 
     /*----------------------------------------------------------------------
      * Biquad
@@ -140,12 +146,12 @@ void bind_filters (py::module_& m)
 
         .def (py::init ([] () { return new Bq_t(); }),
               "Default constructor.")
-        .def (py::init ([] (F sr, F cutoff, F q, FiltNS::FilterMode m, F gain)
+        .def (py::init ([] (F sr, F cutoff, F q, FilterMode m, F gain)
               { return new Bq_t (sr, cutoff, q, m, gain); }),
               py::arg ("sample_rate"),
               py::arg ("cutoff"),
               py::arg ("q")    = F (0.7071067811865476f),
-              py::arg ("mode") = FiltNS::FilterMode::LowPass,
+              py::arg ("mode") = FilterMode::LowPass,
               py::arg ("gain") = F (0),
               "Construct with sample rate, cutoff, Q, mode, and gain (dB).")
 
@@ -155,9 +161,9 @@ void bind_filters (py::module_& m)
         .def ("set_mode",         &Bq_t::setMode,       py::arg ("mode"))
         .def ("set_gain",         &Bq_t::setGain,       py::arg ("gain_db"))
         .def ("set_parameters",
-            [] (Bq_t& self, F hz, F q, FiltNS::FilterMode m, F gain)
+            [] (Bq_t& self, F hz, F q, FilterMode m, F gain)
             { self.setParameters (hz, q, m); self.setGain (gain); },
-            py::arg ("hz"), py::arg ("q"), py::arg ("mode") = FiltNS::FilterMode::LowPass,
+            py::arg ("hz"), py::arg ("q"), py::arg ("mode") = FilterMode::LowPass,
             py::arg ("gain") = F (0))
         .def ("reset", &Bq_t::reset)
 
@@ -172,7 +178,7 @@ void bind_filters (py::module_& m)
             [] (Bq_t& s, F v)  { s.setGain (v); })
         .def_property ("mode",
             [] (const Bq_t& s) { return s.getMode(); },
-            [] (Bq_t& s, FiltNS::FilterMode mode) { s.setMode (mode); })
+            [] (Bq_t& s, FilterMode mode) { s.setMode (mode); })
 
         .def ("frequency_response", &Bq_t::getFrequencyResponse, py::arg ("freq"),
               "Analytic |H(f)| at freq Hz for the current mode/coeffs.")
@@ -203,7 +209,7 @@ void bind_filters (py::module_& m)
                 }
             },
             py::arg ("samples"),
-            "Process a 1-D float32 numpy array in-place, overwriting the input.")
+            "Process a 1-D float32 numpy array in-place, overwriting the input.");
 
     /*----------------------------------------------------------------------
      * Ladder (Moog)
@@ -264,7 +270,7 @@ void bind_filters (py::module_& m)
                 }
             },
             py::arg ("samples"),
-            "Process a 1-D float32 numpy array in-place, overwriting the input.")
+            "Process a 1-D float32 numpy array in-place, overwriting the input.");
 
     /*----------------------------------------------------------------------
      * DiodeLadder
@@ -325,7 +331,7 @@ void bind_filters (py::module_& m)
                 }
             },
             py::arg ("samples"),
-            "Process a 1-D float32 numpy array in-place, overwriting the input.")
+            "Process a 1-D float32 numpy array in-place, overwriting the input.");
 
     /*----------------------------------------------------------------------
      * OnePole
@@ -340,11 +346,11 @@ void bind_filters (py::module_& m)
 
         .def (py::init ([] () { return new Op_t(); }),
               "Default constructor.")
-        .def (py::init ([] (F sr, F cutoff, FiltNS::FilterMode m)
+        .def (py::init ([] (F sr, F cutoff, FilterMode m)
               { return new Op_t (sr, cutoff, m); }),
               py::arg ("sample_rate"),
               py::arg ("cutoff"),
-              py::arg ("mode") = FiltNS::FilterMode::LowPass,
+              py::arg ("mode") = FilterMode::LowPass,
               "Construct with sample rate, cutoff, and mode (LP/HP).")
 
         .def ("set_sample_rate",  &Op_t::setSampleRate, py::arg ("sr"))
@@ -357,7 +363,7 @@ void bind_filters (py::module_& m)
             [] (Op_t& s, F v)  { s.setCutoff (v); })
         .def_property ("mode",
             [] (const Op_t& s) { return s.getMode(); },
-            [] (Op_t& s, FiltNS::FilterMode m) { s.setMode (m); })
+            [] (Op_t& s, FilterMode m) { s.setMode (m); })
 
         .def ("frequency_response", &Op_t::getFrequencyResponse, py::arg ("freq"),
               "Analytic |H(f)| at freq Hz.")
@@ -388,7 +394,7 @@ void bind_filters (py::module_& m)
                 }
             },
             py::arg ("samples"),
-            "Process a 1-D float32 numpy array in-place, overwriting the input.")
+            "Process a 1-D float32 numpy array in-place, overwriting the input.");
 
     /*----------------------------------------------------------------------
      * FilterBank (runtime-switchable multi-filter)
@@ -457,7 +463,7 @@ void bind_filters (py::module_& m)
               "Runtime switch by pack index.")
         .def ("get_active_index", &FB_t::getActiveIndex,
               "Read the active filter index.")
-        .def ("set_active", [] (FB_t& self) { self.setActive<FiltNS::Biquad>(); },
+        .def ("set_active", [] (FB_t& self) { self.setActive<CASPI::Filters::Biquad>(); },
               "Compile-time switch to Biquad (example).")
 
         .def ("set_cutoff",       &FB_t::setCutoff,       py::arg ("hz"))
@@ -465,8 +471,8 @@ void bind_filters (py::module_& m)
         .def ("set_gain",         &FB_t::setGain,         py::arg ("gain_db"))
         .def ("set_mode",         &FB_t::setMode,         py::arg ("mode"))
         .def ("set_parameters",
-            [] (FB_t& self, F hz, F q, FiltNS::FilterMode m) { self.setParameters (hz, q, m); },
-            py::arg ("hz"), py::arg ("q"), py::arg ("mode") = FiltNS::FilterMode::LowPass)
+            [] (FB_t& self, F hz, F q, FilterMode m) { self.setParameters (hz, q, m); },
+            py::arg ("hz"), py::arg ("q"), py::arg ("mode") = FilterMode::LowPass)
 
         .def_property ("cutoff",
             [] (const FB_t& s) { return s.getCutoff(); },
@@ -479,7 +485,7 @@ void bind_filters (py::module_& m)
             [] (FB_t& s, F v)  { s.setGain (v); })
         .def_property ("mode",
             [] (const FB_t& s) { return s.getMode(); },
-            [] (FB_t& s, FiltNS::FilterMode m) { s.setMode (m); })
+            [] (FB_t& s, FilterMode m) { s.setMode (m); })
 
         .def_property_readonly ("active_index", &FB_t::getActiveIndex)
         .def_property_readonly ("sample_rate", &FB_t::getSampleRate)
@@ -487,18 +493,18 @@ void bind_filters (py::module_& m)
         .def_property_readonly ("q",           [] (const FB_t& s) { return s.getQ(); })
         .def_property_readonly ("gain",        [] (const FB_t& s) { return s.getGainDb(); })
         .def_property_readonly ("mode",        [] (const FB_t& s) { return s.getMode(); })
-        .def_property_readonly ("num_filters", [] (const FB_t&) { return FB_t::FilterTuple::size(); });
+        .def_property_readonly ("num_filters", [] (const FB_t&) { return std::tuple_size<typename FB_t::FilterTuple>::value; });
 
     /*----------------------------------------------------------------------
      * Convenience type aliases at module level
      *--------------------------------------------------------------------*/
     m.attr ("FilterBank3") = py::cpp_function (
-        [] (F sr, std::size_t idx = 0) { return new Filters<F, FiltNS::StateVariable, FiltNS::Biquad, FiltNS::Ladder> (sr, idx); },
+        [] (F sr, std::size_t idx = 0) { return new CASPI::Filters::Filters<F, CASPI::Filters::StateVariable, CASPI::Filters::Biquad, CASPI::Filters::Ladder> (sr, idx); },
         py::arg ("sample_rate"), py::arg ("initial_index") = 0,
         "FilterBank with StateVariable, Biquad, Ladder");
 
     m.attr ("FilterBank5") = py::cpp_function (
-        [] (F sr, std::size_t idx = 0) { return new Filters<F, FiltNS::StateVariable, FiltNS::Biquad, FiltNS::Ladder, FiltNS::DiodeLadder, FiltNS::OnePole> (sr, idx); },
+        [] (F sr, std::size_t idx = 0) { return new CASPI::Filters::Filters<F, CASPI::Filters::StateVariable, CASPI::Filters::Biquad, CASPI::Filters::Ladder, CASPI::Filters::DiodeLadder, CASPI::Filters::OnePole> (sr, idx); },
         py::arg ("sample_rate"), py::arg ("initial_index") = 0,
         "FilterBank with all 5 topologies");
 }
