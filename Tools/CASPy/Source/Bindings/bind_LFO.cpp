@@ -45,6 +45,7 @@ void bind_lfo (py::module_& m)
     py::object node_base = m.attr("NodeBase");
 
     py::class_<LfoF,NodeBase_t, LfoFPtr_t> (lfo_m, "LFO",
+        py::dynamic_attr(),
         R"pbdoc(
             Low-frequency oscillator (float32).
 
