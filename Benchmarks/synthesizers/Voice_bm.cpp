@@ -16,7 +16,7 @@
 
 #include "controls/caspi_Envelope.h"
 #include "core/caspi_Graph.h"
-#include "filters/caspi_SvfFilter.h"
+#include "filters/caspi_StateVariable.h"
 #include "oscillators/caspi_BlepOscillator.h"
 #include "synthesizers/caspi_Engine.h"
 #include "synthesizers/caspi_Voice.h"
@@ -61,7 +61,7 @@ namespace
     };
 
     /*----------------------------------------------------------------------
-     * Builds one voice: BlepOscillator -> SvfFilter -> MultiplyNode(ADSR).
+     * Builds one voice: BlepOscillator -> StateVariable -> MultiplyNode(ADSR).
      * Representative of a minimal subtractive-synth voice.
      *---------------------------------------------------------------------*/
     VoiceConfig<float> makeVoice (float frequencyHz)
@@ -72,7 +72,7 @@ namespace
         osc.node.setShape (Oscillators::WaveShape::Saw);
         osc.node.setFrequency (frequencyHz);
 
-        auto filter = graph.emplace<Filters::SvfFilter<float>>();
+        auto filter = graph.emplace<Filters::StateVariable<float>>();
         filter.node.setCutoff (1500.f);
         filter.node.setQ (0.7071067811865476f);
 
