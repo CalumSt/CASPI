@@ -2,17 +2,56 @@
 \page benchmarks Benchmarks
 
 SIMD buffer operation benchmarks across buffer sizes 64–65536 elements.
-Results updated weekly or on each tagged release.
+Results are updated weekly, on each tagged release, and checked (but not
+recorded) on pull requests that touch benchmarked code.
+
+Each benchmark compares three implementations where applicable: `SIMD` (this
+library's `ops::` path), `AutoVec` (a plain loop the compiler is free to
+auto-vectorise), and `Scalar` (a plain loop with a dependency chain that
+blocks vectorisation). Buffer sizes span L1-hot (64), a typical real-time
+audio block (512), L2/L3 working sets (2048, 16384), and beyond L3 on most
+desktop CPUs (65536).
+
+Runs execute on a shared GitHub Actions runner, so absolute numbers carry
+run-to-run noise from CPU frequency scaling and neighbouring VM load — treat
+them as indicative, not a precise hardware benchmark. Relative comparisons
+(SIMD vs. Scalar, or the trend across releases below) are far more reliable
+than any single absolute value.
+
+Below the SIMD micro-benchmarks, a second section tracks real-time headroom
+for the composite classes that actually run on an audio thread: a single
+voice's signal chain (`AudioGraph` — oscillator, filter, ADSR-modulated VCA),
+polyphonic mixdown (`VoiceManager`), and full MIDI dispatch (`Engine`).
+VoiceManager and Engine benchmarks use a fixed 512-frame stereo block at
+48kHz; the dashed reference line marks the 48000/512 ≈ 93.75 blocks/sec a
+callback must sustain to keep up with real-time at that block size — a
+benchmark trending toward that line means shrinking real-time margin, not
+just "getting slower".
 
 \htmlonly
-<div id="bm-controls" style="margin: 1rem 0;">
+<div id="bm-controls" style="margin: 1rem 0; display:flex; gap:1.5rem; flex-wrap:wrap; align-items:center;">
   <label style="font-size:14px;">
+    View:
+    <select id="bm-mode-select" style="margin-left:6px; padding:4px 8px; font-size:14px;">
+      <option value="snapshot">Snapshot (single run)</option>
+      <option value="trend">Trend (across runs)</option>
+    </select>
+  </label>
+  <label id="bm-run-label" style="font-size:14px;">
     Run:
     <select id="bm-run-select" style="margin-left:6px; padding:4px 8px; font-size:14px;"></select>
+  </label>
+  <label id="bm-size-label" style="font-size:14px; display:none;">
+    Buffer size:
+    <select id="bm-size-select" style="margin-left:6px; padding:4px 8px; font-size:14px;"></select>
   </label>
 </div>
 <div id="bm-meta" style="font-size:12px; margin-bottom:1.5rem; opacity:0.6;"></div>
 <div id="bm-charts" style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;"></div>
+
+<h2>Real-time headroom</h2>
+<div id="bm-rt-meta" style="font-size:12px; margin-bottom:1rem; opacity:0.6;"></div>
+<div id="bm-rt-charts" style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
@@ -31,6 +70,30 @@ Results updated weekly or on each tagged release.
 
   var SIZES = [64, 512, 2048, 16384, 65536];
   var charts = [];
+  var rtCharts = [];
+  var indexFiles = [];
+  var cache = {};
+
+  // Fixed geometry used by the VoiceManager/Engine benchmarks (Benchmarks/synthesizers/Voice_bm.cpp).
+  var RT_SAMPLE_RATE  = 48000;
+  var RT_BLOCK_FRAMES = 512;
+  var RT_FLOOR_BPS    = RT_SAMPLE_RATE / RT_BLOCK_FRAMES; // blocks/sec required to keep up with real-time
+
+  // op name -> { xLabel, isBlockSizeAxis }. isBlockSizeAxis ops vary block size
+  // (so the real-time floor is RT_SAMPLE_RATE/x); others vary polyphony at a
+  // fixed block size (so the floor is the constant RT_FLOOR_BPS).
+  var RT_OPS = {
+    VoiceGraph_Render:          { xLabel: "Block size (frames)", isBlockSizeAxis: true },
+    VoiceManager_Process:       { xLabel: "Polyphony (voices)",  isBlockSizeAxis: false },
+    Engine_Process_Simple:      { xLabel: "Polyphony (voices)",  isBlockSizeAxis: false },
+    Engine_Process_SampleAccurate: { xLabel: "Polyphony (voices)", isBlockSizeAxis: false },
+  };
+
+  var modeSelect = document.getElementById("bm-mode-select");
+  var runLabel   = document.getElementById("bm-run-label");
+  var runSelect  = document.getElementById("bm-run-select");
+  var sizeLabel  = document.getElementById("bm-size-label");
+  var sizeSelect = document.getElementById("bm-size-select");
 
   function getTextColor() {
     return getComputedStyle(document.body).getPropertyValue("color").trim() || "#333";
@@ -43,11 +106,11 @@ Results updated weekly or on each tagged release.
 
   function parseBenchmarks(data) {
     var means = data.benchmarks.filter(function(b) {
-      return b.name.endsWith("_mean");
+      return b.name.endsWith("_median");
     });
     var groups = {};
     means.forEach(function(b) {
-      var name    = b.name.replace("_mean", "");
+      var name    = b.name.replace("_median", "");
       var parts   = name.split("/");
       var size    = parseInt(parts[1] || "0");
       var tokens  = parts[0].split("_");
@@ -72,28 +135,37 @@ Results updated weekly or on each tagged release.
     return groups;
   }
 
-  function renderCharts(groups) {
+  function clearCharts() {
     charts.forEach(function(c) { c.destroy(); });
     charts = [];
+    document.getElementById("bm-charts").innerHTML = "";
+  }
+
+  function makeChartCanvas(op) {
     var container = document.getElementById("bm-charts");
-    container.innerHTML = "";
+    var wrap = document.createElement("div");
+    var h    = document.createElement("h3");
+    h.textContent = op;
+    h.style.marginBottom = "0.5rem";
+    var canvasWrap = document.createElement("div");
+    canvasWrap.style.height = "260px";
+    var canvas = document.createElement("canvas");
+    canvas.id  = "bm_" + op;
+    canvasWrap.appendChild(canvas);
+    wrap.appendChild(h);
+    wrap.appendChild(canvasWrap);
+    container.appendChild(wrap);
+    return canvas;
+  }
+
+  function renderSnapshot(groups) {
+    clearCharts();
     var textColor = getTextColor();
     var gridColor = getGridColor();
 
     Object.keys(groups).sort().forEach(function(op) {
-      var g    = groups[op];
-      var wrap = document.createElement("div");
-      var h    = document.createElement("h3");
-      h.textContent = op;
-      h.style.marginBottom = "0.5rem";
-      var canvasWrap = document.createElement("div");
-      canvasWrap.style.height = "260px";
-      var canvas = document.createElement("canvas");
-      canvas.id  = "bm_" + op;
-      canvasWrap.appendChild(canvas);
-      wrap.appendChild(h);
-      wrap.appendChild(canvasWrap);
-      container.appendChild(wrap);
+      var g      = groups[op];
+      var canvas = makeChartCanvas(op);
 
       var datasets = Object.keys(g.variants).map(function(variant) {
         return {
@@ -133,15 +205,213 @@ Results updated weekly or on each tagged release.
     });
   }
 
-  async function load(filename) {
-    var r    = await fetch(RESULTS_DIR + filename);
-    var data = await r.json();
+  function renderTrend(runs, size) {
+    clearCharts();
+    var textColor = getTextColor();
+    var gridColor = getGridColor();
+
+    // ops -> variant -> [{label, value}]
+    var ops = {};
+    var labels = runs.map(function(r) {
+      return r.filename.replace("results-", "").replace(".json", "");
+    });
+
+    runs.forEach(function(r) {
+      var groups = parseBenchmarks(r.data);
+      Object.keys(groups).forEach(function(op) {
+        var g = groups[op];
+        if (!ops[op]) ops[op] = { unit: g.unit, variants: {} };
+        Object.keys(g.variants).forEach(function(variant) {
+          if (!ops[op].variants[variant]) ops[op].variants[variant] = [];
+          ops[op].variants[variant].push(g.variants[variant][size] != null ? g.variants[variant][size] : null);
+        });
+      });
+    });
+
+    Object.keys(ops).sort().forEach(function(op) {
+      var g      = ops[op];
+      var canvas = makeChartCanvas(op);
+
+      var datasets = Object.keys(g.variants).map(function(variant) {
+        return {
+          label:           variant,
+          data:            g.variants[variant],
+          borderColor:     COLOURS[variant] || "#888",
+          backgroundColor: (COLOURS[variant] || "#888") + "33",
+          tension:         0.3,
+          spanGaps:        true,
+        };
+      });
+
+      charts.push(new Chart(canvas, {
+        type: "line",
+        data: { labels: labels, datasets: datasets },
+        options: {
+          responsive:          true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "top", labels: { color: textColor } },
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Run", color: textColor },
+              ticks: { color: textColor, maxRotation: 60, minRotation: 60 },
+              grid:  { color: gridColor },
+            },
+            y: {
+              title: { display: true, text: g.unit + " @ " + size + " elements", color: textColor },
+              ticks: { color: textColor },
+              grid:  { color: gridColor },
+              beginAtZero: true,
+            },
+          },
+        },
+      }));
+    });
+  }
+
+  function parseRealtimeBenchmarks(data) {
+    var medians = data.benchmarks.filter(function(b) {
+      return b.name.endsWith("_median");
+    });
+    var groups = {};
+    medians.forEach(function(b) {
+      var name  = b.name.replace("_median", "");
+      var parts = name.split("/");
+      var op    = parts[0].replace(/^BM_/, "");
+      var meta  = RT_OPS[op];
+      if (!meta || !b.items_per_second) return;
+
+      var x = parseInt(parts[1] || "0");
+      if (!groups[op]) groups[op] = { meta: meta, points: {} };
+      groups[op].points[x] = b.items_per_second;
+    });
+    return groups;
+  }
+
+  function clearRtCharts() {
+    rtCharts.forEach(function(c) { c.destroy(); });
+    rtCharts = [];
+    document.getElementById("bm-rt-charts").innerHTML = "";
+  }
+
+  function renderRealtimeCharts(groups) {
+    clearRtCharts();
+    var textColor = getTextColor();
+    var gridColor = getGridColor();
+    var container = document.getElementById("bm-rt-charts");
+
+    Object.keys(groups).sort().forEach(function(op) {
+      var g  = groups[op];
+      var xs = Object.keys(g.points).map(Number).sort(function(a, b) { return a - b; });
+
+      var wrap = document.createElement("div");
+      var h    = document.createElement("h3");
+      h.textContent = op.replace(/_/g, " ");
+      h.style.marginBottom = "0.5rem";
+      var canvasWrap = document.createElement("div");
+      canvasWrap.style.height = "260px";
+      var canvas = document.createElement("canvas");
+      canvasWrap.appendChild(canvas);
+      wrap.appendChild(h);
+      wrap.appendChild(canvasWrap);
+      container.appendChild(wrap);
+
+      var floor = xs.map(function(x) {
+        return g.meta.isBlockSizeAxis ? RT_SAMPLE_RATE / x : RT_FLOOR_BPS;
+      });
+
+      rtCharts.push(new Chart(canvas, {
+        type: "line",
+        data: {
+          labels: xs,
+          datasets: [
+            {
+              label:           "blocks/sec",
+              data:            xs.map(function(x) { return g.points[x]; }),
+              borderColor:     "#378ADD",
+              backgroundColor: "#378ADD33",
+              tension:         0.3,
+            },
+            {
+              label:       "real-time floor",
+              data:        floor,
+              borderColor: "#D85A30",
+              borderDash:  [6, 4],
+              pointRadius: 0,
+              fill:        false,
+            },
+          ],
+        },
+        options: {
+          responsive:          true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "top", labels: { color: textColor } },
+          },
+          scales: {
+            x: {
+              title: { display: true, text: g.meta.xLabel, color: textColor },
+              ticks: { color: textColor },
+              grid:  { color: gridColor },
+            },
+            y: {
+              type:  "logarithmic",
+              title: { display: true, text: "blocks/sec (log)", color: textColor },
+              ticks: { color: textColor },
+              grid:  { color: gridColor },
+            },
+          },
+        },
+      }));
+    });
+  }
+
+  async function fetchResult(filename) {
+    if (!cache[filename]) {
+      var r = await fetch(RESULTS_DIR + filename);
+      cache[filename] = await r.json();
+    }
+    return cache[filename];
+  }
+
+  async function loadSnapshot(filename) {
+    var data = await fetchResult(filename);
     var ctx  = data.context || {};
     document.getElementById("bm-meta").textContent =
       "Host: " + (ctx.host_name || "unknown") +
       " - " + (ctx.date || "") +
       " - " + (ctx.num_cpus || "?") + " CPUs @ " + (ctx.mhz_per_cpu || "?") + "MHz";
-    renderCharts(parseBenchmarks(data));
+    renderSnapshot(parseBenchmarks(data));
+
+    document.getElementById("bm-rt-meta").textContent =
+      "Same run. VoiceManager/Engine: " + RT_BLOCK_FRAMES + "-frame stereo block @ " +
+      RT_SAMPLE_RATE + "Hz (floor " + RT_FLOOR_BPS.toFixed(1) + " blocks/sec).";
+    renderRealtimeCharts(parseRealtimeBenchmarks(data));
+  }
+
+  async function loadTrend(size) {
+    document.getElementById("bm-meta").textContent =
+      "Showing " + indexFiles.length + " runs at buffer size " + size + " elements.";
+    var runs = await Promise.all(indexFiles.map(async function(filename) {
+      return { filename: filename, data: await fetchResult(filename) };
+    }));
+    renderTrend(runs, size);
+
+    clearRtCharts();
+    document.getElementById("bm-rt-meta").textContent =
+      "Real-time headroom charts are only shown in Snapshot view.";
+  }
+
+  function onModeChange() {
+    var trend = modeSelect.value === "trend";
+    runLabel.style.display  = trend ? "none" : "";
+    sizeLabel.style.display = trend ? "" : "none";
+    if (trend) {
+      loadTrend(parseInt(sizeSelect.value));
+    } else {
+      loadSnapshot(runSelect.value);
+    }
   }
 
   async function init() {
@@ -150,23 +420,33 @@ Results updated weekly or on each tagged release.
       document.getElementById("bm-meta").textContent = "No benchmark results found.";
       return;
     }
-    var files = await r.json();
-    var sel   = document.getElementById("bm-run-select");
+    indexFiles = await r.json();
 
-    if (!files.length) {
+    if (!indexFiles.length) {
       document.getElementById("bm-meta").textContent = "No benchmark results found.";
       return;
     }
 
-    files.slice().reverse().forEach(function(f) {
-      var opt       = document.createElement("option");
-      opt.value     = f;
+    indexFiles.slice().reverse().forEach(function(f) {
+      var opt         = document.createElement("option");
+      opt.value       = f;
       opt.textContent = f.replace("results-", "").replace(".json", "");
-      sel.appendChild(opt);
+      runSelect.appendChild(opt);
     });
 
-    sel.addEventListener("change", function() { load(sel.value); });
-    load(sel.value);
+    SIZES.forEach(function(s) {
+      var opt         = document.createElement("option");
+      opt.value       = s;
+      opt.textContent = s;
+      if (s === 512) opt.selected = true;
+      sizeSelect.appendChild(opt);
+    });
+
+    modeSelect.addEventListener("change", onModeChange);
+    runSelect.addEventListener("change", function() { loadSnapshot(runSelect.value); });
+    sizeSelect.addEventListener("change", function() { loadTrend(parseInt(sizeSelect.value)); });
+
+    onModeChange();
   }
 
   init();

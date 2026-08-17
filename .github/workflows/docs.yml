@@ -19,7 +19,7 @@ jobs:
       - name: Generate Doxygen documentation
         run: doxygen Doxyfile
 
-      - name: Copy benchmark viewer into Doxygen output
+      - name: Copy benchmark results into Doxygen output
         run: cp -r Docs/bench Docs/html/bench
 
       - name: Deploy to GitHub Pages
