@@ -23,6 +23,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #include "base/caspi_Assert.h"
 #include "core/caspi_AudioBuffer.h"
+#include "core/caspi_Graph.h"
 #include "core/caspi_Node.h"
 #include <cmath>
 #include <string>
