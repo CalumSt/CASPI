@@ -6,6 +6,13 @@ on:
     - cron: '0 2 * * 1'
   push:
     tags: ['v*']
+  pull_request:
+    paths:
+      - 'CASPI/**'
+      - 'Benchmarks/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/Benchmarks.yml'
+      - '.github/scripts/check_benchmark_regression.py'
   workflow_dispatch:
 
 permissions:
@@ -26,15 +33,28 @@ jobs:
       - name: Build
         run: cmake --build build --target Benchmarks -j$(nproc)
 
+      - name: Warm-up
+        # Brings CPU frequency scaling and page/branch caches to a steady
+        # state before the measured run, so early benchmarks aren't skewed
+        # by a cold start.
+        run: |
+          taskset -c 0 ./build/Benchmarks/Benchmarks \
+            --benchmark_min_time=0.2s \
+            --benchmark_repetitions=1 \
+            > /dev/null
+
       - name: Run
         run: |
-          ./build/Benchmarks/Benchmarks \
+          taskset -c 0 ./build/Benchmarks/Benchmarks \
             --benchmark_format=json \
             --benchmark_out=result_new.json \
             --benchmark_repetitions=5 \
             --benchmark_report_aggregates_only=true \
             --benchmark_min_time=0.5s \
-            --benchmark_enable_random_interleaving=true
+            --benchmark_enable_random_interleaving=true \
+            --benchmark_context=commit_sha="${GITHUB_SHA}" \
+            --benchmark_context=ref="${GITHUB_REF_NAME}" \
+            --benchmark_context=event="${GITHUB_EVENT_NAME}"
 
       - name: Name result file
         id: name
@@ -54,6 +74,9 @@ jobs:
         continue-on-error: true
 
       - name: Commit results
+        # PR runs are for regression-gating only; only schedule/tag/dispatch
+        # runs against main become part of the committed baseline history.
+        if: github.event_name != 'pull_request'
         run: |
           mkdir -p Docs/bench/results
           cp result_new.json Docs/bench/results/${{ steps.name.outputs.filename }}
