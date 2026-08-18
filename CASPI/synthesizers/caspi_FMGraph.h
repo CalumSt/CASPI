@@ -136,7 +136,7 @@ namespace CASPI
     // Forward Declarations
     // ============================================================================
 
-    template <typename FloatType>
+    template <CASPI_FLOAT_TYPE FloatType>
     class FMGraphDSP;
 
     // ============================================================================
