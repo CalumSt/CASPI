@@ -13,9 +13,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Strategy.h
 * @author CS Islay
-* @brief Compile-time SIMD strategy and trait definitions.
-*
-* Provides compile-time traits and utilities for SIMD operations:
+ * @brief Compile-time SIMD strategy and trait definitions.
+ * @ingroup maths
+ *
+ * Provides compile-time traits and utilities for SIMD operations:
 *   - Type mappings (scalar to SIMD vector)
 *   - Minimum SIMD widths per type
 *   - Alignment checking and calculations
@@ -570,7 +571,7 @@ inline std::size_t l1_data_bytes() noexcept
  * @brief Compile-time L1 cache size constant.
  *
  * Used in template parameters and constexpr contexts.
- * Override at build time with -DCASPI_L1_CACHE_BYTES=<bytes>.
+ * Override at build time with \c -DCASPI_L1_CACHE_BYTES=bytes.
  *
  * @return Compile-time constant; does NOT query hardware.
  */

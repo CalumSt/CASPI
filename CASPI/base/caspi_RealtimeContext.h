@@ -1,3 +1,12 @@
+/**
+ * @file caspi_RealtimeContext.h
+ * @brief Real-time safety annotations and RealtimeSanitizer wrappers.
+ * @ingroup base
+ *
+ * Provides ScopedRealtimeThread and ScopedRealtimeDisable for marking
+ * real-time safe code paths when Clang's RealtimeSanitizer is enabled.
+ */
+
 #ifndef CASPI_REALTIMECONTEXT_H
 #define CASPI_REALTIMECONTEXT_H
 

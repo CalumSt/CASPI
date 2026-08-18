@@ -13,10 +13,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Operations.h
 * @author CS Islay
-* @brief Low-level SIMD arithmetic and math operations.
-*
-*
-* OVERVIEW
+ * @brief Low-level SIMD arithmetic and math operations.
+ * @ingroup maths
+ *
+ * OVERVIEW
 *
 * Provides fundamental SIMD operations including:
 *   - Broadcast operations (set1)
@@ -582,7 +582,7 @@ namespace CASPI
          * @param b         Right-hand input vector
          * @return          Mask vector: all-ones where a[i] > b[i], else all-zeros
          *
-         * @example
+         *
          * @code
          * float32x4 m = cmp_gt(set1<float>(2.0f), set1<float>(1.0f)); // all-ones
          * @endcode
@@ -695,7 +695,7 @@ namespace CASPI
          * @param b         Right-hand input vector
          * @return          Mask vector: all-ones where a[i] <= b[i], else all-zeros
          *
-         * @example
+         *
          * @code
          * float64x2 mask = cmp_le(set1<double>(1.0), set1<double>(2.0)); // lanes = true
          * @endcode
@@ -726,7 +726,7 @@ namespace CASPI
          * @param b         Right-hand input vector
          * @return          Mask vector: all-ones where a[i] >= b[i], else all-zeros
          *
-         * @example
+         *
          * @code
          * float64x2 mask = cmp_ge(set1<double>(3.0), set1<double>(2.0)); // lanes = true
          * @endcode
@@ -1448,7 +1448,7 @@ namespace CASPI
          * @param c         Subtrahend
          * @return          Result vector
          *
-         * @example
+         *
          * @code
          * float32x4 r = mul_sub(set1<float>(3.0f), set1<float>(2.0f), set1<float>(1.0f)); // 6 - 1 = 5
          * @endcode
@@ -1510,7 +1510,7 @@ namespace CASPI
          * @param c         Subtrahend
          * @return          Result vector with per-lane (a[i]*b[i] - c[i])
          *
-         * @example
+         *
          * @code
          * float64x2 r = mul_sub(set1<double>(3.0), set1<double>(2.0), set1<double>(1.0)); // 6 - 1 = 5
          * @endcode
@@ -1581,7 +1581,7 @@ namespace CASPI
          *
          * @note Behaviour for NaN/Inf follows the platform intrinsics semantics.
          *
-         * @example
+         *
          * @code
          * float32x4 v = set1<float>(1.9f);
          * float32x4 f = floor(v); // [1.0f, 1.0f, 1.0f, 1.0f]
@@ -1619,7 +1619,7 @@ namespace CASPI
          * @param a         Input vector
          * @return          Vector with per-lane ceiled values
          *
-         * @example
+         *
          * @code
          * float32x4 v = set1<float>(1.1f);
          * float32x4 c = ceil(v); // [2.0f, 2.0f, 2.0f, 2.0f]
@@ -1655,7 +1655,7 @@ namespace CASPI
          * @param a         Input vector
          * @return          Vector with per-lane rounded values
          *
-         * @example
+         *
          * @code
          * float32x4 v = set1<float>(1.6f);
          * float32x4 r = round(v); // [2.0f, 2.0f, 2.0f, 2.0f]

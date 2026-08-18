@@ -14,6 +14,7 @@
  * @file caspi_Expected.h Graceful error handling.
  * @author CS Islay
  * @brief Provides an implementation of the expected<T, E> type that is C++11 compatible.
+ * @ingroup core
  *        This type is used to represent a value that may either be a valid result of type T
  *        or an error of type E.
  *        It is similar to std::expected introduced in C++23, probably less robust.

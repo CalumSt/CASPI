@@ -13,10 +13,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Intrinsics.h
 * @author CS Islay
-* @brief SIMD vector type definitions for cross-platform support.
-*
-*
-* OVERVIEW
+ * @brief SIMD vector type definitions for cross-platform support.
+ * @ingroup maths
+ *
+ * OVERVIEW
 *
 * Provides portable type aliases for SIMD vectors across multiple platforms:
 *   - x86/x64: SSE, SSE2 (via __m128, __m128d)

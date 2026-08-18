@@ -1,0 +1,79 @@
+/**
+\defgroup core Core
+\brief Audio graph engine, node base classes, audio buffer, parameter system, and span utilities
+
+The Core module provides the foundational types for the CASPI library:
+- \ref CASPI::Graph::NodeBase "NodeBase", \ref CASPI::Graph::AudioNode "AudioNode", \ref CASPI::Graph::ControlNode "ControlNode" -- polymorphic node hierarchy
+- \ref CASPI::Graph::AudioContext "AudioContext", \ref CASPI::Graph::AudioGraph "AudioGraph" -- graph engine for connecting nodes and processing blocks
+- \ref CASPI::AudioBuffer "AudioBuffer" -- multichannel audio buffer with interleaved and channel-major layouts
+- \ref CASPI::Core::Span "Span", \ref CASPI::Core::StridedSpan "StridedSpan" -- safe array views with SIMD eligibility
+- \ref CASPI::Core::Parameter "Parameter" -- modulatable parameter system with per-block smoothing
+- \ref CASPI::Phase "Phase" -- phase accumulator for oscillators
+- \ref CASPI::expected "Expected" -- monadic error handling
+- \ref CASPI::CircularAudioBuffer "CircularAudioBuffer" -- ring buffers for delay lines
+
+\defgroup oscillators Oscillators
+\brief Band-limited and modulation oscillator implementations
+
+Oscillator types for waveform generation:
+- \ref CASPI::Oscillators::BlepOscillator "BlepOscillator" -- PolyBLEP antialiased oscillator (sine, saw, square, triangle, pulse)
+- \ref CASPI::Oscillators::WavetableOscillator "WavetableOscillator" -- sample-accurate wavetable playback
+- \ref CASPI::Operator "Operator" -- FM/PM operator with self-modulation and built-in envelope
+- \ref CASPI::Oscillators::LFO "LFO" -- low-frequency oscillator for modulation
+- \ref CASPI::Oscillators::NoiseOscillator "NoiseOscillator" -- white and pink noise generators
+
+\defgroup filters Filters
+\brief Audio filter implementations
+
+- \ref CASPI::Filters::SvfFilter "SvfFilter" -- state-variable filter (low-pass, high-pass, band-pass, notch, all-pass)
+- \ref CASPI::Filters::FilterBase "FilterBase" -- CRTP base for creating custom filter types
+- \ref caspi_OnePoleFilter "OnePoleFilter" -- simple one-pole filter
+
+\defgroup controls Controls
+\brief Control-rate signal generators and modulation
+
+- \ref CASPI::Envelope::ADSR "ADSR (Envelope)" -- envelope generator with configurable attack, decay, sustain, release
+- \ref CASPI::Controls::ModMatrix "ModMatrix" -- modulation routing matrix with curve shaping
+
+\defgroup synthesis Synthesis
+\brief Synthesis engine implementations
+
+- \ref CASPI::FMGraphBuilder "FMGraphBuilder", \ref CASPI::FMGraphDSP "FMGraphDSP" -- FM synthesis engine with graph validation
+- \ref CASPI::VoiceManager "VoiceManager" -- polyphonic voice manager
+- \ref CASPI::Engine "Engine" -- real-time audio engine
+
+\defgroup maths Maths
+\brief Math utilities and SIMD abstractions
+
+- \ref CASPI::SIMD "SIMD" -- SIMD abstractions for SSE, NEON, WASM with scalar fallbacks
+- \ref CASPI::FFT "FFT" -- fast Fourier transform
+- Utility functions (clamp, lerp, map, db conversion, MIDI conversion) in \ref CASPI::Maths "CASPI::Maths"
+
+\defgroup base Base
+\brief Low-level infrastructure and platform support
+
+- \ref CASPI::AssertInfo "AssertInfo" -- debug assertions
+- \ref CASPI::Core::ScopedFlushDenormals "ScopedFlushDenormals" -- denormal flushing utilities
+- \ref CASPI::Constants "Constants" -- mathematical constants
+- \ref CASPI::ScopedRealtimeDisable "ScopedRealtimeDisable", \ref CASPI::ScopedRealtimeThread "ScopedRealtimeThread" -- real-time safety annotations
+- Platform detection macros, utility macros, feature detection, backtrace capture, type traits, compatibility polyfills
+
+\defgroup gain Gain
+\brief Gain and waveshaping processors
+
+- \ref CASPI::Gain "Gain" -- linear gain processing
+- \ref CASPI::Gain::Waveshaper "Waveshaper" -- wavetable-based waveshaping with configurable transfer functions
+
+\defgroup midi MIDI
+\brief MIDI message processing
+
+- \ref CASPI::Midi::MidiMessage "MidiMessage" -- MIDI message parsing and encoding
+- \ref CASPI::Midi::MidiStream "MidiStream" -- real-time-safe MIDI stream buffer
+
+\defgroup external External
+\brief Third-party integrations
+
+- \ref moodycamel::ConcurrentQueue "moodycamel::ConcurrentQueue" -- lock-free queue for real-time safe inter-thread communication
+- \ref moodycamel::BlockingConcurrentQueue "moodycamel::BlockingConcurrentQueue" -- blocking variant with wait/dequeue
+
+*/

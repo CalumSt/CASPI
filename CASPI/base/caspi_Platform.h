@@ -16,9 +16,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Platform.h
 * @author CS Islay
-* @brief A platform detection header.
-*
-************************************************************************/
+ * @brief A platform detection header.
+ * @ingroup base
+ *
+ ************************************************************************/
 
 
 /**

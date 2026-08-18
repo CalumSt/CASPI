@@ -15,6 +15,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
  * @author CS Islay
  * @brief  Single-cycle wavetable oscillator with per-sample modulation
  *         and multi-table morphing.
+ * @ingroup oscillators
  *
  * @details
  * Three cooperating types form the public API:
@@ -722,7 +723,7 @@ public:
      * uses getSampleRate() to compute phase.increment. This is the preferred
      * constructor when all three are known at construction time.
      *
-     * @param bank        Reference to the WaveTableBank. Must outlive this object.
+     * @param bankIn      Reference to the WaveTableBank. Must outlive this object.
      * @param sampleRate  Audio sample rate in Hz. Must be > 0.
      * @param hz          Oscillator frequency in Hz. Must be in (0, sampleRate/2).
      *

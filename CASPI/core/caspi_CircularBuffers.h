@@ -14,9 +14,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_CircularBuffers.h
 * @author CS Islay
-* @brief A DelayLine and FIFO class for audio processing.
-*
-************************************************************************/
+ * @brief A DelayLine and FIFO class for audio processing.
+ * @ingroup core
+ *
+ ************************************************************************/
 
 #ifndef CASPI_CIRCULARBUFFERS_H
 #define CASPI_CIRCULARBUFFERS_H

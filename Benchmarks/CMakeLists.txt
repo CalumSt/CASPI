@@ -34,6 +34,7 @@ set(SOURCES
         base/AudioBuffer_SIMD_bm.cpp
         base/PolyKernel_bm.cpp
         Producers/Oscillator_bm.cpp
+        synthesizers/Voice_bm.cpp
 )
 # --------------------------------------------------------------------------
 

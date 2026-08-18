@@ -17,6 +17,7 @@
  * @file   filters/caspi_Filter.h
  * @author CS Islay
  * @brief  CRTP base class for digital filters integrating with AudioNode.
+ * @ingroup filters
  *
  * @details
  * ### Overview

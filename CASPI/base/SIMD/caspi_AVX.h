@@ -13,10 +13,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_AVX.h
 * @author CS Islay
-* @brief AVX-specific SIMD operations (256-bit vectors).
-*
-*
-* OVERVIEW
+ * @brief AVX-specific SIMD operations (256-bit vectors).
+ * @ingroup maths
+ *
+ * OVERVIEW
 *
 * Provides AVX (Advanced Vector Extensions) specific operations for 256-bit
 * vectors. These provide twice the throughput of 128-bit operations on

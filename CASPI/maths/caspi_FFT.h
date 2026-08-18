@@ -15,9 +15,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_FFT.h
 * @author CS Islay
-* @brief FFT related functionality and processing classes.
-*
-* ALGORITHM
+ * @brief FFT related functionality and processing classes.
+ * @ingroup maths
+ *
+ * ALGORITHM
 * =========
 * Cooley-Tukey radix-2 DIT (Decimation-In-Time), iterative.
 *   - No recursion stack; O(N log N) time, O(N) space.
@@ -471,7 +472,8 @@ public:
     }
 
     /** @brief Inverse FFT in-place.
-     *  @param normalise Divide by N (default: true). */
+     *  @param data       Complex array to transform (size must match prepare()).
+     *  @param normalise  Divide by N (default: true). */
     void performInverse (CArray& data, bool normalise = true) const
     {
         checkReady (data.size());
@@ -484,7 +486,7 @@ public:
         }
     }
 
-    FFTConfig    config_;       ///< public for test access (#define private public)
+    FFTConfig    config_;       ///< public for test access (macro-based)
     TwiddleTable twiddleTable_; ///< public for test access
 
 private:
