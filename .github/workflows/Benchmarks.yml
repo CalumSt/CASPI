@@ -93,5 +93,11 @@ jobs:
           git push
 
       - name: Fail on regression
-        if: steps.regression.outcome == 'failure'
+        # PR runs are advisory only: shared GitHub-hosted runners have enough
+        # hardware variance to swamp real 10-15% regressions (see benchmark
+        # CI investigation), so a single noisy PR run can't be trusted to
+        # gate merges. Regressions are still visible as ::warning/::error
+        # annotations on the run either way. Scheduled/tag/dispatch runs
+        # build the committed baseline history and still fail hard.
+        if: steps.regression.outcome == 'failure' && github.event_name != 'pull_request'
         run: exit 1
