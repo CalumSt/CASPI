@@ -13,9 +13,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_AudioBuffer.h
 * @author CS Islay
-* @brief An audio buffer class for basic audio processing.
-*
-************************************************************************/
+ * @brief An audio buffer class for basic audio processing.
+ * @ingroup core
+ *
+ ************************************************************************/
 
 #ifndef CASPI_AUDIOBUFFER_H
 #define CASPI_AUDIOBUFFER_H

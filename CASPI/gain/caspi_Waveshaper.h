@@ -1,6 +1,12 @@
-//
-// Created by calum on 09/03/2025.
-//
+/**
+ * @file caspi_Waveshaper.h
+ * @brief Wavetable-based waveshaping with configurable transfer functions.
+ * @ingroup gain
+ *
+ * Applies saturation, clipping or distortion by mapping input samples
+ * through configurable waveshaper functions. Supports asymmetric shaping
+ * with separate positive and negative transfer curves.
+ */
 
 #ifndef CASPI_WAVESHAPER_H
 #define CASPI_WAVESHAPER_H
@@ -15,26 +21,23 @@ namespace CASPI::Gain
 
 {
 /**
- * A waveshaper class which process input according to a selected function.
- *  Generally used to add saturation, clipping or distortion.
- *  Uniquely, it allows you to use different waveshaper functions for the positive and negative segments,
- *  and to add register your own custom waveshaper function, through a lambda that mathematically represents
- *  the waveshaper function, OR as a file of values to interpolate, OR as a file of waveshaper functions.
- *  Similarly, it is able to save your custom waveshaper function to a file.
- *  Do not register your custom waveshaper in real time (i.e. in a process or processBlock function),
- *  as it WILL block your audio thread.
- *  Additionally, there are no sanity checks done on the waveshaper function. Be careful,
- *  especially with any functions with divisions or asymptotes.
+ * @brief Wavetable-based waveshaper for saturation and distortion.
+ *
+ * Applies a transfer function to input samples. Supports different
+ * functions for positive and negative signal segments, plus custom
+ * user-registered functions via lambdas or file import.
+ * Do not register custom waveshapes in the audio thread (they may block).
  */
     template <typename FloatType>
     class Waveshaper
     {
        public:
+        /** @brief Built-in waveshaper transfer function types. */
         enum WaveshaperType
         {
-            None,
-            SoftClip,
-            HardClip
+            None,       /**< Passthrough (no shaping). */
+            SoftClip,   /**< Soft clipping. */
+            HardClip    /**< Hard clipping. */
         };
 
         template <typename func>
@@ -63,6 +66,13 @@ namespace CASPI::Gain
         * https://johannesugb.github.io/cpu-programming/how-to-pass-lambda-functions-in-C++/
         * E.G. registerWaveshape([](FloatType x) { return x * x; }, "Square");
         */
+        /**
+         * @brief Register a custom waveshaper function by name.
+         *
+         * @tparam func Callable type (e.g. lambda).
+         * @param Waveshape Callable accepting FloatType and returning FloatType.
+         * @param name Name to identify this waveshape (used for selection).
+         */
         template <typename func>
         void registerWaveshape(func Waveshape, std::string name)
         {
@@ -70,23 +80,44 @@ namespace CASPI::Gain
             functionMap[name] = f;
         }
 
+        /**
+         * @brief Register a custom waveshaper from a WaveshaperArg pair.
+         *
+         * @tparam func Callable type.
+         * @param FuncNamePair Struct containing callable and name string.
+         */
         template <typename func>
         void registerWaveshape(WaveshaperArg<func> &FuncNamePair)
         {
             registerWaveshape(FuncNamePair.Waveshape, FuncNamePair.name);
         }
 
+        /**
+         * @brief Register a waveshaper from a file.
+         * @note Not yet implemented.
+         */
         void registerWaveshape(std::string &filename)
         {
-            /// TODO: implementation class for file reading and serialisation
         }
 
+        /**
+         * @brief Enable asymmetric waveshaping with a crossover point.
+         *
+         * @param isAsymmetricFlag  True to enable asymmetric processing.
+         * @param newAsymmetryPoint Threshold below which the negative waveshape is used.
+         */
         void setAsymmetry (bool isAsymmetricFlag, FloatType newAsymmetryPoint)
         {
             isAsymmetric = isAsymmetricFlag;
             asymmetryPoint = newAsymmetryPoint;
         }
 
+       /**
+        * @brief Process a single sample through the waveshaper.
+        *
+        * @param input Input sample.
+        * @return Processed (shaped) sample, restricted to [-1, 1].
+        */
        FloatType render(FloatType input)
        {
             auto output = input;
@@ -111,31 +142,40 @@ namespace CASPI::Gain
             return restrict(output);
        }
 
+       /**
+        * @brief Apply the currently selected waveshape to a sample in place.
+        * @param out Sample to modify in place.
+        */
        inline void applyWaveshape (FloatType &out)
        {
             out = functionMap[waveshape](out);
        }
 
+       /** @brief Get the name of the active waveshape function. */
        std::string getWaveshapeName()
        {
            return waveshape;
        }
 
+       /** @brief Get the name of the negative-segment waveshape function. */
        std::string getNegativeWaveshapeName()
        {
            return negativeWaveshape;
        }
 
+       /** @brief Set the clip limit for hard/soft clipping modes. */
   	   void setClipLimit (FloatType newClipLimit)
        {
            clipLimit = newClipLimit;
        }
 
+       /** @brief Set the pre-waveshaper gain (linear). */
        void setGain (FloatType newGain)
        {
            gain = newGain;
        }
 
+       /** @brief Set the pre-waveshaper gain in dBFS. */
        void setGainDBFS (FloatType newGainDBFS)
        {
            gain = CASPI::Maths::dBFSToLinear(newGainDBFS);

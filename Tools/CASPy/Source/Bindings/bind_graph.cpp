@@ -55,15 +55,17 @@ static py::array_t<F> node_output_to_numpy (const NodeBase_t& node,
     if (buf == nullptr)
     {
         return py::array_t<F> (
-            { static_cast<py::ssize_t> (0), static_cast<py::ssize_t> (0) });
+            py::array::ShapeContainer {
+                static_cast<py::ssize_t> (0), static_cast<py::ssize_t> (0) });
     }
 
     const std::size_t C = buf->numChannels();
     const std::size_t N = buf->numFrames();
 
-    py::array_t<F> out ({
-        static_cast<py::ssize_t> (C),
-        static_cast<py::ssize_t> (N)
+    py::array_t<F> out (
+        py::array::ShapeContainer {
+            static_cast<py::ssize_t> (C),
+            static_cast<py::ssize_t> (N)
     });
     auto r = out.mutable_unchecked<2>();
 
@@ -389,10 +391,11 @@ void bind_graph (py::module_& m)
                 }
 
                 const std::size_t total = numBlocks * frames;
-                py::array_t<F> out ({
-                    static_cast<py::ssize_t> (channels),
-                    static_cast<py::ssize_t> (total)
-                });
+                py::array_t<F> out (
+                    py::array::ShapeContainer {
+                        static_cast<py::ssize_t> (channels),
+                        static_cast<py::ssize_t> (total)
+                    });
                 auto buf = out.mutable_unchecked<2>();
 
                 for (std::size_t block = 0; block < numBlocks; ++block)

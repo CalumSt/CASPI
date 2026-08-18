@@ -16,9 +16,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Features.h
 * @author CS Islay
-* @brief A collection of macros to define features based on platform.
-*
-************************************************************************/
+ * @brief A collection of macros to define features based on platform.
+ * @ingroup base
+ *
+ ************************************************************************/
 
 #include "caspi_Platform.h"
 

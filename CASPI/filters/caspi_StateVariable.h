@@ -16,7 +16,8 @@
  *
  * @file   filters/caspi_StateVariable.h
  * @author CS Islay
- * @brief  Cytomic SVF topology (two-integrator state variable).
+ * @brief  State-variable filter (Cytomic SVF topology) integrated with FilterBase.
+ * @ingroup filters
  *
  * Full specialisation for the Cytomic SVF topology (Simper 2013). Two-integrator
  * state-variable filter with simultaneous LP / BP / HP / Notch / Peak / AllPass outputs.
@@ -66,8 +67,11 @@ namespace CASPI
                 using Base = FilterBase<StateVariable<FloatType>, FloatType, 2u, 5u>;
 
                 /**
-                 * @brief Default constructor. Initialises sample rate to the
-                 *        project default.
+                 * @brief Default constructor.
+                 *
+                 * Sample rate defaults to Constants::DEFAULT_SAMPLE_RATE.
+                 * Coefficients are not computed until setSampleRate() and
+                 * setCutoff() / setParameters() are called.
                  */
                 StateVariable() noexcept CASPI_NON_ALLOCATING
                 {
@@ -75,9 +79,10 @@ namespace CASPI
                 }
 
                 /**
-                 * @brief Construct with sample rate, cutoff, Q, and mode.
+                 * @brief Full constructor with immediate coefficient computation.
                  *
-                 * Computes coefficients immediately via updateCoefficients().
+                 * Prefer this over the default constructor + separate calls
+                 * when all parameters are known at construction time.
                  *
                  * @param sampleRateHz  Sample rate in Hz. Must be > 0.
                  * @param cutoffHz      Cutoff frequency in Hz. Must be > 0.
@@ -106,7 +111,7 @@ namespace CASPI
                 StateVariable& operator= (StateVariable&&)      = default;
 
                 /**
-                 * @brief Override the sample rate and recompute coefficients.
+                 * @brief Set sample rate and recompute coefficients.
                  *
                  * Called by NodeBase or directly by the user when the
                  * audio driver sample rate changes.
@@ -124,8 +129,7 @@ namespace CASPI
                 }
 
                 /**
-                 * @brief Compute the five SVF coefficients from the current
-                 *        (cutoff, Q, sampleRate).
+                 * @brief Recompute and publish filter coefficients.
                  *
                  * Writes the result into the atomic double buffer via swap()
                  * so the audio thread sees a consistent set.
@@ -156,7 +160,7 @@ namespace CASPI
                 }
 
                 /**
-                 * @brief Process one input sample through the SVF.
+                 * @brief Process one sample through the SVF filter.
                  *
                  * Audio thread safe. Reads the current coefficient set and
                  * the two state variables, then writes back updated state.

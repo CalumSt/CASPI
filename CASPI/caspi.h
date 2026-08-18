@@ -1,3 +1,10 @@
+/**
+ * @file caspi.h
+ * @brief Umbrella header that includes all CASPI components.
+ * @defgroup caspi CASPI
+ * @brief C++ Audio Synthesis and Processing Interface - header-only audio DSP library.
+ */
+
 #ifndef CASPI_H
 #define CASPI_H
 
@@ -29,7 +36,7 @@
 // oscillators
 #include "oscillators/caspi_BlepOscillator.h"
 #include "oscillators/caspi_Operator.h"
-#include "oscillators/caspi_WaveTableOscillator.h"
+#include "oscillators/caspi_WavetableOscillator.h"
 #include "oscillators/caspi_LFO.h"
 #include "oscillators/caspi_Noise.h"
 

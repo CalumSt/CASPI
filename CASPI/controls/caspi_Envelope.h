@@ -14,14 +14,16 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Envelope.h
 * @author CS Islay
-* @brief A class implementing a variety of envelopes using ADSR stages.
-*
-************************************************************************/
+ * @brief A class implementing a variety of envelopes using ADSR stages.
+ * @ingroup controls
+ *
+ ************************************************************************/
 #ifndef CASPI_ENVELOPEGENERATOR_H
 #define CASPI_ENVELOPEGENERATOR_H
 
 #include "base/caspi_Assert.h"
 #include "core/caspi_AudioBuffer.h"
+#include "core/caspi_Graph.h"
 #include "core/caspi_Node.h"
 #include <cmath>
 #include <string>

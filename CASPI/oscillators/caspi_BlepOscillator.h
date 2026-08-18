@@ -14,6 +14,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
  * @file   caspi_BlepOscillator.h
  * @author CS Islay
  * @brief  Band-limited oscillator using the PolyBLEP antialiasing method.
+ * @ingroup oscillators
  *
  * @details
  * BlepOscillator<FloatType> produces band-limited Sine, Saw, Square,

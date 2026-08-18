@@ -1,5 +1,4 @@
 #include "base/caspi_Constants.h"
-#include "core/caspi_Core.h"
 #include "core/caspi_Phase.h"
 #include <benchmark/benchmark.h>
 
