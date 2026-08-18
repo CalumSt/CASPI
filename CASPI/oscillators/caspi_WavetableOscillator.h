@@ -15,6 +15,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
  * @author CS Islay
  * @brief  Single-cycle wavetable oscillator with per-sample modulation
  *         and multi-table morphing.
+ * @ingroup oscillators
  *
  * @details
  * Three cooperating types form the public API:
@@ -36,8 +37,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
  * ### WavetableOscillator\<FloatType, TableSize, NumTables\>
  * The oscillator. Holds a non-owning pointer to a WaveTableBank; the bank
  * must outlive the oscillator. The API matches BlepOscillator exactly:
- * - Inherits Core::Producer<FloatType, Traversal::PerFrame>
- * - Inherits Core::SampleRateAware<FloatType>
+ * - Inherits Graph::AudioNode<WavetableOscillator<FloatType, TableSize, NumTables>, FloatType>
  * - Public ModulatableParameter members: amplitude, frequency, morphPosition
  * - setFrequency(hz) — writes into the log-scale parameter and snaps the
  *   smoother (same contract as BlepOscillator::setFrequency)
@@ -123,7 +123,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 #include "base/caspi_Assert.h"
 #include "base/caspi_Constants.h"
-#include "core/caspi_Producer.h"
+#include "core/caspi_Node.h"
 #include "core/caspi_Graph.h"
 #include "core/caspi_Parameter.h"
 #include "core/caspi_Phase.h"
@@ -667,9 +667,8 @@ template <CASPI_FLOAT_TYPE FloatType,
           std::size_t TableSize = 2048,
           std::size_t NumTables = 1>
 class WavetableOscillator
-    : public Core::Producer<WavetableOscillator<FloatType, TableSize, NumTables>,
-                            FloatType,
-                            Core::Traversal::PerFrame>
+    : public Graph::AudioNode<WavetableOscillator<FloatType, TableSize, NumTables>,
+                              FloatType>
 {
     CASPI_STATIC_ASSERT (std::is_floating_point<FloatType>::value,
                    "WavetableOscillator requires a floating-point type");
@@ -724,7 +723,7 @@ public:
      * uses getSampleRate() to compute phase.increment. This is the preferred
      * constructor when all three are known at construction time.
      *
-     * @param bank        Reference to the WaveTableBank. Must outlive this object.
+     * @param bankIn      Reference to the WaveTableBank. Must outlive this object.
      * @param sampleRate  Audio sample rate in Hz. Must be > 0.
      * @param hz          Oscillator frequency in Hz. Must be in (0, sampleRate/2).
      *
@@ -1032,7 +1031,7 @@ public:
      * @endcode
      */
     CASPI_NO_DISCARD
-    FloatType renderSample() noexcept CASPI_NON_BLOCKING override
+    FloatType renderSample() noexcept CASPI_NON_BLOCKING
     {
         amplitude.process();
         frequency.process();
@@ -1070,7 +1069,15 @@ public:
             morphPosition.addModulation (morphMod);
         }
 
-        this->render (this->outputBuffer);
+        auto& buf = this->outputBuffer;
+        const auto F = buf.numFrames();
+        const auto C = buf.numChannels();
+
+        renderBlock (buf.data(), static_cast<int> (F));
+
+        for (std::size_t ch = 1; ch < C; ++ch)
+            for (std::size_t f = 0; f < F; ++f)
+                buf.sample (ch, f) = buf.sample (0, f);
 
         if (freqMod != FloatType (0))
         {

@@ -13,11 +13,12 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
  * @file   caspi_LFO.h
  * @author CS Islay
- * @brief  Low-frequency oscillator — control signal source.
+ * @brief  Low-frequency oscillator - control signal source.
+ * @ingroup oscillators
  *
  * @details
  * LFO<FloatType> is a control-rate modulation source. It does not inherit
- * Core::Producer because:
+ * Graph::AudioNode because:
  *
  * - Producer::render(AudioBuffer&) implies audio-rate sample generation
  *   written into a multichannel frame buffer. An LFO produces a single
@@ -160,7 +161,7 @@ enum class LfoOutputMode
  * @brief Low-frequency oscillator — control signal source.
  *
  * @details
- * Produces a modulation scalar per sample. Does not inherit Core::Producer;
+ * Produces a modulation scalar per sample. Does not inherit Graph::AudioNode;
  * see file header for rationale. Inherits only Core::SampleRateAware<FloatType>.
  *
  * @tparam FloatType  float or double.

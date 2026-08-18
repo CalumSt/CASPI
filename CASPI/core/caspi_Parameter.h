@@ -16,12 +16,10 @@
  *
  * @file caspi_Parameter.h A template for CASPI header files.
  * @author CS Islay
- * @brief Use this file to write new files.
+ * @brief Thread-safe modulatable parameter with smoothing.
+ * @ingroup core
  ************************************************************************/
 
-//------------------------------------------------------------------------------
-// Includes - System
-//------------------------------------------------------------------------------
 #include <atomic>
 
 //------------------------------------------------------------------------------

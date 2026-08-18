@@ -13,10 +13,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Blocks.h
 * @author CS Islay
-* @brief Block-based SIMD operations with kernel abstraction.
-*
-*
-* OVERVIEW
+ * @brief Block-based SIMD operations with kernel abstraction.
+ * @ingroup maths
+ *
+ * OVERVIEW
 *
 * Provides high-level block operations that process arrays with automatic
 * handling of:
@@ -630,7 +630,7 @@ namespace CASPI
          * @note If either pointer is null or count == 0 the function returns
          *       without side effects.
          *
-         * @example
+         *
          * @code
          * SIMD::block_op_binary<float>(dst, src, n, SIMD::kernels::AddKernel<float>());
          * // equivalent to: for (i) dst[i] = dst[i] + src[i];
@@ -709,7 +709,7 @@ namespace CASPI
          * @note dst and src may alias if the kernel supports in-place operation;
          *       otherwise they must be distinct.
          *
-         * @example
+         *
          * @code
          * SIMD::block_op_unary<float>(dst, src, n, SIMD::kernels::CopyGainKernel<float>(gain));
          * // Produces dst[i] = src[i] * gain;
@@ -780,7 +780,7 @@ namespace CASPI
          *
          * @note Returns immediately if data == nullptr or count == 0.
          *
-         * @example
+         *
          * @code
          * SIMD::block_op_inplace<float>(samples, n, SIMD::kernels::ScaleKernel<float>(0.5f));
          * // scales samples in-place by 0.5
@@ -852,7 +852,7 @@ namespace CASPI
          *       NT stores (stream_store) are used with a final store_fence() call.
          * @note If dst == nullptr or count == 0 nothing happens.
          *
-         * @example
+         *
          * @code
          * SIMD::block_op_fill<float>(buffer, n, SIMD::kernels::FillKernel<float>(0.0f));
          * @endcode
@@ -948,7 +948,7 @@ namespace CASPI
          *
          * @note All alignment logic mirrors the binary/inplace drivers.
          *
-         * @example
+         *
          * @code
          * SIMD::block_op_ternary<float>(dst, a, b, n, SIMD::kernels::MACKernel<float>());
          * // equivalent to: for i: dst[i] += a[i] * b[i];
@@ -1019,7 +1019,7 @@ namespace CASPI
          * @note The function is null-safe: returns immediately when any input is null
          *       or count == 0.
          *
-         * @example
+         *
          * @code
          * SIMD::block_op_binary_out<float>(dst, a, b, n, SIMD::kernels::AddKernel<float>());
          * // produces dst[i] = a[i] + b[i];

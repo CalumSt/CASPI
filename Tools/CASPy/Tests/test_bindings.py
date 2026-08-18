@@ -54,11 +54,22 @@ def add_osc4(g, bank, hz=440.0):
     return g.add_node(wt.WavetableOscillator4(bank, SR, hz))
 
 
-def add_filter(g, cutoff=1000.0, mode=None):
-    """Add an SvfFilter to graph g; return its NodeId."""
+def add_filter(g, cutoff=1000.0, mode=None, topology="svf"):
+    """Add a filter node to graph g; return its NodeId.
+
+    topology: "svf" (default), "biquad", "ladder", "diode", "onepole".
+    """
     if mode is None:
         mode = caspy.FilterMode.LowPass
-    return g.add_node(caspy.SvfFilter(SR, cutoff, 0.707, mode))
+    if topology == "biquad":
+        return g.add_node(caspy.BiquadFilter(SR, cutoff, 0.707, mode))
+    elif topology == "ladder":
+        return g.add_node(caspy.LadderFilter(SR, cutoff, 0.707))
+    elif topology == "diode":
+        return g.add_node(caspy.DiodeLadderFilter(SR, cutoff, 0.707))
+    elif topology == "onepole":
+        return g.add_node(caspy.OnePoleFilter(SR, cutoff, mode))
+    return g.add_node(caspy.StateVariableFilter(SR, cutoff, 0.707, mode))
 
 
 # ===========================================================================
@@ -81,7 +92,9 @@ class TestImport:
         _ = wt.InterpolationMode.Linear
 
     def test_classes_present(self):
-        for name in ("AudioGraph", "SvfFilter", "NodeBase"):
+        for name in ("AudioGraph", "StateVariableFilter", "BiquadFilter",
+                     "LadderFilter", "DiodeLadderFilter", "OnePoleFilter",
+                     "Filters", "NodeBase"):
             assert hasattr(caspy, name), f"caspy.{name} missing"
         for name in ("WaveTable", "WaveTableBank1", "WaveTableBank4",
                      "WavetableOscillator1", "WavetableOscillator4"):
@@ -286,50 +299,50 @@ class TestWavetableOsc4:
 
 
 # ===========================================================================
-# SvfFilter  (standalone — no graph)
+# StateVariableFilter  (standalone — no graph)
 # ===========================================================================
 
-class TestSvfFilter:
+class TestStateVariableFilter:
     def test_construct_default(self):
-        assert caspy.SvfFilter() is not None
+        assert caspy.StateVariableFilter() is not None
 
     def test_construct_full(self):
-        assert caspy.SvfFilter(SR, 1000.0, 0.707, caspy.FilterMode.LowPass) is not None
+        assert caspy.StateVariableFilter(SR, 1000.0, 0.707, caspy.FilterMode.LowPass) is not None
 
     def test_process_sample_returns_float(self):
-        assert isinstance(caspy.SvfFilter(SR, 1000.0).process_sample(1.0), float)
+        assert isinstance(caspy.StateVariableFilter(SR, 1000.0).process_sample(1.0), float)
 
     def test_process_block_shape(self):
-        f   = caspy.SvfFilter(SR, 1000.0)
+        f   = caspy.StateVariableFilter(SR, 1000.0)
         out = f.process_block(np.random.randn(FRAMES).astype(np.float32))
         assert out.shape == (FRAMES,)
         assert out.dtype == np.float32
 
     def test_lowpass_attenuates_high_freq(self):
-        f = caspy.SvfFilter(SR, 500.0, 0.707, caspy.FilterMode.LowPass)
+        f = caspy.StateVariableFilter(SR, 500.0, 0.707, caspy.FilterMode.LowPass)
         assert f.frequency_response(100.0) > f.frequency_response(5000.0) * 10
 
     def test_highpass_attenuates_low_freq(self):
-        f = caspy.SvfFilter(SR, 5000.0, 0.707, caspy.FilterMode.HighPass)
+        f = caspy.StateVariableFilter(SR, 5000.0, 0.707, caspy.FilterMode.HighPass)
         assert f.frequency_response(SR / 2 * 0.9) > f.frequency_response(200.0) * 10
 
     def test_mode_property_roundtrip(self):
-        f = caspy.SvfFilter(SR, 1000.0)
+        f = caspy.StateVariableFilter(SR, 1000.0)
         f.mode = caspy.FilterMode.BandPass
         assert f.mode == caspy.FilterMode.BandPass
 
     def test_cutoff_property_roundtrip(self):
-        f = caspy.SvfFilter(SR, 1000.0)
+        f = caspy.StateVariableFilter(SR, 1000.0)
         f.cutoff = 2000.0
         assert f.cutoff == pytest.approx(2000.0, rel=1e-4)
 
     def test_q_property_roundtrip(self):
-        f = caspy.SvfFilter(SR, 1000.0)
+        f = caspy.StateVariableFilter(SR, 1000.0)
         f.q = 2.0
         assert f.q == pytest.approx(2.0, rel=1e-4)
 
     def test_reset_clears_state(self):
-        f = caspy.SvfFilter(SR, 1000.0)
+        f = caspy.StateVariableFilter(SR, 1000.0)
         for _ in range(100):
             f.process_sample(1.0)
         f.reset()
@@ -340,9 +353,167 @@ class TestSvfFilter:
         for mode in (caspy.FilterMode.LowPass, caspy.FilterMode.HighPass,
                      caspy.FilterMode.BandPass, caspy.FilterMode.Notch,
                      caspy.FilterMode.Peak, caspy.FilterMode.AllPass):
-            f   = caspy.SvfFilter(SR, 1000.0, 0.707, mode)
+            f   = caspy.StateVariableFilter(SR, 1000.0, 0.707, mode)
             out = f.process_block(noise)
             assert float(np.max(np.abs(out))) > 0.0, f"Mode {mode} produced silence"
+
+
+# ===========================================================================
+# BiquadFilter
+# ===========================================================================
+
+class TestBiquadFilter:
+    def test_construct_default(self):
+        assert caspy.BiquadFilter() is not None
+
+    def test_construct_full(self):
+        assert caspy.BiquadFilter(SR, 1000.0, 0.707, caspy.FilterMode.LowPass) is not None
+
+    def test_process_sample_returns_float(self):
+        assert isinstance(caspy.BiquadFilter(SR, 1000.0).process_sample(1.0), float)
+
+    def test_process_block_shape(self):
+        f   = caspy.BiquadFilter(SR, 1000.0)
+        out = f.process_block(np.random.randn(256).astype(np.float32))
+        assert out.shape == (256,)
+        assert out.dtype == np.float32
+
+    def test_lowpass_attenuates_high_freq(self):
+        f = caspy.BiquadFilter(SR, 500.0, 0.707, caspy.FilterMode.LowPass)
+        assert f.frequency_response(100.0) > f.frequency_response(5000.0) * 10
+
+    def test_highpass_attenuates_low_freq(self):
+        f = caspy.BiquadFilter(SR, 5000.0, 0.707, caspy.FilterMode.HighPass)
+        assert f.frequency_response(SR / 2 * 0.9) > f.frequency_response(200.0) * 10
+
+    def test_cutoff_property_roundtrip(self):
+        f = caspy.BiquadFilter(SR, 1000.0)
+        f.cutoff = 2000.0
+        assert f.cutoff == pytest.approx(2000.0, rel=1e-4)
+
+    def test_q_property_roundtrip(self):
+        f = caspy.BiquadFilter(SR, 1000.0)
+        f.q = 2.0
+        assert f.q == pytest.approx(2.0, rel=1e-4)
+
+    def test_gain_property(self):
+        f = caspy.BiquadFilter(SR, 1000.0, 0.707, caspy.FilterMode.Peak, 6.0)
+        f.frequency_response(1000.0)  # just ensure no crash
+
+    def test_reset_clears_state(self):
+        f = caspy.BiquadFilter(SR, 1000.0)
+        for _ in range(100):
+            f.process_sample(1.0)
+        f.reset()
+        assert abs(f.process_sample(0.0)) < 1e-6
+
+    def test_process_block_inplace(self):
+        f = caspy.BiquadFilter(SR, 1000.0)
+        data = np.random.randn(256).astype(np.float32)
+        copy = data.copy()
+        f.process_block_inplace(data)
+        assert not np.allclose(data, copy)  # was modified
+
+
+# ===========================================================================
+# LadderFilter
+# ===========================================================================
+
+class TestLadderFilter:
+    def test_construct_default(self):
+        assert caspy.LadderFilter() is not None
+
+    def test_construct_full(self):
+        assert caspy.LadderFilter(SR, 1000.0, 0.707) is not None
+
+    def test_process_sample_returns_float(self):
+        assert isinstance(caspy.LadderFilter(SR, 1000.0).process_sample(1.0), float)
+
+    def test_process_block_shape(self):
+        f   = caspy.LadderFilter(SR, 1000.0)
+        out = f.process_block(np.random.randn(256).astype(np.float32))
+        assert out.shape == (256,)
+        assert out.dtype == np.float32
+
+    def test_cutoff_property_roundtrip(self):
+        f = caspy.LadderFilter(SR, 1000.0)
+        f.cutoff = 2000.0
+        assert f.cutoff == pytest.approx(2000.0, rel=1e-4)
+
+    def test_q_property_roundtrip(self):
+        f = caspy.LadderFilter(SR, 1000.0)
+        f.q = 2.0
+        assert f.q == pytest.approx(2.0, rel=1e-4)
+
+
+# ===========================================================================
+# DiodeLadderFilter
+# ===========================================================================
+
+class TestDiodeLadderFilter:
+    def test_construct_default(self):
+        assert caspy.DiodeLadderFilter() is not None
+
+    def test_construct_full(self):
+        assert caspy.DiodeLadderFilter(SR, 1000.0, 1.0) is not None
+
+    def test_process_sample_returns_float(self):
+        assert isinstance(caspy.DiodeLadderFilter(SR, 1000.0).process_sample(1.0), float)
+
+    def test_process_block_shape(self):
+        f   = caspy.DiodeLadderFilter(SR, 1000.0)
+        out = f.process_block(np.random.randn(256).astype(np.float32))
+        assert out.shape == (256,)
+        assert out.dtype == np.float32
+
+    def test_cutoff_property_roundtrip(self):
+        f = caspy.DiodeLadderFilter(SR, 1000.0)
+        f.cutoff = 2000.0
+        assert f.cutoff == pytest.approx(2000.0, rel=1e-4)
+
+
+# ===========================================================================
+# OnePoleFilter
+# ===========================================================================
+
+class TestOnePoleFilter:
+    def test_construct_default(self):
+        assert caspy.OnePoleFilter() is not None
+
+    def test_construct_full(self):
+        assert caspy.OnePoleFilter(SR, 1000.0, caspy.FilterMode.HighPass) is not None
+
+    def test_process_sample_returns_float(self):
+        assert isinstance(caspy.OnePoleFilter(SR, 1000.0).process_sample(1.0), float)
+
+    def test_process_block_shape(self):
+        f   = caspy.OnePoleFilter(SR, 1000.0)
+        out = f.process_block(np.random.randn(256).astype(np.float32))
+        assert out.shape == (256,)
+        assert out.dtype == np.float32
+
+    def test_lowpass_reaches_dc(self):
+        f = caspy.OnePoleFilter(SR, 100.0, caspy.FilterMode.LowPass)
+        for _ in range(int(SR)):
+            f.process_sample(1.0)
+        assert f.process_sample(1.0) == pytest.approx(1.0, abs=1e-2)
+
+    def test_highpass_dc_zero(self):
+        f = caspy.OnePoleFilter(SR, 100.0, caspy.FilterMode.HighPass)
+        for _ in range(int(SR)):
+            f.process_sample(1.0)
+        out = f.process_sample(1.0)
+        assert out == pytest.approx(0.0, abs=1e-2)
+
+    def test_cutoff_property_roundtrip(self):
+        f = caspy.OnePoleFilter(SR, 1000.0)
+        f.cutoff = 2000.0
+        assert f.cutoff == pytest.approx(2000.0, rel=1e-4)
+
+    def test_mode_property_roundtrip(self):
+        f = caspy.OnePoleFilter(SR, 1000.0)
+        f.mode = caspy.FilterMode.HighPass
+        assert f.mode == caspy.FilterMode.HighPass
 
 
 # ===========================================================================

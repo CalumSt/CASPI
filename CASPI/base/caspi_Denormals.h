@@ -16,6 +16,7 @@
  * @file   core/caspi_Denormals.h
  * @author CS Islay
  * @brief  Denormal number handling utilities.
+ * @ingroup base
  *
  * @details
  * Denormal (subnormal) floating-point numbers can cause severe CPU stalls

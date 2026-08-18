@@ -14,15 +14,17 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Envelope.h
 * @author CS Islay
-* @brief A class implementing a variety of envelopes using ADSR stages.
-*
-************************************************************************/
+ * @brief A class implementing a variety of envelopes using ADSR stages.
+ * @ingroup controls
+ *
+ ************************************************************************/
 #ifndef CASPI_ENVELOPEGENERATOR_H
 #define CASPI_ENVELOPEGENERATOR_H
 
 #include "base/caspi_Assert.h"
 #include "core/caspi_AudioBuffer.h"
-#include "core/caspi_Producer.h"
+#include "core/caspi_Graph.h"
+#include "core/caspi_Node.h"
 #include <cmath>
 #include <string>
 namespace CASPI
@@ -145,22 +147,21 @@ namespace CASPI
          * ADSR<FloatType>
          *
          * Concrete ADSR envelope. Usable standalone via render(), or as a
-         * graph Producer node via AudioGraph::addNode().
+         * graph AudioNode via AudioGraph::addNode().
          *
-         * Inherits Producer<ADSR<F>, F, PerFrame>:
-         *   - AudioGraph calls process(ctx) -> processImpl(ctx) -> render(outputBuffer)
-         *   - render(outputBuffer) calls renderSample() once per frame (PerFrame policy)
-         *   - renderSample() calls render() — the same path as standalone use
+         * Inherits AudioNode<ADSR<F>, F>:
+         *   - AudioGraph calls process(ctx) -> processImpl(ctx)
+         *   - processImpl() calls render() per frame — the same path as standalone use
          *
          * There is no wrapper, no delegation, no separate node class.
          * The ADSR IS the graph node.
          ***********************************************************************************************/
         template <CASPI_FLOAT_TYPE FloatType>
-        class ADSR final : Envelope<FloatType>, public Core::Producer<ADSR<FloatType>, FloatType, Core::Traversal::PerFrame>
+        class ADSR final : Envelope<FloatType>, public Graph::AudioNode<ADSR<FloatType>, FloatType>
         {
             public:
                 ADSR()
-                    : Core::Producer<ADSR<FloatType>, FloatType, Core::Traversal::PerFrame> (0, 1)
+                    : Graph::AudioNode<ADSR<FloatType>, FloatType> (1, 1)
                 {
                 }
 
@@ -333,16 +334,26 @@ namespace CASPI
                 }
 
                 /**
-                 * @brief Called by Producer::render() once per frame (PerFrame policy).
-                 *
-                 * This is the single point connecting standalone and graph use.
-                 * In standalone: call render() directly.
-                 * In graph: AudioGraph -> process() -> processImpl() -> render(outputBuffer)
-                 *           -> renderSample() -> render().
+                 * @brief Called by AudioNode::process() each block. Renders the
+                 *        envelope per frame and broadcasts to all channels.
                  */
-                FloatType renderSample() CASPI_NON_BLOCKING override
+                void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
                 {
-                    return render();
+                    auto& buf = this->outputBuffer;
+                    const auto F = buf.numFrames();
+                    const auto C = buf.numChannels();
+
+                    const auto* audioIn = ctx.getAudioInput (this->getId(), 0);  // nullptr if unconnected
+
+                    for (std::size_t f = 0; f < F; ++f)
+                    {
+                        const FloatType env = render();
+                        for (std::size_t ch = 0; ch < C; ++ch)
+                        {
+                            const FloatType carrier = (audioIn != nullptr) ? audioIn->sample (ch, f) : FloatType (1);
+                            buf.sample (ch, f) = carrier * env;  // VCA when connected, raw envelope otherwise
+                        }
+                    }
                 }
 
             private:

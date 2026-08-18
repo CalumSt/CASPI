@@ -1,3 +1,11 @@
+/**
+ * @file caspi_Backtrace.h
+ * @brief Backtrace capture utilities for debugging.
+ * @ingroup base
+ *
+ * Provides stack backtrace capture, available only in debug builds.
+ */
+
 #pragma once
 #include <string>
 #include <vector>

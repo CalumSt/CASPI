@@ -18,6 +18,7 @@
  * @author CS Islay
  * @brief  MIDI 1.0 message representation, fixed-capacity stream buffer,
  *         and audio-thread-safe utility functions.
+ * @ingroup midi
  *
  * @details
  * ### Overview

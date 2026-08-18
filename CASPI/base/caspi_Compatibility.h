@@ -1,10 +1,16 @@
+/**
+ * @file caspi_Compatibility.h
+ * @brief Polyfills for C++11 and C++14 compatibility.
+ * @ingroup base
+ *
+ * Provides std::make_unique for pre-C++14 environments, etc.
+ */
+
 #ifndef CASPI_COMPATIBILITY_H
 #define CASPI_COMPATIBILITY_H
 
 #include <memory>
 #include <utility>
-
-
 #include "caspi_Features.h"
 
 

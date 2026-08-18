@@ -14,7 +14,8 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Span.h
 * @author CS Islay
-* @brief Span types with automatic SIMD acceleration for contiguous data
+ * @brief Span types with automatic SIMD acceleration for contiguous data
+ * @ingroup core
 *
 * Provides:
 * - Span<T>: Contiguous, non-owning view (SIMD-eligible)

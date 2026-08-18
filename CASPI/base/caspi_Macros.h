@@ -14,9 +14,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_Macros.h
 * @author CS Islay
-* @brief A collection of marcos for useful purposes.
-*
-************************************************************************/
+ * @brief A collection of marcos for useful purposes.
+ * @ingroup base
+ *
+ ************************************************************************/
 
 #ifndef CASPI_MACROS_H
 #define CASPI_MACROS_H

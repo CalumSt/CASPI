@@ -1,0 +1,122 @@
+/**
+\page getting_started Getting Started
+
+\section gs_quickstart 5-Minute Quickstart
+
+### 1. Include the library
+
+\code
+#include "caspi.h"          // Everything
+// or just what you need:
+#include "oscillators/caspi_BlepOscillator.h"
+\endcode
+
+### 2. Create an oscillator and render audio
+
+\code
+#include "oscillators/caspi_BlepOscillator.h"
+
+CASPI::BlepOscillator<double, CASPI::BLEPWaveform::Sine> osc;
+osc.setFrequency(440.0, 48000.0);
+osc.setAmplitude(0.5);
+
+constexpr std::size_t N = 512;
+double buffer[N];
+osc.renderBlock(buffer, N);   // fills buffer with 440 Hz sine
+\endcode
+
+### 3. Add a filter
+
+\code
+#include "oscillators/caspi_BlepOscillator.h"
+#include "filters/caspi_SvfFilter.h"
+
+// Oscillator
+CASPI::BlepOscillator<double, CASPI::BLEPWaveform::Saw> osc;
+osc.setFrequency(220.0, 48000.0);
+osc.setAmplitude(0.4);
+
+// Filter
+CASPI::SvfFilter<double> filter;
+filter.setCutoff(1000.0);
+filter.setQ(0.707);
+filter.setMode(CASPI::FilterMode::LowPass);
+
+// Process per sample
+constexpr std::size_t N = 512;
+double buf[N];
+osc.renderBlock(buf, N);
+for (std::size_t i = 0; i < N; ++i)
+    buf[i] = filter.processSample(buf[i]);
+\endcode
+
+\section gs_cmake CMake Integration
+
+\code
+# CMakeLists.txt
+add_subdirectory(path/to/CASPI)
+target_link_libraries(my_synth PRIVATE CASPI)
+\endcode
+
+Build options:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `CASPI_ENABLE_DEBUG` | OFF | Debug assertions and logging |
+| `CASPI_BUILD_TESTING` | OFF | Unit tests (GoogleTest) |
+| `CASPI_BUILD_BENCHMARKS` | OFF | Benchmarks (GoogleBench) |
+| `CASPI_BUILD_PYTHON` | OFF | Python bindings (CASPy) |
+| `CASPI_SANITIZER` | None | Address, Undefined, Thread, Realtime |
+
+\code
+cmake -B build -DCASPI_BUILD_TESTING=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+\endcode
+
+\section gs_graph Graph Engine
+
+For complex patches with multiple interconnected nodes, use the graph engine:
+
+\code
+#include "core/caspi_Graph.h"
+#include "oscillators/caspi_BlepOscillator.h"
+#include "filters/caspi_SvfFilter.h"
+
+using namespace CASPI::Graph;
+
+AudioContext<double> ctx(48000.0, 512);
+
+auto* osc = ctx.createNode<BlepOscillator<double, BLEPWaveform::Sine>>();
+auto* flt = ctx.createNode<SvfFilter<double>>();
+
+osc->setFrequency(440.0, 48000.0);
+flt->setCutoff(2000.0);
+flt->setQ(0.707);
+
+ctx.connect(osc, 0, flt, 0);
+ctx.setOutput(flt, 0);
+ctx.process();
+
+auto& output = ctx.getOutputBuffer();
+\endcode
+
+\section gs_python Try Without Compiling
+
+CASPI has Python bindings (CASPy) for interactive exploration.
+Install with:
+
+\code
+cd Tools/CASPy
+uv sync
+\endcode
+
+Then open the Jupyter notebooks in `Tools/CASPy/Examples/` for interactive demos
+of oscillators, FM synthesis, envelopes, LFOs, and filters.
+
+\section gs_next Next Steps
+
+- \ref examples "C++ Examples" - worked code snippets for each component
+- <a href="topics.html">Modules</a> - browse the API by module
+- \ref benchmarks "Benchmarks" - SIMD performance comparisons
+*/

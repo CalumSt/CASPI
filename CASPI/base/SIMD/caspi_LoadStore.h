@@ -13,10 +13,10 @@ Y88b  d88P 888  888      X88 888 d88P 888
 
 * @file caspi_LoadStore.h
 * @author CS Islay
-* @brief SIMD load and store operations with alignment handling.
-*
-*
-* OVERVIEW
+ * @brief SIMD load and store operations with alignment handling.
+ * @ingroup maths
+ *
+ * OVERVIEW
 *
 * Provides functions for loading from and storing to memory with automatic
 * or explicit alignment handling:
@@ -261,7 +261,7 @@ namespace CASPI
          *
          * @warning Undefined behavior if pointer is not properly aligned.
          *
-         * @example
+         *
          * @code
          * alignas(16) double buf[2];
          * float64x2 v = set1<double>(1.234);
@@ -292,7 +292,7 @@ namespace CASPI
          *       than the aligned version on platforms where unaligned accesses
          *       are penalised.
          *
-         * @example
+         *
          * @code
          * float tmp[4];
          * float32x4 v = set1<float>(0.5f);
@@ -406,7 +406,7 @@ namespace CASPI
          * @note On platforms without non-temporal store intrinsics this falls back
          *       to a normal aligned store.
          *
-         * @example
+         *
          * @code
          * for (size_t i = 0; i < count; i += 2) {
          *     stream_store(output + i, load_aligned<double>(input + i));
@@ -431,7 +431,7 @@ namespace CASPI
          *
          * @note On non-SSE targets (NEON, WASM), this is a no-op.
          *
-         * @example
+         *
          * @code
          * stream_store(...);
          * stream_store(...);
