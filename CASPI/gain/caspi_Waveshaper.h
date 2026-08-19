@@ -11,13 +11,19 @@
 #ifndef CASPI_WAVESHAPER_H
 #define CASPI_WAVESHAPER_H
 
+#include <cmath>
 #include <unordered_map>
 #include <functional>
 #include <string>
 #include "base/caspi_Constants.h"
 #include "maths/caspi_Maths.h"
 
-namespace CASPI::Gain
+// Waveshaper lives directly in CASPI (matching Gain<F>'s own placement in
+// caspi_Gain.h) rather than in a CASPI::Gain sub-namespace: that name is
+// already a class template (CASPI::Gain<F>), and a namespace can't share a
+// fully-qualified name with a class template — the two headers would fail
+// to compile together.
+namespace CASPI
 
 {
 /**
@@ -195,14 +201,14 @@ namespace CASPI::Gain
 
            FloatType hardClip (FloatType x)
            {
-               auto out = 0.5 * (abs(x + clipLimit) - abs(x - clipLimit));
+               auto out = 0.5 * (std::abs (x + clipLimit) - std::abs (x - clipLimit));
                return out;
            }
 
            FloatType softClip (FloatType x)
            {
                auto out = (x > clipLimit) ? clipLimit : x;
-               out = (x < -clipLimit) ? -clipLimit : x;
+               out = (out < -clipLimit) ? -clipLimit : out;
                return out;
            }
 
