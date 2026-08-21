@@ -25,6 +25,7 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #include "core/caspi_AudioBuffer.h"
 #include "core/caspi_Graph.h"
 #include "core/caspi_Node.h"
+#include "maths/caspi_Maths.h"
 #include <cmath>
 #include <string>
 namespace CASPI
@@ -42,12 +43,12 @@ namespace CASPI
                 const FloatType one     = static_cast<FloatType> (1.0f);
                 const FloatType two     = static_cast<FloatType> (2.0f);
                 /// member variables
-                /// Implemented with Redmon's analog equations
-                const FloatType attackTCO   = static_cast<FloatType> (std::exp (-1.5));
+                /// Implemented with Redmon's analog equations (see Maths::analogTcoCoefficient)
+                const FloatType attackTCO   = CASPI::Constants::ATTACK_TCO<FloatType>;
                 FloatType attackCoefficient = zero;
                 FloatType attackOffset      = zero;
 
-                const FloatType decayTCO   = static_cast<FloatType> (std::exp (-4.95));
+                const FloatType decayTCO   = CASPI::Constants::DECAY_TCO<FloatType>;
                 FloatType decayCoefficient = silence;
                 FloatType decayOffset      = zero;
 
@@ -62,18 +63,16 @@ namespace CASPI
                 void setAttackTime (FloatType _attackTime_s)
                 {
                     auto lengthInSamples = sampleRate * _attackTime_s;
-                    attackCoefficient =
-                        static_cast<FloatType> (std::exp (std::log ((one + attackTCO) / attackTCO) / -lengthInSamples));
-                    attackOffset = (one + attackTCO) * (one - attackCoefficient);
+                    attackCoefficient    = CASPI::Maths::analogTcoCoefficient (attackTCO, lengthInSamples);
+                    attackOffset         = CASPI::Maths::analogTcoOffset (one + attackTCO, attackCoefficient);
                 }
 
                 void setDecayTime (FloatType _decayTime_s)
                 {
                     CASPI_ASSERT (sustainLevel > zero, "Set sustain level to be non-zero before decay.");
                     auto lengthInSamples = sampleRate * _decayTime_s;
-                    decayCoefficient =
-                        static_cast<FloatType> (std::exp (std::log ((one + decayTCO) / decayTCO) / -lengthInSamples));
-                    decayOffset = (sustainLevel - decayTCO) * (one - decayCoefficient);
+                    decayCoefficient     = CASPI::Maths::analogTcoCoefficient (decayTCO, lengthInSamples);
+                    decayOffset          = CASPI::Maths::analogTcoOffset (sustainLevel - decayTCO, decayCoefficient);
                 }
 
                 bool setSustainLevel (FloatType _sustainLevel) noexcept
@@ -95,9 +94,8 @@ namespace CASPI
                 void setReleaseTime (FloatType _releaseTime_s)
                 {
                     auto lengthInSamples = sampleRate * _releaseTime_s;
-                    releaseCoefficient =
-                        static_cast<FloatType> (std::exp (std::log ((one + decayTCO) / decayTCO) / -lengthInSamples));
-                    releaseOffset = (-decayTCO) * (one - releaseCoefficient);
+                    releaseCoefficient   = CASPI::Maths::analogTcoCoefficient (decayTCO, lengthInSamples);
+                    releaseOffset        = CASPI::Maths::analogTcoOffset (-decayTCO, releaseCoefficient);
                 }
 
                 /// getters - mostly for debugging
