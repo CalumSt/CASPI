@@ -45,6 +45,7 @@ set(SOURCES
         processors/Gain_test.cpp
         synthesizers/FMGraph_test.cpp
         synthesizers/Engine_test.cpp
+        synthesizers/OperatorFMVoice_test.cpp
         maths/Spectral_test.cpp
         maths/FMTheory_test.cpp
         maths/FFT_test.cpp

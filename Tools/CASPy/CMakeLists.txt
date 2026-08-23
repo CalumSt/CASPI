@@ -49,6 +49,7 @@ pybind11_add_module(caspy
         Source/Bindings/bind_engine.cpp
         Source/Bindings/bind_filters.cpp
         Source/Bindings/bind_mixer.cpp
+        Source/Bindings/bind_multiply.cpp
 )
 
 target_link_libraries(caspy PRIVATE CASPI)
