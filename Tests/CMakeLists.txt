@@ -18,6 +18,7 @@ include(GoogleTest)
 # ============================================================
 
 set(SOURCES
+        base/Features_test.cpp
         base/SIMD_test.cpp
         base/SIMD/SIMD_complex_test.cpp
         base/SIMD/SIMD_operations_test.cpp

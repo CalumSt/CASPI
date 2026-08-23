@@ -114,6 +114,56 @@ Y88b  d88P 888  888      X88 888 d88P 888
 #endif
 
 
+// Deprecated declarations
+//
+// CASPI_DEPRECATED(msg) marks a declaration deprecated with a required reason
+// string, e.g.:
+//   CASPI_DEPRECATED("use Operator + Graph::AudioGraph instead")
+//   void oldFunction();
+//
+// Prefers the standard [[deprecated("msg")]] attribute where the compiler
+// actually supports it for the active language standard (__has_cpp_attribute
+// correctly reports false under C++11, where the attribute doesn't exist);
+// falls back to the compiler-specific spelling otherwise, so this works from
+// C++11 onwards on MSVC, Clang, and GCC.
+#if defined(__has_cpp_attribute) && __has_cpp_attribute(deprecated)
+#  define CASPI_DEPRECATED(msg) [[deprecated(msg)]]
+#elif defined(CASPI_COMPILER_MSVC)
+#  define CASPI_DEPRECATED(msg) __declspec(deprecated(msg))
+#elif defined(CASPI_COMPILER_CLANG) || defined(CASPI_COMPILER_GCC)
+#  define CASPI_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#else
+#  define CASPI_DEPRECATED(msg)
+#endif
+
+// CASPI_SUPPRESS_DEPRECATED_BEGIN / _END bracket a region where deprecated
+// declarations are used deliberately (e.g. a reference implementation kept
+// around for a parity test, or a call site not yet migrated) so the warning
+// from CASPI_DEPRECATED doesn't drown out warnings that matter elsewhere.
+// Always paired; each BEGIN must have a matching END.
+#if defined(CASPI_COMPILER_MSVC)
+#  define CASPI_SUPPRESS_DEPRECATED_BEGIN \
+      __pragma(warning(push))             \
+      __pragma(warning(disable : 4996))
+#  define CASPI_SUPPRESS_DEPRECATED_END \
+      __pragma(warning(pop))
+#elif defined(CASPI_COMPILER_CLANG)
+#  define CASPI_SUPPRESS_DEPRECATED_BEGIN                                 \
+      _Pragma("clang diagnostic push")                                    \
+      _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+#  define CASPI_SUPPRESS_DEPRECATED_END \
+      _Pragma("clang diagnostic pop")
+#elif defined(CASPI_COMPILER_GCC)
+#  define CASPI_SUPPRESS_DEPRECATED_BEGIN                                 \
+      _Pragma("GCC diagnostic push")                                      \
+      _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#  define CASPI_SUPPRESS_DEPRECATED_END \
+      _Pragma("GCC diagnostic pop")
+#else
+#  define CASPI_SUPPRESS_DEPRECATED_BEGIN
+#  define CASPI_SUPPRESS_DEPRECATED_END
+#endif
+
 // Concept for floating-point types (C++20)
 #if defined(CASPI_FEATURES_HAS_CONCEPTS) && ! defined(CASPI_FEATURES_DISABLE_CONCEPTS)
 #include <concepts>
