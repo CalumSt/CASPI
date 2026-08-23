@@ -748,6 +748,63 @@ namespace CASPI
                  */
                 Core::ModulatableParameter<FloatType> pulseWidth;
 
+                /*************************************************************************
+                 * Waveform evaluation (reusable core)
+                 *************************************************************************/
+
+                /**
+                 * @brief Evaluate the band-limited waveform at an externally driven phase.
+                 *
+                 * @details
+                 * Exposes the same naive + PolyBLEP evaluation used internally by
+                 * renderSample() / renderBlock(), decoupled from this oscillator's own
+                 * phase accumulator and frequency parameter. This lets another component
+                 * drive phase and modulation itself while reusing BlepOscillator's
+                 * antialiased waveform shapes instead of reimplementing PolyBLEP
+                 * correction.
+                 *
+                 * CASPI::Operator uses this to support Saw / Square / Triangle / Pulse
+                 * FM/PM carriers without duplicating the BLEP math.
+                 *
+                 * The Triangle leaky integrator is owned by this instance, so a caller
+                 * driving Triangle shape should keep a single BlepOscillator instance
+                 * and call this method every sample (do not construct a fresh instance
+                 * per call).
+                 *
+                 * @param phase          Normalised phase in [0, 1) at the start of this
+                 *                       sample (before advancement).
+                 * @param phaseIncrement Phase increment for this sample (frequency /
+                 *                       sampleRate, normalised). Drives PolyBLEP width
+                 *                       and the Triangle leak coefficient.
+                 * @param syncCorrection One-sample discontinuity correction. Zero for
+                 *                       normal (non-hard-synced) use.
+                 * @return               Waveform value in approximately [-1, 1], before
+                 *                       amplitude scaling.
+                 *
+                 * @code
+                 *   Oscillators::BlepOscillator<float> core;
+                 *   core.setShape(Oscillators::WaveShape::Saw);
+                 *   float sample = core.evaluateAtPhase(normalisedPhase, dt);
+                 * @endcode
+                 */
+                CASPI_NO_DISCARD FloatType evaluateAtPhase (FloatType phase,
+                                                             FloatType phaseIncrement,
+                                                             FloatType syncCorrection = FloatType (0)) noexcept
+                    CASPI_NON_BLOCKING
+                {
+                    // Step pulseWidth's smoother: renderSample()/renderBlock() normally do
+                    // this, but evaluateAtPhase() bypasses them entirely.
+                    pulseWidth.process();
+
+                    if (shape == WaveShape::Triangle)
+                    {
+                        // leakCoeff(hz, sampleRate) depends only on hz/sampleRate == phaseIncrement.
+                        triangleLeak = detail::leakCoeff (phaseIncrement, FloatType (1));
+                    }
+
+                    return computeSample (phase, phaseIncrement, syncCorrection);
+                }
+
             private:
                 /*************************************************************************
                  * computeSample — waveform evaluation at a given phase

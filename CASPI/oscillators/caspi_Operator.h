@@ -30,7 +30,10 @@
 #include "core/caspi_Graph.h"
 #include "core/caspi_Phase.h"
 #include "core/caspi_Node.h"
+#include "oscillators/caspi_BlepOscillator.h"
+#include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace CASPI
 {
@@ -162,6 +165,35 @@ namespace CASPI
                 updatePhaseIncrement();
             }
 
+            /**
+             * @brief Construct an operator with N declared modulation input ports.
+             *
+             * @details
+             * Use this constructor when placing the operator directly in a
+             * Graph::AudioGraph as a modulation target, with modulators connected
+             * via graph.connect(). By default (the no-argument constructor) an
+             * Operator declares zero input ports and can only be modulated via
+             * setModulationInput() / renderSample(modulation) — a graph connection
+             * into port 0 would fail with GraphError::InvalidPort.
+             *
+             * Each declared port has an independent weight (default 1.0, set via
+             * setModulationPortWeight()), analogous to FMGraphBuilder::connect()'s
+             * per-edge modulation depth. processImpl() sums all connected ports'
+             * signals (each scaled by its weight) before applying modulationIndex,
+             * so multiple modulators can feed one carrier at different depths —
+             * the same topology FMGraphDSP supports internally, expressed with
+             * plain graph connections instead of a separate connection list.
+             *
+             * @param numModulationPorts  Number of independent modulation input ports.
+             * @param numOutputPorts      Number of output ports (default 1).
+             */
+            explicit Operator (std::size_t numModulationPorts, std::size_t numOutputPorts = 1)
+                : Base (numModulationPorts, numOutputPorts)
+                , modulationPortWeights (numModulationPorts, FloatType (1))
+            {
+                envelope.setSampleRate (Constants::DEFAULT_SAMPLE_RATE<FloatType>);
+            }
+
             // ====================================================================
             // Frequency Control
             // ====================================================================
@@ -211,12 +243,92 @@ namespace CASPI
                 modulationMode = mode;
             }
 
+            // ====================================================================
+            // Waveform Control
+            // ====================================================================
+
+            /**
+             * @brief Select the operator's output waveform.
+             *
+             * @details
+             * Defaults to Sine (the classic FM operator core, evaluated directly
+             * with std::sin — no behavioural change from prior releases).
+             * Saw / Square / Triangle / Pulse reuse Oscillators::BlepOscillator's
+             * PolyBLEP-antialiased waveform evaluation instead of duplicating it,
+             * so operators can act as band-limited FM/PM carriers with richer
+             * base timbres than a pure sine.
+             *
+             * @param shape  Target waveform. Triangle switches reset the internal
+             *               BLEP core's leaky integrator to avoid a DC transient.
+             */
+            void setWaveform (Oscillators::WaveShape shape) CASPI_NON_BLOCKING
+            {
+                waveformCore.setShape (shape);
+                waveform = shape;
+            }
+
+            Oscillators::WaveShape getWaveform() const CASPI_NON_BLOCKING
+            {
+                return waveform;
+            }
+
+            /**
+             * @brief Set pulse width for Square / Pulse waveforms. Range [0.01, 0.99].
+             *
+             * No effect on Sine, Saw, or Triangle.
+             */
+            void setPulseWidth (FloatType width) CASPI_NON_BLOCKING
+            {
+                waveformCore.pulseWidth.setBaseNormalised (width);
+                waveformCore.pulseWidth.skip (1000);
+            }
+
             void setModulation (FloatType index, FloatType depth, FloatType feedback = FloatType (0.0))
                 CASPI_NON_BLOCKING
             {
                 setModulationIndex (index);
                 setModulationDepth (depth);
                 setModulationFeedback (feedback);
+            }
+
+            // ====================================================================
+            // Graph Modulation Ports
+            //
+            // Only meaningful when this Operator was constructed with the
+            // (numModulationPorts, numOutputPorts) constructor and placed in a
+            // Graph::AudioGraph. Unrelated to setModulationInput() / renderSample(),
+            // which remain the standalone/FMGraphDSP-internal API.
+            // ====================================================================
+
+            /**
+             * @brief Set the weight applied to a graph modulation input port.
+             *
+             * @details
+             * processImpl() sums each connected port's signal times its weight,
+             * then applies modulationIndex to the total (same two-stage scaling
+             * as FMGraphBuilder::connect()'s per-edge depth followed by the
+             * operator's own modulationIndex).
+             *
+             * @param port    Port index; must be < getNumModulationPorts().
+             * @param weight  Modulation depth for this port. Default: 1.0.
+             */
+            void setModulationPortWeight (std::size_t port, FloatType weight) CASPI_NON_BLOCKING
+            {
+                CASPI_ASSERT (port < modulationPortWeights.size(), "Modulation port index out of range.");
+                if (port < modulationPortWeights.size())
+                {
+                    modulationPortWeights[port] = weight;
+                }
+            }
+
+            FloatType getModulationPortWeight (std::size_t port) const CASPI_NON_BLOCKING
+            {
+                return (port < modulationPortWeights.size()) ? modulationPortWeights[port] : FloatType (0);
+            }
+
+            CASPI_NO_DISCARD std::size_t getNumModulationPorts() const CASPI_NON_BLOCKING
+            {
+                return modulationPortWeights.size();
             }
 
             /**
@@ -315,27 +427,45 @@ namespace CASPI
             }
 
             /**
-             * @brief Graph dispatch: reads upstream audio modulation from input port 0,
-             *        renders sample-by-sample into outputBuffer.
+             * @brief Graph dispatch: sums weighted modulation from all declared input
+             *        ports, renders sample-by-sample into outputBuffer.
              *
-             * If port 0 is connected, each frame of the upstream buffer drives
-             * renderSample(modulationInput) — this is the preferred graph-level FM path.
-             * If not connected, falls back to stored currentModulation / buffer.
+             * @details
+             * Each connected port contributes `sample * modulationPortWeight[port]`
+             * to the combined modulation signal for that frame (see
+             * setModulationPortWeight() — this is how multiple modulators can feed
+             * one carrier at independent depths using plain graph connections).
+             * If no port is connected (including the common case of an Operator
+             * constructed with zero ports), falls back to stored
+             * currentModulation / buffer, matching pre-existing single-value usage.
+             *
+             * getAudioInput() is re-resolved per frame rather than hoisted outside
+             * the loop; with the small port/connection counts typical of FM voices
+             * this is negligible next to the per-sample waveform/envelope work
+             * already done below, and keeps this path allocation-free.
              */
             void processImpl (Graph::AudioContext<FloatType>& ctx) noexcept
             {
-                const auto* modBuf   = ctx.getAudioInput (this->getId(), 0);
-                const std::size_t C  = this->outputBuffer.numChannels();
-                const std::size_t Fm = this->outputBuffer.numFrames();
+                const std::size_t C        = this->outputBuffer.numChannels();
+                const std::size_t Fm       = this->outputBuffer.numFrames();
+                const std::size_t numPorts = this->getNumInputPorts();
 
                 for (std::size_t fr = 0; fr < Fm; ++fr)
                 {
-                    FloatType modSignal = FloatType (0);
-                    if (modBuf != nullptr)
+                    FloatType modSignal    = FloatType (0);
+                    bool anyPortConnected  = false;
+
+                    for (std::size_t port = 0; port < numPorts; ++port)
                     {
-                        modSignal = modBuf->sample (0, fr); // read channel 0 of upstream
+                        const auto* buf = ctx.getAudioInput (this->getId(), port);
+                        if (buf != nullptr)
+                        {
+                            anyPortConnected = true;
+                            modSignal += buf->sample (0, fr) * modulationPortWeights[port];
+                        }
                     }
-                    else
+
+                    if (! anyPortConnected)
                     {
                         modSignal = getCurrentModulationSignal();
                     }
@@ -365,6 +495,9 @@ namespace CASPI
                 envelopeEnabled    = false;
                 envelope.reset();
                 clearModulationInput();
+                waveform = Oscillators::WaveShape::Sine;
+                waveformCore.setShape (Oscillators::WaveShape::Sine);
+                std::fill (modulationPortWeights.begin(), modulationPortWeights.end(), FloatType (1));
             }
 
             // ====================================================================
@@ -436,6 +569,17 @@ namespace CASPI
             FloatType previousOutput      = FloatType (0.0);
             FloatType currentModulation   = FloatType (0.0); // NEW: Single-value modulation
 
+            // Waveform core: Sine is evaluated directly (no behavioural change from
+            // prior releases). Saw/Square/Triangle/Pulse delegate to a BlepOscillator
+            // instance for its PolyBLEP antialiasing rather than reimplementing it.
+            Oscillators::WaveShape waveform = Oscillators::WaveShape::Sine;
+            Oscillators::BlepOscillator<FloatType> waveformCore;
+
+            // Graph modulation ports: one weight per declared input port. Empty for
+            // the default/legacy constructors (0 declared ports) — see the
+            // (numModulationPorts, numOutputPorts) constructor and processImpl().
+            std::vector<FloatType> modulationPortWeights;
+
             // Envelope
             bool envelopeEnabled = false;
             Envelope::ADSR<FloatType> envelope;
@@ -474,6 +618,34 @@ namespace CASPI
 
                 // Note: This handles both positive and negative phases correctly
                 // For negative: floor(-x/2π) gives the correct wrap
+            }
+
+            /**
+             * @brief Evaluate the operator's waveform at a phase (in radians).
+             *
+             * REAL-TIME SAFE: No allocations
+             *
+             * Sine is evaluated directly via std::sin. Other shapes are delegated to
+             * waveformCore (a BlepOscillator instance) after converting to its
+             * normalised [0, 1) phase convention, reusing its PolyBLEP evaluation
+             * instead of duplicating it here.
+             */
+            CASPI_NO_DISCARD FloatType evaluateWaveform (FloatType phaseRadians) noexcept CASPI_NON_BLOCKING
+            {
+                if (waveform == Oscillators::WaveShape::Sine)
+                {
+                    return std::sin (phaseRadians);
+                }
+
+                const FloatType twoPi = Constants::TWO_PI<FloatType>;
+                FloatType normalisedPhase = std::fmod (phaseRadians, twoPi) / twoPi;
+                if (normalisedPhase < FloatType (0))
+                {
+                    normalisedPhase += FloatType (1);
+                }
+                const FloatType normalisedIncrement = phase.increment / twoPi;
+
+                return waveformCore.evaluateAtPhase (normalisedPhase, normalisedIncrement);
             }
 
             /**
@@ -526,7 +698,7 @@ namespace CASPI
                     FloatType instantPhaseInc = Constants::TWO_PI<FloatType> * instantFreq / this->getSampleRate();
 
                     // Generate sample
-                    output = envAmount * modulationDepth * std::sin (phase.phase + selfMod);
+                    output = envAmount * modulationDepth * evaluateWaveform (phase.phase + selfMod);
 
                     // Advance phase by modulated increment
                     phase.phase += instantPhaseInc;
@@ -537,7 +709,7 @@ namespace CASPI
                     FloatType phaseDeviation = modulationSignal * modulationIndex;
 
                     // Generate sample with modulated phase
-                    output = envAmount * modulationDepth * std::sin (phase.phase + phaseDeviation + selfMod);
+                    output = envAmount * modulationDepth * evaluateWaveform (phase.phase + phaseDeviation + selfMod);
 
                     // Advance phase normally
                     phase.phase += phase.increment;

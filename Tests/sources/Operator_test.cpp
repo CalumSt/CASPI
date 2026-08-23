@@ -1,4 +1,6 @@
 #include "oscillators/caspi_Operator.h"
+#include "oscillators/caspi_BlepOscillator.h"
+#include "core/caspi_Graph.h"
 #include "maths/caspi_FFT.h"
 #include <gtest/gtest.h>
 #include <cmath>
@@ -11,6 +13,10 @@ using CASPI::ModulationMode;
 using CASPI::Operator;
 using CASPI::Complex;
 using CASPI::CArray;
+using CASPI::Oscillators::BlepOscillator;
+using CASPI::Oscillators::WaveShape;
+using CASPI::Graph::AudioGraph;
+using CASPI::Graph::Port;
 
 // ============================================================================
 // Test Constants
@@ -709,4 +715,343 @@ TEST(OperatorIntegrationTest, ComplexFMPatch)
     double minVal = *std::min_element(output.begin(), output.end());
     EXPECT_LE(maxVal, 2.0);
     EXPECT_GE(minVal, -2.0);
+}
+
+// ============================================================================
+// Waveform Reuse Tests
+//
+// Operator delegates Saw/Square/Triangle/Pulse waveform evaluation to
+// Oscillators::BlepOscillator (see Operator::evaluateWaveform) instead of
+// reimplementing PolyBLEP correction. These tests confirm the delegation is
+// wired correctly and that an unmodulated Operator tracks a standalone
+// BlepOscillator configured identically.
+// ============================================================================
+
+class OperatorWaveformTest : public ::testing::Test
+{
+protected:
+    Operator<double> op;
+
+    void SetUp() override
+    {
+        op.setSampleRate(TEST_SAMPLE_RATE);
+        op.setFrequency(TEST_FREQUENCY);
+    }
+};
+
+TEST_F(OperatorWaveformTest, DefaultsToSine)
+{
+    EXPECT_EQ(op.getWaveform(), WaveShape::Sine);
+}
+
+TEST_F(OperatorWaveformTest, SetWaveformRoundTrip)
+{
+    op.setWaveform(WaveShape::Saw);
+    EXPECT_EQ(op.getWaveform(), WaveShape::Saw);
+
+    op.setWaveform(WaveShape::Triangle);
+    EXPECT_EQ(op.getWaveform(), WaveShape::Triangle);
+}
+
+TEST_F(OperatorWaveformTest, SineWaveformUnchangedFromDirectSin)
+{
+    // No modulation: with waveform left at the default (Sine), Operator must
+    // still match a plain sin() carrier exactly (no behavioural change for
+    // existing users who never call setWaveform()).
+    for (int i = 0; i < 500; ++i)
+    {
+        double expectedPhase = CASPI::Constants::TWO_PI<double> * TEST_FREQUENCY
+                                * static_cast<double>(i) / TEST_SAMPLE_RATE;
+        double sample = op.renderSample();
+        EXPECT_NEAR(sample, std::sin(expectedPhase), 1e-9);
+    }
+}
+
+class OperatorWaveformShapeTest : public ::testing::TestWithParam<WaveShape>
+{
+};
+
+TEST_P(OperatorWaveformShapeTest, MatchesStandaloneBlepOscillator)
+{
+    const WaveShape shape = GetParam();
+
+    Operator<double> op;
+    op.setSampleRate(TEST_SAMPLE_RATE);
+    op.setFrequency(TEST_FREQUENCY);
+    op.setWaveform(shape);
+    // No modulation input: pure carrier, isolates the waveform delegation.
+    op.setModulationDepth(1.0);
+    op.setModulationIndex(0.0);
+
+    BlepOscillator<double> reference;
+    reference.setSampleRate(TEST_SAMPLE_RATE);
+    reference.setShape(shape);
+    reference.setFrequency(TEST_FREQUENCY);
+
+    for (int i = 0; i < 1000; ++i)
+    {
+        const double opSample  = op.renderSample();
+        const double refSample = reference.renderSample();
+        ASSERT_NEAR(opSample, refSample, 1e-6) << "shape=" << static_cast<int>(shape) << " sample=" << i;
+        EXPECT_FALSE(std::isnan(opSample));
+        EXPECT_LE(std::abs(opSample), 1.2);
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllNonSineShapes,
+    OperatorWaveformShapeTest,
+    ::testing::Values(WaveShape::Saw, WaveShape::Square, WaveShape::Triangle, WaveShape::Pulse));
+
+TEST_F(OperatorWaveformTest, PulseWidthAffectsSquareShape)
+{
+    op.setWaveform(WaveShape::Square);
+    op.setModulationDepth(1.0);
+    op.setModulationIndex(0.0);
+
+    op.setPulseWidth(0.5);
+    std::vector<double> symmetric;
+    for (int i = 0; i < 200; ++i)
+        symmetric.push_back(op.renderSample());
+
+    Operator<double> narrowOp;
+    narrowOp.setSampleRate(TEST_SAMPLE_RATE);
+    narrowOp.setFrequency(TEST_FREQUENCY);
+    narrowOp.setWaveform(WaveShape::Square);
+    narrowOp.setModulationDepth(1.0);
+    narrowOp.setModulationIndex(0.0);
+    narrowOp.setPulseWidth(0.1);
+
+    std::vector<double> narrow;
+    for (int i = 0; i < 200; ++i)
+        narrow.push_back(narrowOp.renderSample());
+
+    // Different duty cycles must not produce identical waveforms.
+    bool anyDifferent = false;
+    for (size_t i = 0; i < symmetric.size(); ++i)
+    {
+        if (std::abs(symmetric[i] - narrow[i]) > 1e-6)
+        {
+            anyDifferent = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(anyDifferent);
+}
+
+TEST_F(OperatorWaveformTest, NonSineCarrierUnderFMStaysBoundedAndFinite)
+{
+    Operator<double> modulator;
+    modulator.setSampleRate(TEST_SAMPLE_RATE);
+    modulator.setFrequency(220.0);
+
+    op.setWaveform(WaveShape::Saw);
+    op.setModulationMode(ModulationMode::Phase);
+    op.setModulationIndex(2.0);
+    op.setModulationDepth(1.0);
+
+    for (int i = 0; i < 2000; ++i)
+    {
+        double mod = modulator.renderSample();
+        double sample = op.renderSample(mod);
+        EXPECT_FALSE(std::isnan(sample));
+        EXPECT_LE(std::abs(sample), 1.5);
+    }
+}
+
+TEST_F(OperatorWaveformTest, ResetReturnsWaveformToSine)
+{
+    op.setWaveform(WaveShape::Triangle);
+    op.renderSample();
+
+    op.reset();
+
+    EXPECT_EQ(op.getWaveform(), WaveShape::Sine);
+}
+
+// ============================================================================
+// Graph Modulation Port Tests
+//
+// Operator(numModulationPorts, numOutputPorts) declares N input ports so it
+// can be modulated via plain Graph::AudioGraph connections instead of
+// setModulationInput()/renderSample(mod) — the prerequisite for building FM
+// algorithms as ordinary graphs of Operator nodes rather than FMGraphDSP.
+// ============================================================================
+
+TEST(OperatorGraphPortsTest, DefaultConstructorDeclaresZeroPorts)
+{
+    Operator<double> op;
+    EXPECT_EQ(op.getNumModulationPorts(), 0u);
+}
+
+TEST(OperatorGraphPortsTest, PortConstructorDeclaresPortsWithUnitWeights)
+{
+    Operator<double> op(3);
+    EXPECT_EQ(op.getNumModulationPorts(), 3u);
+    for (std::size_t i = 0; i < 3; ++i)
+        EXPECT_DOUBLE_EQ(op.getModulationPortWeight(i), 1.0);
+}
+
+TEST(OperatorGraphPortsTest, SetModulationPortWeightRoundTrip)
+{
+    Operator<double> op(2);
+    op.setModulationPortWeight(0, 2.5);
+    op.setModulationPortWeight(1, 0.5);
+
+    EXPECT_DOUBLE_EQ(op.getModulationPortWeight(0), 2.5);
+    EXPECT_DOUBLE_EQ(op.getModulationPortWeight(1), 0.5);
+}
+
+TEST(OperatorGraphPortsTest, ResetRestoresUnitWeights)
+{
+    Operator<double> op(2);
+    op.setModulationPortWeight(0, 3.0);
+    op.setModulationPortWeight(1, 4.0);
+
+    op.reset();
+
+    EXPECT_DOUBLE_EQ(op.getModulationPortWeight(0), 1.0);
+    EXPECT_DOUBLE_EQ(op.getModulationPortWeight(1), 1.0);
+    // Port count is a structural (construction-time) property, not runtime state.
+    EXPECT_EQ(op.getNumModulationPorts(), 2u);
+}
+
+class OperatorGraphModulationTest : public ::testing::Test
+{
+protected:
+    AudioGraph<double> graph;
+
+    static constexpr std::size_t kChannels = 1;
+    static constexpr std::size_t kFrames   = 64;
+
+    void prepareGraph()
+    {
+        auto result = graph.prepare(kChannels, kFrames, TEST_SAMPLE_RATE);
+        ASSERT_TRUE(result.has_value());
+    }
+};
+
+TEST_F(OperatorGraphModulationTest, SingleModulatorPortMatchesManualComputation)
+{
+    auto [modId, mod] = graph.emplace<Operator<double>>();
+    mod.setSampleRate(TEST_SAMPLE_RATE);
+    mod.setFrequency(220.0);
+    mod.setModulationDepth(1.0);
+
+    auto [carId, car] = graph.emplace<Operator<double>>(1u); // 1 declared modulation port
+    car.setSampleRate(TEST_SAMPLE_RATE);
+    car.setFrequency(440.0);
+    car.setModulationMode(ModulationMode::Phase);
+    car.setModulationIndex(2.0);
+    car.setModulationPortWeight(0, 1.5); // per-edge depth, applied before modulationIndex
+
+    auto connectResult = graph.connect(Port(modId), Port(carId, 0));
+    ASSERT_TRUE(connectResult.has_value());
+
+    prepareGraph();
+    graph.process();
+
+    const auto* carBuf = graph.getNode(carId)->getOutputBuffer(0);
+    ASSERT_NE(carBuf, nullptr);
+
+    // Reference: independently drive a second pair with the same sequence and
+    // manually apply the port weight, exactly mirroring processImpl's math.
+    Operator<double> refMod;
+    refMod.setSampleRate(TEST_SAMPLE_RATE);
+    refMod.setFrequency(220.0);
+    refMod.setModulationDepth(1.0);
+
+    Operator<double> refCar;
+    refCar.setSampleRate(TEST_SAMPLE_RATE);
+    refCar.setFrequency(440.0);
+    refCar.setModulationMode(ModulationMode::Phase);
+    refCar.setModulationIndex(2.0);
+
+    for (std::size_t fr = 0; fr < kFrames; ++fr)
+    {
+        double modSample = refMod.renderSample();
+        double expected  = refCar.renderSample(modSample * 1.5);
+        EXPECT_NEAR(carBuf->sample(0, fr), expected, 1e-9) << "frame=" << fr;
+    }
+}
+
+TEST_F(OperatorGraphModulationTest, TwoWeightedModulatorsSumIntoOneCarrier)
+{
+    auto [modAId, modA] = graph.emplace<Operator<double>>();
+    modA.setSampleRate(TEST_SAMPLE_RATE);
+    modA.setFrequency(110.0);
+    modA.setModulationDepth(1.0);
+
+    auto [modBId, modB] = graph.emplace<Operator<double>>();
+    modB.setSampleRate(TEST_SAMPLE_RATE);
+    modB.setFrequency(330.0);
+    modB.setModulationDepth(1.0);
+
+    auto [carId, car] = graph.emplace<Operator<double>>(2u); // 2 declared modulation ports
+    car.setSampleRate(TEST_SAMPLE_RATE);
+    car.setFrequency(440.0);
+    car.setModulationMode(ModulationMode::Phase);
+    car.setModulationIndex(1.0);
+    car.setModulationPortWeight(0, 2.0);
+    car.setModulationPortWeight(1, 0.5);
+
+    ASSERT_TRUE(graph.connect(Port(modAId), Port(carId, 0)).has_value());
+    ASSERT_TRUE(graph.connect(Port(modBId), Port(carId, 1)).has_value());
+
+    prepareGraph();
+    graph.process();
+
+    const auto* carBuf = graph.getNode(carId)->getOutputBuffer(0);
+    ASSERT_NE(carBuf, nullptr);
+
+    Operator<double> refA;
+    refA.setSampleRate(TEST_SAMPLE_RATE);
+    refA.setFrequency(110.0);
+    refA.setModulationDepth(1.0);
+
+    Operator<double> refB;
+    refB.setSampleRate(TEST_SAMPLE_RATE);
+    refB.setFrequency(330.0);
+    refB.setModulationDepth(1.0);
+
+    Operator<double> refCar;
+    refCar.setSampleRate(TEST_SAMPLE_RATE);
+    refCar.setFrequency(440.0);
+    refCar.setModulationMode(ModulationMode::Phase);
+    refCar.setModulationIndex(1.0);
+
+    for (std::size_t fr = 0; fr < kFrames; ++fr)
+    {
+        double sampleA  = refA.renderSample();
+        double sampleB  = refB.renderSample();
+        double expected = refCar.renderSample(sampleA * 2.0 + sampleB * 0.5);
+        EXPECT_NEAR(carBuf->sample(0, fr), expected, 1e-9) << "frame=" << fr;
+    }
+}
+
+TEST_F(OperatorGraphModulationTest, UnconnectedPortFallsBackToUnmodulatedCarrier)
+{
+    // A declared-but-unconnected port must not silently break rendering — the
+    // carrier should fall back to its stored/default modulation (none here),
+    // exactly like the pre-graph-ports single-value API.
+    auto [carId, car] = graph.emplace<Operator<double>>(1u);
+    car.setSampleRate(TEST_SAMPLE_RATE);
+    car.setFrequency(440.0);
+    car.setModulationDepth(1.0);
+
+    prepareGraph();
+    graph.process();
+
+    const auto* carBuf = graph.getNode(carId)->getOutputBuffer(0);
+    ASSERT_NE(carBuf, nullptr);
+
+    Operator<double> refCar;
+    refCar.setSampleRate(TEST_SAMPLE_RATE);
+    refCar.setFrequency(440.0);
+    refCar.setModulationDepth(1.0);
+
+    for (std::size_t fr = 0; fr < kFrames; ++fr)
+    {
+        EXPECT_NEAR(carBuf->sample(0, fr), refCar.renderSample(), 1e-9) << "frame=" << fr;
+    }
 }
