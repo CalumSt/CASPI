@@ -152,16 +152,31 @@
  * Section 13: Graph vs standalone equivalence
  * -----------------------------------------------------------------------
  * 13.1  GraphSineRMSMatchesStandaloneRMSWithinFivePercent
+ *
+ * -----------------------------------------------------------------------
+ * Section 14: FM synthesis via Operator nodes in a plain AudioGraph
+ *
+ * Parity gate for treating Operator + AudioGraph::connect() (using the
+ * (numModulationPorts, numOutputPorts) constructor and
+ * setModulationPortWeight()) as FMGraphDSP's graph-native replacement.
+ * -----------------------------------------------------------------------
+ * 14.1  OperatorFMGraphMatchesBesselTheory
+ * 14.2  OperatorFMGraphMatchesFMGraphDSPSampleForSample
+ * 14.3  OperatorPlusMixerMatchesFMGraphDSPParallelCarriers
  */
 
+#include "analysis/caspi_FMTheory.h"
 #include "analysis/caspi_SpectralProfile.h"
 #include "controls/caspi_Envelope.h"
 #include "controls/caspi_ModMatrix.h"
 #include "core/caspi_Graph.h"
+#include "core/caspi_Mixer.h"
 #include "base/caspi_RealtimeContext.h"
 #include "core/caspi_Node.h"
 #include "oscillators/caspi_BlepOscillator.h"
 #include "oscillators/caspi_Noise.h"
+#include "oscillators/caspi_Operator.h"
+#include "synthesizers/caspi_FMGraph.h"
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -1519,4 +1534,140 @@ TEST_F (GraphIntegrationFixture, GraphSineRMSMatchesStandaloneRMSWithinFivePerce
     EXPECT_GT (rmsGraph,      0.1f);
     EXPECT_GT (rmsStandalone, 0.1f);
     EXPECT_NEAR (rmsGraph, rmsStandalone, rmsStandalone * 0.05f);
+}
+
+/*======================================================================
+ * Section 14: FM synthesis via Operator nodes in a plain AudioGraph
+ *====================================================================*/
+
+TEST_F (GraphIntegrationFixture, OperatorFMGraphMatchesBesselTheory)
+{
+    using namespace FMTheory;
+
+    const float carrierFreq   = 440.f;
+    const float modulatorFreq = 110.f;
+    const float beta          = 2.f; // classical FM modulation index
+
+    auto [modId, modNode] = graph.emplace<Operator<float>>();
+    modNode.setFrequency (modulatorFreq);
+    modNode.setModulationDepth (1.f);
+
+    auto [carId, carNode] = graph.emplace<Operator<float>> (1u); // 1 modulation port
+    carNode.setFrequency (carrierFreq);
+    carNode.setModulationMode (ModulationMode::Phase);
+    carNode.setModulationIndex (1.f);
+    carNode.setModulationPortWeight (0, beta);
+
+    ASSERT_TRUE (graph.connect (Port (modId), Port (carId, 0)).has_value());
+
+    prepareGraph();
+    const auto samples = renderAndCollect (graph, carId, kIntBlocks);
+    auto profile = analyzeF (samples);
+
+    EXPECT_TRUE (profile.hasPeakAt (carrierFreq, 5.0));
+    EXPECT_TRUE (profile.hasPeakAt (carrierFreq + modulatorFreq, 5.0));
+    EXPECT_TRUE (profile.hasPeakAt (carrierFreq - modulatorFreq, 5.0));
+
+    int expectedSidebands = predictSignificantSidebands (beta, 0.05);
+    int actualSidebands   = 0;
+    for (int n = 1; n <= expectedSidebands + 2; ++n)
+    {
+        if (profile.hasPeakAt (carrierFreq + n * modulatorFreq, 10.0) ||
+            profile.hasPeakAt (carrierFreq - n * modulatorFreq, 10.0))
+        {
+            actualSidebands++;
+        }
+    }
+    EXPECT_GE (actualSidebands, expectedSidebands - 1);
+}
+
+TEST_F (GraphIntegrationFixture, OperatorFMGraphMatchesFMGraphDSPSampleForSample)
+{
+    const float carrierFreq   = 440.f;
+    const float modulatorFreq = 110.f;
+    const float beta          = 2.f;
+
+    // Reference: FMGraphDSP via FMGraphBuilder (the bespoke connection engine).
+    FMGraphBuilder<float> builder;
+    size_t mod = builder.addOperator();
+    size_t car = builder.addOperator();
+    builder.configureOperator (mod, modulatorFreq, 1.f, 1.f);
+    builder.configureOperator (car, carrierFreq, 1.f, 1.f);
+    builder.setOperatorMode (car, ModulationMode::Phase);
+    builder.connect (mod, car, beta);
+    builder.setOutputOperators ({ car });
+    auto compiled = builder.compile (static_cast<float> (kIntRate));
+    ASSERT_TRUE (compiled.has_value());
+    FMGraphDSP<float> dsp = std::move (compiled).value();
+
+    // Equivalent topology: Operator nodes wired directly in a plain AudioGraph.
+    auto [modId, modNode] = graph.emplace<Operator<float>>();
+    modNode.setFrequency (modulatorFreq);
+    modNode.setModulationDepth (1.f);
+
+    auto [carId, carNode] = graph.emplace<Operator<float>> (1u);
+    carNode.setFrequency (carrierFreq);
+    carNode.setModulationMode (ModulationMode::Phase);
+    carNode.setModulationIndex (1.f);
+    carNode.setModulationPortWeight (0, beta);
+
+    ASSERT_TRUE (graph.connect (Port (modId), Port (carId, 0)).has_value());
+    prepareGraph();
+
+    const std::size_t totalSamples = static_cast<std::size_t> (kIntBlocks) * kIntFrames;
+    for (std::size_t i = 0; i < totalSamples; i += kIntFrames)
+    {
+        graph.process();
+        const auto* carBuf = graph.getNode (carId)->getOutputBuffer (0);
+        for (std::size_t fr = 0; fr < kIntFrames; ++fr)
+        {
+            const float expected = dsp.renderSample();
+            EXPECT_NEAR (carBuf->sample (0, fr), expected, 1e-4f) << "sample=" << (i + fr);
+        }
+    }
+}
+
+TEST_F (GraphIntegrationFixture, OperatorPlusMixerMatchesFMGraphDSPParallelCarriers)
+{
+    const float freqA = 300.f;
+    const float freqB = 500.f;
+
+    // Reference: FMGraphDSP with two output operators (auto-scaled sum).
+    FMGraphBuilder<float> builder;
+    size_t opA = builder.addOperator();
+    size_t opB = builder.addOperator();
+    builder.configureOperator (opA, freqA, 1.f, 1.f);
+    builder.configureOperator (opB, freqB, 1.f, 1.f);
+    builder.setOutputOperators ({ opA, opB });
+    auto compiled = builder.compile (static_cast<float> (kIntRate));
+    ASSERT_TRUE (compiled.has_value());
+    FMGraphDSP<float> dsp = std::move (compiled).value();
+
+    // Equivalent topology: two independent carriers summed by Mixer.
+    auto [aId, aNode] = graph.emplace<Operator<float>>();
+    aNode.setFrequency (freqA);
+    aNode.setModulationDepth (1.f);
+
+    auto [bId, bNode] = graph.emplace<Operator<float>>();
+    bNode.setFrequency (freqB);
+    bNode.setModulationDepth (1.f);
+
+    auto [mixId, mixNode] = graph.emplace<Mixer<float>> (2);
+    // autoScale defaults to true, matching FMGraphDSP's default output scaling.
+
+    ASSERT_TRUE (graph.connect (Port (aId), Port (mixId, 0)).has_value());
+    ASSERT_TRUE (graph.connect (Port (bId), Port (mixId, 1)).has_value());
+    prepareGraph();
+
+    const std::size_t totalSamples = static_cast<std::size_t> (kIntBlocks) * kIntFrames;
+    for (std::size_t i = 0; i < totalSamples; i += kIntFrames)
+    {
+        graph.process();
+        const auto* mixBuf = graph.getNode (mixId)->getOutputBuffer (0);
+        for (std::size_t fr = 0; fr < kIntFrames; ++fr)
+        {
+            const float expected = dsp.renderSample();
+            EXPECT_NEAR (mixBuf->sample (0, fr), expected, 1e-4f) << "sample=" << (i + fr);
+        }
+    }
 }

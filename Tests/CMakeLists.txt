@@ -31,6 +31,7 @@ set(SOURCES
         core/DelayLine_test.cpp
         core/Parameter_test.cpp
         core/Graph_test.cpp
+        core/Mixer_test.cpp
         midi/Midi_test.cpp
         base/Utilities_test.cpp
         controls/Envelope_test.cpp

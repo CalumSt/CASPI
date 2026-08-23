@@ -18,6 +18,7 @@ void bind_lfo(py::module_& m);
 void bind_graph(py::module_& m);
 void bind_filters(py::module_& m);
 void bind_engine(py::module_& m);
+void bind_mixer(py::module_& m);
 
 #include <pybind11/detail/class.h>
 #include <typeinfo>
@@ -60,6 +61,7 @@ PYBIND11_MODULE (caspy, m)
 
     // Bind submodules
     bind_graph(m);
+    bind_mixer(m);
     bind_core (m);
     bind_oscillators (m);
     bind_adsr(m);
