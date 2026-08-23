@@ -85,6 +85,23 @@ namespace CASPI
         };
 
         // ====================================================================
+        // Analog TCO (time-constant-overshoot) envelope segment constants
+        // ====================================================================
+        // Redmon's analog-style equations shape a one-pole segment so it
+        // approaches its target the way an analog RC envelope would, rather
+        // than settling exponentially forever. Shared by ADSR and any other
+        // segment (e.g. a compressor's attack/release detector) that wants
+        // the same "analog" curve character. See Maths::analogTcoCoefficient.
+
+        /** TCO for rising segments (e.g. ADSR attack). */
+        template <typename FloatType>
+        constexpr FloatType ATTACK_TCO = static_cast<FloatType> (0.22313016014842982); // exp(-1.5)
+
+        /** TCO for falling segments (e.g. ADSR decay/release). */
+        template <typename FloatType>
+        constexpr FloatType DECAY_TCO = static_cast<FloatType> (0.0070834089290521185); // exp(-4.95)
+
+        // ====================================================================
         // MIDI Constants
         // ====================================================================
 

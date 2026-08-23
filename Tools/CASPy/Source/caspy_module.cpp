@@ -20,6 +20,8 @@ void bind_filters(py::module_& m);
 void bind_engine(py::module_& m);
 void bind_mixer(py::module_& m);
 void bind_multiply(py::module_& m);
+void bind_gain(py::module_& m);
+void bind_dynamics(py::module_& m);
 
 #include <pybind11/detail/class.h>
 #include <typeinfo>
@@ -76,4 +78,6 @@ PYBIND11_MODULE (caspy, m)
     bind_lfo(m);
     bind_filters(m);
     bind_engine(m);
+    bind_gain(m);
+    bind_dynamics(m);
 }

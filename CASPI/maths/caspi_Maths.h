@@ -294,6 +294,50 @@ namespace CASPI
         }
 
         /**
+         * @brief Compute the per-sample coefficient for an analog-style
+         *        (TCO / time-constant-overshoot) one-pole segment.
+         *
+         * Shapes a one-pole recurrence `level = coefficient * level + offset`
+         * so it reaches its target over `lengthInSamples` samples with the
+         * same curvature as an analog RC envelope stage, instead of settling
+         * exponentially forever. Originally used by ADSR's attack/decay/
+         * release stages; reusable anywhere a segment needs that character
+         * (e.g. a compressor's attack/release detector).
+         *
+         * @tparam FloatType     Floating point type.
+         * @param tco            Time-constant-overshoot value — see
+         *                       Constants::ATTACK_TCO / Constants::DECAY_TCO.
+         * @param lengthInSamples Segment length in samples (must be > 0).
+         * @return Per-sample coefficient for the recurrence.
+         */
+        template <typename FloatType>
+        CASPI_NO_DISCARD static FloatType analogTcoCoefficient (const FloatType tco, const FloatType lengthInSamples)
+        {
+            const auto one = CASPI::Constants::one<FloatType>;
+            return static_cast<FloatType> (std::exp (std::log ((one + tco) / tco) / -lengthInSamples));
+        }
+
+        /**
+         * @brief Compute the per-sample offset for an analog-style
+         *        (TCO / time-constant-overshoot) one-pole segment.
+         *
+         * Pairs with analogTcoCoefficient(): pass the segment's true target
+         * level adjusted by tco in the direction of travel (target + tco for
+         * a rising segment, target - tco for a falling one) as
+         * overshootTarget.
+         *
+         * @tparam FloatType      Floating point type.
+         * @param overshootTarget Target level offset by tco (see above).
+         * @param coefficient     Coefficient from analogTcoCoefficient().
+         * @return Per-sample offset for the recurrence.
+         */
+        template <typename FloatType>
+        CASPI_NO_DISCARD static FloatType analogTcoOffset (const FloatType overshootTarget, const FloatType coefficient)
+        {
+            return overshootTarget * (CASPI::Constants::one<FloatType> - coefficient);
+        }
+
+        /**
          * @brief Compute Bessel function of the first kind, J_n(x)
          * @param n Order of the Bessel function
          * @param x Argument (modulation index β for FM synthesis)

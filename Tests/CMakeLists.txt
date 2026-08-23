@@ -57,6 +57,8 @@ set(SOURCES
         filters/DiodeLadderFilter_test.cpp
         filters/OnePoleFilter_test.cpp
         filters/Filters_test.cpp
+        dynamics/Compressor_test.cpp
+        processors/Waveshaper_test.cpp
 )
 
 add_executable(UnitTests ${SOURCES})

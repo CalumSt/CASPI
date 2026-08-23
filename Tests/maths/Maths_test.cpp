@@ -164,3 +164,83 @@ TEST(BesselFunctionTest, CompareStdBessel)
 }
 #endif
 
+// ============================================================================
+// Analog TCO segment tests
+// ============================================================================
+
+TEST (AnalogTcoTest, CoefficientMatchesClosedForm)
+{
+    const double tco = CASPI::Constants::ATTACK_TCO<double>;
+    const double lengthInSamples = 4410.0;
+
+    const double expected = std::exp (std::log ((1.0 + tco) / tco) / -lengthInSamples);
+    const double actual = CASPI::Maths::analogTcoCoefficient (tco, lengthInSamples);
+
+    EXPECT_NEAR (actual, expected, 1e-12);
+}
+
+TEST (AnalogTcoTest, CoefficientIsBelowOneAndPositive)
+{
+    for (const double lengthInSamples : { 1.0, 44.1, 4410.0, 441000.0 })
+    {
+        const double coefficient = CASPI::Maths::analogTcoCoefficient (CASPI::Constants::ATTACK_TCO<double>, lengthInSamples);
+        EXPECT_GT (coefficient, 0.0);
+        EXPECT_LT (coefficient, 1.0);
+    }
+}
+
+TEST (AnalogTcoTest, LongerSegmentGivesCoefficientCloserToOne)
+{
+    const double tco = CASPI::Constants::DECAY_TCO<double>;
+    const double shortCoefficient = CASPI::Maths::analogTcoCoefficient (tco, 100.0);
+    const double longCoefficient = CASPI::Maths::analogTcoCoefficient (tco, 10000.0);
+
+    EXPECT_GT (longCoefficient, shortCoefficient);
+}
+
+TEST (AnalogTcoTest, OffsetMatchesClosedForm)
+{
+    const double overshootTarget = 1.0 + CASPI::Constants::ATTACK_TCO<double>;
+    const double coefficient = 0.999;
+
+    const double expected = overshootTarget * (1.0 - coefficient);
+    const double actual = CASPI::Maths::analogTcoOffset (overshootTarget, coefficient);
+
+    EXPECT_NEAR (actual, expected, 1e-12);
+}
+
+TEST (AnalogTcoTest, RecurrenceReachesTargetOverSegmentLength)
+{
+    // A rising segment from 0 toward 1 over 1000 samples should land close
+    // to 1 by the end, mirroring how ADSR's attack stage uses this pair.
+    const double tco = CASPI::Constants::ATTACK_TCO<double>;
+    const double lengthInSamples = 1000.0;
+    const double coefficient = CASPI::Maths::analogTcoCoefficient (tco, lengthInSamples);
+    const double offset = CASPI::Maths::analogTcoOffset (1.0 + tco, coefficient);
+
+    double level = 0.0;
+    for (int i = 0; i < static_cast<int> (lengthInSamples); ++i)
+    {
+        level = coefficient * level + offset;
+    }
+
+    EXPECT_NEAR (level, 1.0, 0.01);
+}
+
+TEST (AnalogTcoTest, FallingRecurrenceReachesZero)
+{
+    // A falling segment toward 0, mirroring ADSR's release stage.
+    const double tco = CASPI::Constants::DECAY_TCO<double>;
+    const double lengthInSamples = 1000.0;
+    const double coefficient = CASPI::Maths::analogTcoCoefficient (tco, lengthInSamples);
+    const double offset = CASPI::Maths::analogTcoOffset (-tco, coefficient);
+
+    double level = 1.0;
+    for (int i = 0; i < static_cast<int> (lengthInSamples); ++i)
+    {
+        level = coefficient * level + offset;
+    }
+
+    EXPECT_NEAR (level, 0.0, 0.01);
+}
+
