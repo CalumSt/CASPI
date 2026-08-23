@@ -29,6 +29,24 @@
  *  1. Catch configuration errors before real-time use
  *  2. Guarantee bounded execution in render paths
  *  3. Make real-time assumptions explicit and auditable
+ *
+ * SOFT DEPRECATION NOTICE:
+ *
+ * This file predates Graph::AudioGraph and duplicates a chunk of what it now
+ * provides: its own connection list, its own topological sort, its own cycle
+ * detection. CASPI::Operator now declares graph modulation ports directly
+ * (see Operator's (numModulationPorts, numOutputPorts) constructor and
+ * setModulationPortWeight()), so FM algorithms can be built as ordinary
+ * Graph::AudioGraph instances of Operator nodes wired with connect() —
+ * summed to an output via CASPI::Mixer where FMGraphDSP would have used
+ * multiple output operators. See Tests/core/Graph_test.cpp, Section 14,
+ * for topologies built both ways and asserted sample-for-sample equal.
+ *
+ * FMGraphBuilder/FMGraphDSP are not being removed and existing code using
+ * them keeps working — but new FM voices should prefer Operator +
+ * Graph::AudioGraph (+ Mixer) directly, since that path composes with the
+ * rest of the graph (filters, ModMatrix, envelopes as ordinary nodes)
+ * without FMGraphDSP's black-box boundary.
  ************************************************************************/
 
 
@@ -130,6 +148,7 @@ namespace CASPI
             FloatType modulationDepth;
             FloatType modulationFeedback;
             ModulationMode modulationMode;
+            Oscillators::WaveShape waveform = Oscillators::WaveShape::Sine;
     };
 
     // ============================================================================
@@ -371,6 +390,26 @@ namespace CASPI
                 return {};
             }
 
+            /**
+             * @brief Select the output waveform for an operator.
+             *
+             * Defaults to Sine. Saw / Square / Triangle / Pulse reuse
+             * Oscillators::BlepOscillator's PolyBLEP evaluation (see
+             * CASPI::Operator::setWaveform) so operators can act as band-limited
+             * FM/PM carriers, not just sine cores.
+             */
+            Result setOperatorWaveform (size_t index, Oscillators::WaveShape shape)
+            {
+                if (index >= operators_.size())
+                {
+                    return make_unexpected<Error, NonRealTimeSafe> (
+                        Error::InvalidOperatorIndex);
+                }
+
+                operators_[index].waveform = shape;
+                return {};
+            }
+
             // ====================================================================
             // Validation
             // ====================================================================
@@ -601,6 +640,7 @@ namespace CASPI
                         config.modulationFeedback,
                         config.modulationMode);
                     CASPI_ASSERT (op != nullptr, "Failed to create operator");
+                    op->setWaveform (config.waveform);
                     operators_.push_back (std::move (op));
                 }
 

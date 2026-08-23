@@ -18,6 +18,7 @@ include(GoogleTest)
 # ============================================================
 
 set(SOURCES
+        base/Features_test.cpp
         base/SIMD_test.cpp
         base/SIMD/SIMD_complex_test.cpp
         base/SIMD/SIMD_operations_test.cpp
@@ -31,6 +32,7 @@ set(SOURCES
         core/DelayLine_test.cpp
         core/Parameter_test.cpp
         core/Graph_test.cpp
+        core/Mixer_test.cpp
         midi/Midi_test.cpp
         base/Utilities_test.cpp
         controls/Envelope_test.cpp
@@ -43,6 +45,7 @@ set(SOURCES
         processors/Gain_test.cpp
         synthesizers/FMGraph_test.cpp
         synthesizers/Engine_test.cpp
+        synthesizers/OperatorFMVoice_test.cpp
         maths/Spectral_test.cpp
         maths/FMTheory_test.cpp
         maths/FFT_test.cpp

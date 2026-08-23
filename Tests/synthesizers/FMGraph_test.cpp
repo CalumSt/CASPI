@@ -8,6 +8,7 @@
 #include "analysis/caspi_FMTheory.h"
 
 using namespace CASPI;
+using CASPI::Oscillators::WaveShape;
 
 constexpr double SAMPLE_RATE = 48000.0;
 constexpr double DURATION = 0.5;  // 500ms for spectral analysis
@@ -210,6 +211,25 @@ TEST(FMGraphBuilder, ConfigureInvalidOperator)
     EXPECT_EQ(result.error(), FMGraphError::InvalidOperatorIndex);
 }
 
+TEST(FMGraphBuilder, SetOperatorWaveform)
+{
+    FMGraphBuilder<double> builder;
+
+    size_t op = builder.addOperator();
+
+    auto result = builder.setOperatorWaveform(op, WaveShape::Saw);
+    EXPECT_TRUE(result.has_value());
+}
+
+TEST(FMGraphBuilder, SetOperatorWaveformInvalidIndex)
+{
+    FMGraphBuilder<double> builder;
+
+    auto result = builder.setOperatorWaveform(999, WaveShape::Saw);
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error(), FMGraphError::InvalidOperatorIndex);
+}
+
 // ============================================================================
 // GROUP 2: Graph Validation
 // Tests topology validation (cycles, output operators)
@@ -370,6 +390,35 @@ TEST_F(FMGraphDSPTest, GetOperator)
 
     auto* invalid = dsp.getOperator(999);
     EXPECT_EQ(invalid, nullptr);
+}
+
+TEST_F(FMGraphDSPTest, OperatorWaveformPropagatesThroughCompile)
+{
+    FMGraphBuilder<double> builder;
+
+    size_t mod = builder.addOperator();
+    size_t car = builder.addOperator();
+
+    builder.configureOperator(mod, 880.0, 2.0, 1.0);
+    builder.configureOperator(car, 440.0, 1.0, 1.0);
+    builder.setOperatorWaveform(car, WaveShape::Saw);
+    builder.connect(mod, car, 3.0);
+    builder.setOutputOperators({car});
+
+    auto result = builder.compile(SAMPLE_RATE);
+    ASSERT_TRUE(result.has_value());
+    FMGraphDSP<double> dsp = std::move(result).value();
+
+    EXPECT_EQ(dsp.getOperator(mod)->getWaveform(), WaveShape::Sine);
+    EXPECT_EQ(dsp.getOperator(car)->getWaveform(), WaveShape::Saw);
+
+    dsp.noteOn();
+    for (int i = 0; i < 500; ++i)
+    {
+        double sample = dsp.renderSample();
+        EXPECT_FALSE(std::isnan(sample));
+        EXPECT_LE(std::abs(sample), 2.0);
+    }
 }
 
 TEST_F(FMGraphDSPTest, SetFrequency)

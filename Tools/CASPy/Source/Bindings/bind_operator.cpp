@@ -192,6 +192,21 @@ void bind_operator(py::module_& m)
              py::arg("modulation_mode"),
              "Construct an operator with specified parameters")
 
+        .def(py::init<std::size_t, std::size_t>(),
+             py::arg("num_modulation_ports"),
+             py::arg("num_output_ports") = 1,
+             R"pbdoc(
+                 Construct an operator with N declared modulation input ports.
+
+                 Use this constructor when placing the operator directly in a
+                 caspy AudioGraph as a modulation target, with modulators
+                 connected via graph.connect(). Each port has an independent
+                 weight (default 1.0, set via set_modulation_port_weight()) —
+                 this is how multiple modulators can feed one carrier at
+                 different depths using plain graph connections, the same
+                 topology FMGraphDSP supports internally.
+             )pbdoc")
+
         // Frequency Control
         .def("set_frequency", &OperatorFloat::setFrequency,
              py::arg("frequency"),
@@ -240,6 +255,44 @@ void bind_operator(py::module_& m)
              py::arg("depth"),
              py::arg("feedback") = 0.0f,
              "Set all modulation parameters at once")
+
+        // Waveform Control
+        .def("set_waveform", &OperatorFloat::setWaveform,
+             py::arg("shape"),
+             R"pbdoc(
+                 Select the operator's output waveform.
+
+                 Defaults to Sine (evaluated directly, no behavioural change).
+                 Saw/Square/Triangle/Pulse reuse the same BlepOscillator
+                 PolyBLEP evaluation exposed to caspy.oscillators.WaveShape.
+             )pbdoc")
+
+        .def("get_waveform", &OperatorFloat::getWaveform,
+             "Get the current output waveform")
+
+        .def("set_pulse_width", &OperatorFloat::setPulseWidth,
+             py::arg("width"),
+             "Set pulse width for Square/Pulse waveforms. Range [0.01, 0.99]. No effect on other shapes.")
+
+        // Graph Modulation Ports
+        .def("set_modulation_port_weight", &OperatorFloat::setModulationPortWeight,
+             py::arg("port"), py::arg("weight"),
+             R"pbdoc(
+                 Set the weight applied to a graph modulation input port.
+
+                 Only meaningful for operators constructed with
+                 Operator(num_modulation_ports, ...) and placed in an
+                 AudioGraph. The combined (weighted-summed) signal from all
+                 connected ports is scaled by modulation_index, same as
+                 FMGraphBuilder.connect()'s per-edge depth.
+             )pbdoc")
+
+        .def("get_modulation_port_weight", &OperatorFloat::getModulationPortWeight,
+             py::arg("port"),
+             "Get the weight for a graph modulation input port")
+
+        .def("get_num_modulation_ports", &OperatorFloat::getNumModulationPorts,
+             "Get the number of declared graph modulation input ports")
 
         .def("set_modulation_input",
              py::overload_cast<float>(&OperatorFloat::setModulationInput),
