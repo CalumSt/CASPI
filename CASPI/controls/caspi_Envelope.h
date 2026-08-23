@@ -157,7 +157,7 @@ namespace CASPI
          * The ADSR IS the graph node.
          ***********************************************************************************************/
         template <CASPI_FLOAT_TYPE FloatType>
-        class ADSR final : Envelope<FloatType>, public Graph::AudioNode<ADSR<FloatType>, FloatType>
+        class ADSR final : public Envelope<FloatType>, public Graph::AudioNode<ADSR<FloatType>, FloatType>
         {
             public:
                 ADSR()
