@@ -48,6 +48,8 @@ pybind11_add_module(caspy
         Source/Bindings/bind_graph.cpp
         Source/Bindings/bind_engine.cpp
         Source/Bindings/bind_filters.cpp
+        Source/Bindings/bind_gain.cpp
+        Source/Bindings/bind_dynamics.cpp
 )
 
 target_link_libraries(caspy PRIVATE CASPI)

@@ -43,6 +43,9 @@
 // Filters
 #include "filters/caspi_Filters.h"
 
+// Dynamics
+#include "dynamics/caspi_Dynamics.h"
+
 // Gain
 #include "gain/caspi_Gain.h"
 

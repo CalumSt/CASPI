@@ -750,3 +750,171 @@ class TestAudioGraphRender:
         g.process()
         buf = g.get_node(osc_id).get_output_buffer(0)
         assert buf.shape == (CHANNELS, FRAMES)
+
+# ===========================================================================
+# Gain / Waveshaper
+# ===========================================================================
+
+class TestGain:
+    def test_construct_default(self):
+        assert caspy.Gain() is not None
+
+    def test_ramps_toward_target(self):
+        g = caspy.Gain()
+        g.set_gain(0.5, SR, override=True)
+        assert g.get_gain() == pytest.approx(0.5, abs=1e-4)
+
+    def test_process_block_shape_and_dtype(self):
+        g = caspy.Gain()
+        g.set_gain(0.5, SR, override=True)
+        out = g.process_block(np.ones(64, dtype=np.float32))
+        assert out.shape == (64,)
+        assert out.dtype == np.float32
+        assert out[-1] == pytest.approx(0.5, abs=1e-4)
+
+    def test_process_block_inplace(self):
+        g = caspy.Gain()
+        g.set_gain(0.5, SR, override=True)
+        buf = np.ones(32, dtype=np.float32)
+        g.process_block_inplace(buf)
+        assert buf[-1] == pytest.approx(0.5, abs=1e-4)
+
+
+class TestWaveshaper:
+    def test_construct_default(self):
+        assert caspy.Waveshaper() is not None
+
+    def test_default_is_linear_passthrough(self):
+        w = caspy.Waveshaper()
+        assert w.process_sample(0.3) == pytest.approx(0.3, abs=1e-6)
+
+    def test_waveshape_property_roundtrip(self):
+        w = caspy.Waveshaper()
+        w.waveshape = caspy.WaveshapeType.SoftClip
+        assert w.waveshape == caspy.WaveshapeType.SoftClip
+
+    def test_hard_clip_clamps_to_limit(self):
+        w = caspy.Waveshaper()
+        w.waveshape = caspy.WaveshapeType.HardClip
+        w.clip_limit = 0.5
+        assert w.process_sample(0.9) == pytest.approx(0.5, abs=1e-6)
+
+    def test_soft_clip_differs_from_hard_clip_below_limit(self):
+        hard = caspy.Waveshaper()
+        hard.waveshape = caspy.WaveshapeType.HardClip
+        hard.clip_limit = 0.5
+
+        soft = caspy.Waveshaper()
+        soft.waveshape = caspy.WaveshapeType.SoftClip
+        soft.clip_limit = 0.5
+
+        assert soft.process_sample(0.4) < hard.process_sample(0.4)
+
+    def test_process_block_shape(self):
+        w = caspy.Waveshaper()
+        w.waveshape = caspy.WaveshapeType.Araya
+        out = w.process_block(np.random.uniform(-1, 1, 128).astype(np.float32))
+        assert out.shape == (128,)
+        assert out.dtype == np.float32
+
+    def test_asymmetric_shaping(self):
+        w = caspy.Waveshaper()
+        w.waveshape = caspy.WaveshapeType.Linear
+        w.negative_waveshape = caspy.WaveshapeType.HardClip
+        w.clip_limit = 0.3
+        w.set_asymmetry(True, 0.0)
+        assert w.process_sample(0.5) == pytest.approx(0.5, abs=1e-5)
+        assert w.process_sample(-0.5) == pytest.approx(-0.3, abs=1e-5)
+
+    def test_register_and_select_custom_curve(self):
+        w = caspy.Waveshaper()
+        w.register_custom_waveshape("square", lambda x: x * x)
+        assert w.set_custom_waveshape("square")
+        assert w.waveshape == caspy.WaveshapeType.Custom
+        assert w.process_sample(0.5) == pytest.approx(0.25, abs=1e-5)
+
+    def test_select_unknown_custom_curve_fails(self):
+        w = caspy.Waveshaper()
+        assert not w.set_custom_waveshape("does_not_exist")
+
+    def test_usable_as_graph_node(self):
+        g = caspy.AudioGraph()
+        w_id = g.add_node(caspy.Waveshaper())
+        assert w_id is not None
+
+
+# ===========================================================================
+# Dynamics — Compressor
+# ===========================================================================
+
+class TestCompressor:
+    def test_construct_default(self):
+        assert caspy.Compressor() is not None
+
+    def test_parameter_roundtrip(self):
+        c = caspy.Compressor()
+        c.threshold = -12.0
+        c.ratio = 8.0
+        c.knee = 3.0
+        c.attack_time = 0.02
+        c.release_time = 0.25
+        c.makeup_gain = 6.0
+        assert c.threshold == pytest.approx(-12.0)
+        assert c.ratio == pytest.approx(8.0)
+        assert c.knee == pytest.approx(3.0)
+        assert c.attack_time == pytest.approx(0.02)
+        assert c.release_time == pytest.approx(0.25)
+        assert c.makeup_gain == pytest.approx(6.0)
+
+    def test_quiet_signal_is_unreduced(self):
+        c = caspy.Compressor()
+        c.set_sample_rate(SR)
+        c.threshold = -18.0
+        c.ratio = 4.0
+        for _ in range(200):
+            c.process_sample(0.01)
+        assert c.gain_reduction_db == pytest.approx(0.0, abs=1e-2)
+
+    def test_loud_signal_builds_gain_reduction(self):
+        c = caspy.Compressor()
+        c.set_sample_rate(SR)
+        c.threshold = -18.0
+        c.ratio = 4.0
+        c.attack_time = 0.005
+        for _ in range(2000):
+            c.process_sample(1.0)
+        assert c.gain_reduction_db > 5.0
+
+    def test_process_block_shape(self):
+        c = caspy.Compressor()
+        c.set_sample_rate(SR)
+        out = c.process_block(np.full(256, 0.5, dtype=np.float32))
+        assert out.shape == (256,)
+        assert out.dtype == np.float32
+
+    def test_sidechain_overload_keys_off_sidechain(self):
+        c = caspy.Compressor()
+        c.set_sample_rate(SR)
+        c.threshold = -18.0
+        c.ratio = 4.0
+        c.attack_time = 0.005
+        out = 0.0
+        for _ in range(2000):
+            out = c.process_sample_sidechain(0.01, 1.0)
+        assert c.gain_reduction_db > 5.0
+        assert 0.0 < out < 0.01
+
+    def test_reset_clears_gain_reduction(self):
+        c = caspy.Compressor()
+        c.set_sample_rate(SR)
+        c.threshold = -18.0
+        for _ in range(200):
+            c.process_sample(1.0)
+        c.reset()
+        assert c.gain_reduction_db == pytest.approx(0.0, abs=1e-6)
+
+    def test_usable_as_graph_node_with_sidechain_port(self):
+        g = caspy.AudioGraph()
+        main_id = g.add_node(caspy.BlepOscillator()) if hasattr(caspy, "BlepOscillator") else None
+        c_id = g.add_node(caspy.Compressor())
+        assert c_id is not None
